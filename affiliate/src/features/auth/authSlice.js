@@ -1,18 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-/**
- * 👇 Demo user (same as Context)
- */
-const DEMO_USER = {
-  name: "Demo User",
-  email: "demo@example.com",
-  password: "demo123",
-  phone: "01700000000",
-};
-
 const initialState = {
   user: null,
-  token: "demo-token",
+  token: null,
   loading: true,
 };
 
@@ -20,9 +10,6 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    /**
-     * 🔁 Context useEffect equivalent
-     */
     rehydrateAuth: (state) => {
       try {
         const storedUser = localStorage.getItem("user");
@@ -31,29 +18,29 @@ const authSlice = createSlice({
         if (storedUser && storedToken) {
           state.user = JSON.parse(storedUser);
           state.token = storedToken;
+        } else {
+          state.user = null;
+          state.token = null;
         }
-      } catch (err) {
+      } catch (error) {
         localStorage.removeItem("user");
         localStorage.removeItem("token");
+        state.user = null;
+        state.token = null;
       } finally {
         state.loading = false;
       }
     },
 
-    /**
-     * ✅ Demo Login
-     */
-    demoLogin: (state) => {
-      state.user = DEMO_USER;
-      state.token = "demo-token";
+    setAuth: (state, action) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.loading = false;
 
-      localStorage.setItem("user", JSON.stringify(DEMO_USER));
-      localStorage.setItem("token", "demo-token");
+      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      localStorage.setItem("token", action.payload.token);
     },
 
-    /**
-     * ❌ Logout
-     */
     logout: (state) => {
       state.user = null;
       state.token = null;
@@ -65,5 +52,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { rehydrateAuth, demoLogin, logout } = authSlice.actions;
+export const { rehydrateAuth, setAuth, logout } = authSlice.actions;
 export default authSlice.reducer;

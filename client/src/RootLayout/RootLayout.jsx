@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Navber from "../components/Navber/Navber";
 import { Outlet, useLocation } from "react-router";
 import Sidebar from "../components/Sidebar/Sidebar";
+import BottomNavbar from "../components/BottomNavbar/BottomNavbar";
 
 const RootLayout = () => {
   const [open, setOpen] = useState(false);
@@ -37,6 +38,7 @@ const RootLayout = () => {
         >
           <Outlet />
         </div>
+        <BottomNavbar />
       </div>
     </div>
   );

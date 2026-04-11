@@ -7,6 +7,8 @@ import Register from "../pages/Register/Register";
 import Withdraw from "../pages/Withdraw/Withdraw";
 import Deposit from "../pages/Deposit/Deposit";
 import PrivateRoute from "../PrivateRoute/PrivateRoute";
+import AffiliateLayout from "../AffiliateLayout/AffiliateLayout";
+import Dashboard from "../components/Dashboard/Dashboard";
 
 export const routes = createBrowserRouter([
   {
@@ -19,29 +21,35 @@ export const routes = createBrowserRouter([
         element: <Home />,
       },
       {
-        path: "withdraw",
-        element: (
-          <PrivateRoute>
-            {" "}
-            <Withdraw />
-          </PrivateRoute>
-        ),
-      },
-      {
-        path: "deposit",
-        element: (
-          <PrivateRoute>
-            <Deposit />
-          </PrivateRoute>
-        ),
-      },
-      {
         path: "login",
         element: <Login />,
       },
       {
         path: "register",
         element: <Register />,
+      },
+    ],
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <PrivateRoute allowedRoles={["aff-user", "user", "admin"]}>
+        <AffiliateLayout />
+      </PrivateRoute>
+    ),
+    errorElement: <NotFoundPage />,
+    children: [
+      {
+        index: true,
+        element: <Dashboard />,
+      },
+      {
+        path: "deposit",
+        element: <Deposit />,
+      },
+      {
+        path: "withdraw",
+        element: <Withdraw />,
       },
     ],
   },

@@ -1,4 +1,4 @@
-import BottomNavbar from "../../components/BottomNavbar/BottomNavbar";
+// import BottomNavbar from "../../components/BottomNavbar/BottomNavbar";
 import Categories from "../../components/Categories/Categories";
 import FavouriteGames from "../../components/FavouriteGames/FavouriteGames";
 import FeatureGames from "../../components/FeatureGames/FeatureGames";
@@ -16,7 +16,7 @@ const Home = () => {
       <FeatureGames />
       <FavouriteGames />
       <Footer />
-      <BottomNavbar />
+      
     </div>
   );
 };

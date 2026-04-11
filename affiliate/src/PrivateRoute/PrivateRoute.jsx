@@ -1,25 +1,22 @@
-import { Navigate, useLocation } from "react-router";
+import React from "react";
 import { useSelector } from "react-redux";
+import { Navigate, Outlet, useLocation } from "react-router";
 import {
-  selectAuth,
+  selectAuthLoading,
   selectIsAuthenticated,
+  selectUser,
 } from "../features/auth/authSelectors";
 
-const PrivateRoute = ({ children }) => {
-  const location = useLocation();
-
-  const { loading } = useSelector(selectAuth);
+const PrivateRoute = ({ allowedRoles = [], children }) => {
+  const loading = useSelector(selectAuthLoading);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const user = useSelector(selectUser);
+  const location = useLocation();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-950 via-red-950 to-black flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-orange-200 text-lg font-medium">
-            যাচাই করা হচ্ছে...
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Loading...
       </div>
     );
   }
@@ -28,7 +25,11 @@ const PrivateRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return children;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children ? children : <Outlet />;
 };
 
 export default PrivateRoute;
