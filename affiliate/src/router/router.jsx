@@ -9,6 +9,8 @@ import Deposit from "../pages/Deposit/Deposit";
 import PrivateRoute from "../PrivateRoute/PrivateRoute";
 import AffiliateLayout from "../AffiliateLayout/AffiliateLayout";
 import Dashboard from "../components/Dashboard/Dashboard";
+import MyUsers from "../pages/MyUsers/MyUsers";
+import Profile from "../pages/Profile/Profile";
 
 export const routes = createBrowserRouter([
   {
@@ -50,6 +52,14 @@ export const routes = createBrowserRouter([
       {
         path: "withdraw",
         element: <Withdraw />,
+      },
+      {
+        path: "my-users",
+        element: <MyUsers />,
+      },
+      {
+        path: "profile",
+        element: <Profile />,
       },
     ],
   },

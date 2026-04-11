@@ -11,6 +11,8 @@ import CreateAdmin from "../pages/CreateAdmin/CreateAdmin";
 import AddPromotion from "../pages/AddPromotion/AddPromotion";
 import AllUser from "../pages/AllUser/AllUser";
 import AllAffiliateUser from "../pages/AllAffiliateUser/AllAffiliateUser";
+import UserDetails from "../pages/UserDetails/UserDetails";
+import AffUserDetails from "../pages/AffUserDetails/AffUserDetails";
 
 export const routes = createBrowserRouter([
   {
@@ -84,6 +86,23 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="all-affiliate-user">
             <AllAffiliateUser />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/all-user-details/:id",
+        element: (
+          <PrivateRoute permKey="all-user-details">
+            {" "}
+            <UserDetails />{" "}
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "affiliate-user-details/:id",
+        element: (
+          <PrivateRoute permKey="affiliate-user-details">
+            <AffUserDetails />
           </PrivateRoute>
         ),
       },

@@ -38,7 +38,7 @@ const RootLayout = () => {
         >
           <Outlet />
         </div>
-        <BottomNavbar />
+        {!hideNavbar && <BottomNavbar />}
       </div>
     </div>
   );

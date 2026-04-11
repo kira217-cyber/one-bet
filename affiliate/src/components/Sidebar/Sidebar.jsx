@@ -54,9 +54,9 @@ const Sidebar = () => {
         end: true,
       },
       {
-        to: "/dashboard/all-users",
+        to: "/dashboard/my-users",
         icon: <FaUsers />,
-        text: "All Users",
+        text: "My Users",
       },
       {
         to: "/dashboard/all-affiliate-user",

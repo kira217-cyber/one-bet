@@ -1,27 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   FaSearch,
-  FaEye,
+  FaUsers,
   FaUserCheck,
   FaUserSlash,
+  FaPhoneAlt,
+  FaEnvelope,
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router";
 import { api } from "../../api/axios";
 
 const USERS_PER_PAGE = 15;
 
 const filterOptions = [
-  { label: "All", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
+  { label: "All Users", value: "all" },
+  { label: "Active Users", value: "active" },
+  { label: "Inactive Users", value: "inactive" },
 ];
 
-const AllUser = () => {
-  const navigate = useNavigate();
-
+const MyUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toggleLoadingId, setToggleLoadingId] = useState(null);
@@ -30,23 +29,26 @@ const AllUser = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchUsers = async () => {
+  const fetchMyUsers = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/api/users/admin/all-users");
+
+      const { data } = await api.get("/api/affiliate/my-users");
 
       if (data?.success) {
         setUsers(data.users || []);
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load users");
+      toast.error(
+        error?.response?.data?.message || "Failed to load referred users"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchMyUsers();
   }, []);
 
   const filteredUsers = useMemo(() => {
@@ -66,7 +68,9 @@ const AllUser = () => {
         const phone = user?.phone?.toLowerCase() || "";
         const email = user?.email?.toLowerCase() || "";
 
-        return userId.includes(q) || phone.includes(q) || email.includes(q);
+        return (
+          userId.includes(q) || phone.includes(q) || email.includes(q)
+        );
       });
     }
 
@@ -95,10 +99,10 @@ const AllUser = () => {
       setToggleLoadingId(user._id);
 
       const { data } = await api.patch(
-        `/api/users/admin/all-users/${user._id}/toggle-status`,
+        `/api/affiliate/my-users/${user._id}/toggle-status`,
         {
           isActive: !user.isActive,
-        },
+        }
       );
 
       if (data?.success) {
@@ -108,49 +112,46 @@ const AllUser = () => {
           prev.map((item) =>
             item._id === user._id
               ? { ...item, isActive: !item.isActive }
-              : item,
-          ),
+              : item
+          )
         );
       }
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to update user status",
+        error?.response?.data?.message || "Failed to update user status"
       );
     } finally {
       setToggleLoadingId(null);
     }
   };
 
-  const handleViewDetails = (user) => {
-    navigate(`/all-user-details/${user._id}`);
-  };
-
   return (
-    <div className="min-h-[calc(100vh-120px)] text-white">
+    <div className="min-h-[calc(100vh-120px)] text-gray-100">
+      {/* Header */}
       <div className="mb-5 md:mb-6">
-        <div className="rounded-2xl border border-green-700/40 bg-gradient-to-r from-black via-green-950/30 to-black p-4 md:p-5 shadow-lg shadow-green-900/20">
+        <div className="rounded-2xl border border-green-800/40 bg-gradient-to-r from-gray-950 via-green-950/30 to-gray-950 p-4 md:p-5 shadow-lg shadow-green-950/20">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                All Users
+                My Users
               </h1>
               <p className="text-sm md:text-base text-green-200/80 mt-1">
-                Manage all normal users from the admin panel
+                Manage all users referred by you.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto lg:min-w-[360px]">
-              <div className="rounded-xl border border-green-700/40 bg-black/40 px-4 py-3">
+              <div className="rounded-xl border border-green-700/40 bg-gray-900/40 px-4 py-3">
                 <p className="text-xs text-green-300/80">Total</p>
                 <p className="text-lg font-semibold">{users.length}</p>
               </div>
-              <div className="rounded-xl border border-green-700/40 bg-black/40 px-4 py-3">
+              <div className="rounded-xl border border-green-700/40 bg-gray-900/40 px-4 py-3">
                 <p className="text-xs text-green-300/80">Active</p>
                 <p className="text-lg font-semibold">
                   {users.filter((u) => u.isActive).length}
                 </p>
               </div>
-              <div className="rounded-xl border border-green-700/40 bg-black/40 px-4 py-3">
+              <div className="rounded-xl border border-green-700/40 bg-gray-900/40 px-4 py-3">
                 <p className="text-xs text-green-300/80">Inactive</p>
                 <p className="text-lg font-semibold">
                   {users.filter((u) => !u.isActive).length}
@@ -161,7 +162,8 @@ const AllUser = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-green-700/40 bg-gradient-to-b from-black/90 via-green-950/20 to-black/90 p-4 md:p-5 shadow-lg shadow-green-900/20 mb-5">
+      {/* Search + Filter */}
+      <div className="rounded-2xl border border-green-800/40 bg-gradient-to-b from-gray-950/90 via-green-950/20 to-gray-950/90 p-4 md:p-5 shadow-lg shadow-green-950/20 mb-5">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
             <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-green-400 text-base" />
@@ -170,7 +172,7 @@ const AllUser = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="Search by User ID, Phone or Email"
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-black/70 border border-green-700/50 text-white placeholder-green-300/60 focus:outline-none focus:ring-2 focus:ring-green-400/40 focus:border-green-400"
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-900/70 border border-green-700/50 text-white placeholder-green-300/60 focus:outline-none focus:ring-2 focus:ring-green-400/40 focus:border-green-400"
             />
           </div>
 
@@ -182,8 +184,8 @@ const AllUser = () => {
                 onClick={() => setStatusFilter(option.value)}
                 className={`cursor-pointer px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
                   statusFilter === option.value
-                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-black border-green-400 shadow-lg shadow-green-600/30"
-                    : "bg-black/60 text-white border-green-700/50 hover:bg-green-900/30"
+                    ? "bg-gradient-to-r from-green-600 to-teal-600 text-white border-green-400 shadow-lg shadow-green-700/30"
+                    : "bg-gray-900/60 text-white border-green-700/50 hover:bg-green-900/30"
                 }`}
               >
                 {option.label}
@@ -193,20 +195,21 @@ const AllUser = () => {
         </div>
       </div>
 
+      {/* Mobile View */}
       <div className="block lg:hidden space-y-4">
         {loading ? (
-          <div className="rounded-2xl border border-green-700/40 bg-black/60 p-6 text-center text-green-200">
+          <div className="rounded-2xl border border-green-800/40 bg-gray-900/60 p-6 text-center text-green-200">
             Loading users...
           </div>
         ) : paginatedUsers.length === 0 ? (
-          <div className="rounded-2xl border border-green-700/40 bg-black/60 p-6 text-center text-green-200">
+          <div className="rounded-2xl border border-green-800/40 bg-gray-900/60 p-6 text-center text-green-200">
             No users found
           </div>
         ) : (
           paginatedUsers.map((user) => (
             <div
               key={user._id}
-              className="rounded-2xl border border-green-700/40 bg-gradient-to-b from-black/90 via-green-950/20 to-black/90 p-4 shadow-lg shadow-green-900/20"
+              className="rounded-2xl border border-green-800/40 bg-gradient-to-b from-gray-950/90 via-green-950/20 to-gray-950/90 p-4 shadow-lg shadow-green-950/20"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -221,7 +224,7 @@ const AllUser = () => {
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     user.isActive
-                      ? "bg-green-500/20 text-green-300 border border-green-500/40"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                       : "bg-red-500/20 text-red-300 border border-red-500/40"
                   }`}
                 >
@@ -230,46 +233,34 @@ const AllUser = () => {
               </div>
 
               <div className="mt-4 space-y-2 text-sm text-green-100">
-                <p>
-                  <span className="text-green-300">Phone:</span>{" "}
-                  {user.phone || "N/A"}
-                </p>
-                <p>
-                  <span className="text-green-300">Balance:</span>{" "}
-                  {user.balance || 0}
-                </p>
-                <p>
-                  <span className="text-green-300">Refer Code:</span>{" "}
-                  {user.referralCode || "N/A"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <FaPhoneAlt className="text-green-400" />
+                  <span>{user.phone || "N/A"}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <FaEnvelope className="text-green-400" />
+                  <span>{user.email || "N/A"}</span>
+                </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="mt-4">
                 <button
                   type="button"
-                  onClick={() => handleViewDetails(user)}
-                  className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30"
-                >
-                  <FaEye />
-                  View Details
-                </button>
-
-                <button
-                  type="button"
-                  disabled={toggleLoadingId === user._id}
                   onClick={() => handleToggleStatus(user)}
-                  className={`cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${
+                  disabled={toggleLoadingId === user._id}
+                  className={`w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all ${
                     user.isActive
                       ? "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30"
-                      : "bg-green-500/20 border border-green-500/40 text-green-300 hover:bg-green-500/30"
+                      : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30"
                   }`}
                 >
                   {user.isActive ? <FaUserSlash /> : <FaUserCheck />}
                   {toggleLoadingId === user._id
                     ? "Updating..."
                     : user.isActive
-                      ? "Deactivate"
-                      : "Activate"}
+                    ? "Deactivate"
+                    : "Activate"}
                 </button>
               </div>
             </div>
@@ -277,11 +268,12 @@ const AllUser = () => {
         )}
       </div>
 
-      <div className="hidden lg:block rounded-2xl border border-green-700/40 bg-gradient-to-b from-black/90 via-green-950/20 to-black/90 overflow-hidden shadow-lg shadow-green-900/20">
+      {/* Desktop Table */}
+      <div className="hidden lg:block rounded-2xl border border-green-800/40 bg-gradient-to-b from-gray-950/90 via-green-950/20 to-gray-950/90 overflow-hidden shadow-lg shadow-green-950/20">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
+          <table className="w-full min-w-[920px]">
             <thead>
-              <tr className="bg-gradient-to-r from-green-700/30 to-emerald-700/20 text-left">
+              <tr className="bg-gradient-to-r from-green-700/30 to-teal-700/20 text-left">
                 <th className="px-5 py-4 text-sm font-semibold text-green-100">
                   User ID
                 </th>
@@ -292,16 +284,10 @@ const AllUser = () => {
                   Email
                 </th>
                 <th className="px-5 py-4 text-sm font-semibold text-green-100">
-                  Balance
-                </th>
-                <th className="px-5 py-4 text-sm font-semibold text-green-100">
-                  Refer Code
-                </th>
-                <th className="px-5 py-4 text-sm font-semibold text-green-100">
                   Status
                 </th>
                 <th className="px-5 py-4 text-sm font-semibold text-green-100 text-center">
-                  Actions
+                  Action
                 </th>
               </tr>
             </thead>
@@ -310,7 +296,7 @@ const AllUser = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="5"
                     className="px-5 py-10 text-center text-green-200"
                   >
                     Loading users...
@@ -319,7 +305,7 @@ const AllUser = () => {
               ) : paginatedUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="5"
                     className="px-5 py-10 text-center text-green-200"
                   >
                     No users found
@@ -329,8 +315,8 @@ const AllUser = () => {
                 paginatedUsers.map((user, index) => (
                   <tr
                     key={user._id}
-                    className={`border-t border-green-700/20 hover:bg-green-900/10 transition-colors ${
-                      index % 2 === 0 ? "bg-black/20" : "bg-transparent"
+                    className={`border-t border-green-800/20 hover:bg-green-900/10 transition-colors ${
+                      index % 2 === 0 ? "bg-gray-900/20" : "bg-transparent"
                     }`}
                   >
                     <td className="px-5 py-4 text-sm text-white font-medium">
@@ -342,50 +328,34 @@ const AllUser = () => {
                     <td className="px-5 py-4 text-sm text-green-100">
                       {user.email || "N/A"}
                     </td>
-                    <td className="px-5 py-4 text-sm text-green-100">
-                      {user.balance || 0}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-green-100">
-                      {user.referralCode || "N/A"}
-                    </td>
                     <td className="px-5 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           user.isActive
-                            ? "bg-green-500/20 text-green-300 border border-green-500/40"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                             : "bg-red-500/20 text-red-300 border border-red-500/40"
                         }`}
                       >
                         {user.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleViewDetails(user)}
-                          className="cursor-pointer px-3 py-2 rounded-lg bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 text-sm"
-                        >
-                          View Details
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={toggleLoadingId === user._id}
-                          onClick={() => handleToggleStatus(user)}
-                          className={`cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-3 py-2 rounded-lg text-sm ${
-                            user.isActive
-                              ? "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30"
-                              : "bg-green-500/20 border border-green-500/40 text-green-300 hover:bg-green-500/30"
-                          }`}
-                        >
-                          {toggleLoadingId === user._id
-                            ? "Updating..."
-                            : user.isActive
-                              ? "Deactivate"
-                              : "Activate"}
-                        </button>
-                      </div>
+                    <td className="px-5 py-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(user)}
+                        disabled={toggleLoadingId === user._id}
+                        className={`cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-4 py-2 rounded-lg text-sm transition-all ${
+                          user.isActive
+                            ? "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30"
+                            : "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30"
+                        }`}
+                      >
+                        {toggleLoadingId === user._id
+                          ? "Updating..."
+                          : user.isActive
+                          ? "Deactivate"
+                          : "Activate"}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -395,7 +365,8 @@ const AllUser = () => {
         </div>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-green-700/40 bg-gradient-to-r from-black via-green-950/20 to-black p-4 shadow-lg shadow-green-900/20">
+      {/* Pagination */}
+      <div className="mt-5 rounded-2xl border border-green-800/40 bg-gradient-to-r from-gray-950 via-green-950/20 to-gray-950 p-4 shadow-lg shadow-green-950/20">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-green-200/80 text-center md:text-left">
             Showing{" "}
@@ -420,7 +391,7 @@ const AllUser = () => {
               type="button"
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 px-4 py-2 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 px-4 py-2 rounded-xl bg-gray-900/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
             >
               <FaChevronLeft />
               Prev
@@ -436,7 +407,7 @@ const AllUser = () => {
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
               disabled={currentPage === totalPages}
-              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 px-4 py-2 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 px-4 py-2 rounded-xl bg-gray-900/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
             >
               Next
               <FaChevronRight />
@@ -448,4 +419,4 @@ const AllUser = () => {
   );
 };
 
-export default AllUser;
+export default MyUsers;

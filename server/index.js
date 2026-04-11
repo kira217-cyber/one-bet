@@ -5,7 +5,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
-
+import affiliateRoutes from "./routes/affiliateRoutes.js";
 // ...
 
 
@@ -35,6 +35,7 @@ app.get("/", (req, res) => {
 // ✅ routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/affiliate", affiliateRoutes);
 
 
 // ✅ port

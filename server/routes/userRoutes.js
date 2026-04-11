@@ -117,11 +117,13 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const userIdRegex = /^[a-zA-Z0-9]+$/;
+    // ✅ allow letters, numbers, @ . _ -
+    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
     if (!userIdRegex.test(trimmedUserId)) {
       return res.status(400).json({
         success: false,
-        message: "User Id must contain only letters and numbers",
+        message:
+          "User Id must contain only letters, numbers, @, dot, underscore and hyphen",
       });
     }
 
@@ -151,7 +153,9 @@ router.post("/register", async (req, res) => {
     let referrerUser = null;
 
     if (trimmedReferralCode) {
-      referrerUser = await User.findOne({ referralCode: trimmedReferralCode });
+      referrerUser = await User.findOne({
+        referralCode: trimmedReferralCode.toUpperCase(),
+      });
 
       if (!referrerUser) {
         return res.status(400).json({
@@ -186,7 +190,10 @@ router.post("/register", async (req, res) => {
     if (referrerUser) {
       await User.findByIdAndUpdate(referrerUser._id, {
         $push: { createdUsers: newUser._id },
-        $inc: { referralCount: 1 },
+        $inc: {
+          referralCount: 1,
+          referCommissionBalance: Number(referrerUser.referCommission || 0),
+        },
       });
     }
 
@@ -593,5 +600,411 @@ router.patch(
     }
   },
 );
+
+/**
+ * GET ALL USERS
+ */
+router.get("/admin/all-users", authMiddleware, async (req, res) => {
+  try {
+    const users = await User.find({ role: "user" })
+      .select("userId phone email balance referralCode isActive createdAt")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error("GET ALL USERS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load users",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * TOGGLE USER STATUS
+ */
+router.patch(
+  "/admin/all-users/:id/toggle-status",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      const user = await User.findOne({
+        _id: id,
+        role: "user",
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      user.isActive = !!isActive;
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: user.isActive
+          ? "User activated successfully"
+          : "User deactivated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("TOGGLE USER STATUS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update user status",
+        error: error.message,
+      });
+    }
+  },
+);
+
+/**
+ * GET SINGLE USER DETAILS
+ */
+router.get("/admin/all-users/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({
+      _id: id,
+      role: "user",
+    })
+      .select(
+        "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
+      )
+      .populate("referredBy", "userId phone");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("GET USER DETAILS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load user details",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * UPDATE SINGLE USER DETAILS
+ */
+
+router.patch("/admin/all-users/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      userId,
+      email,
+      phone,
+      firstName,
+      lastName,
+      password,
+      isActive,
+      currency,
+      balance,
+      commissionBalance,
+      gameLossCommission,
+      depositCommission,
+      referCommission,
+      gameWinCommission,
+      gameLossCommissionBalance,
+      depositCommissionBalance,
+      referCommissionBalance,
+      gameWinCommissionBalance,
+    } = req.body;
+
+    const user = await User.findOne({
+      _id: id,
+      role: "user",
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const trimmedUserId = userId?.trim();
+    const trimmedPhone = phone?.trim();
+    const trimmedEmail = email ? email.trim().toLowerCase() : "";
+
+    if (!trimmedUserId || !trimmedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and phone are required",
+      });
+    }
+
+    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+    if (!userIdRegex.test(trimmedUserId)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
+      });
+    }
+
+    const existingUserId = await User.findOne({
+      userId: trimmedUserId,
+      _id: { $ne: user._id },
+    });
+
+    if (existingUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "This User ID already exists",
+      });
+    }
+
+    const existingPhone = await User.findOne({
+      phone: trimmedPhone,
+      _id: { $ne: user._id },
+    });
+
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number already exists",
+      });
+    }
+
+    user.userId = trimmedUserId;
+    user.email = trimmedEmail;
+    user.phone = trimmedPhone;
+    user.firstName = firstName || "";
+    user.lastName = lastName || "";
+    user.isActive = !!isActive;
+    user.currency = currency || "BDT";
+    user.balance = Number(balance) || 0;
+    user.commissionBalance = Number(commissionBalance) || 0;
+    user.gameLossCommission = Number(gameLossCommission) || 0;
+    user.depositCommission = Number(depositCommission) || 0;
+    user.referCommission = Number(referCommission) || 0;
+    user.gameWinCommission = Number(gameWinCommission) || 0;
+    user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
+    user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
+    user.referCommissionBalance = Number(referCommissionBalance) || 0;
+    user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
+
+    if (password && password.trim()) {
+      if (password.trim().length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
+      }
+
+      user.password = await bcrypt.hash(password.trim(), 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("UPDATE USER DETAILS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user",
+      error: error.message,
+    });
+  }
+});
+/**
+ * GET SINGLE AFFILIATE USER DETAILS
+ */
+router.get("/admin/affiliate-users/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({
+      _id: id,
+      role: "aff-user",
+    })
+      .select(
+        "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
+      )
+      .populate("referredBy", "userId phone");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Affiliate user not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("GET AFFILIATE USER DETAILS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load affiliate user details",
+      error: error.message,
+    });
+  }
+});
+/**
+ * UPDATE SINGLE AFFILIATE USER DETAILS
+ */
+router.patch("/admin/affiliate-users/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      userId,
+      email,
+      phone,
+      firstName,
+      lastName,
+      password,
+      isActive,
+      currency,
+      balance,
+      commissionBalance,
+      gameLossCommission,
+      depositCommission,
+      referCommission,
+      gameWinCommission,
+      gameLossCommissionBalance,
+      depositCommissionBalance,
+      referCommissionBalance,
+      gameWinCommissionBalance,
+    } = req.body;
+
+    const user = await User.findOne({
+      _id: id,
+      role: "aff-user",
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Affiliate user not found",
+      });
+    }
+
+    const trimmedUserId = userId?.trim();
+    const trimmedPhone = phone?.trim();
+    const trimmedEmail = email ? email.trim().toLowerCase() : "";
+
+    if (!trimmedUserId || !trimmedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and phone are required",
+      });
+    }
+
+    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+    if (!userIdRegex.test(trimmedUserId)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
+      });
+    }
+
+    const existingUserId = await User.findOne({
+      userId: trimmedUserId,
+      _id: { $ne: user._id },
+    });
+
+    if (existingUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "This User ID already exists",
+      });
+    }
+
+    const existingPhone = await User.findOne({
+      phone: trimmedPhone,
+      _id: { $ne: user._id },
+    });
+
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number already exists",
+      });
+    }
+
+    user.userId = trimmedUserId;
+    user.email = trimmedEmail;
+    user.phone = trimmedPhone;
+    user.firstName = firstName || "";
+    user.lastName = lastName || "";
+    user.isActive = !!isActive;
+    user.currency = currency || "BDT";
+    user.balance = Number(balance) || 0;
+    user.commissionBalance = Number(commissionBalance) || 0;
+    user.gameLossCommission = Number(gameLossCommission) || 0;
+    user.depositCommission = Number(depositCommission) || 0;
+    user.referCommission = Number(referCommission) || 0;
+    user.gameWinCommission = Number(gameWinCommission) || 0;
+    user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
+    user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
+    user.referCommissionBalance = Number(referCommissionBalance) || 0;
+    user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
+
+    if (password && password.trim()) {
+      if (password.trim().length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
+      }
+
+      user.password = await bcrypt.hash(password.trim(), 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Affiliate user updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("UPDATE AFFILIATE USER DETAILS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update affiliate user",
+      error: error.message,
+    });
+  }
+});
 
 export default router;

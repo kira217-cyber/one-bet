@@ -7,14 +7,10 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTimes,
-  FaPhoneAlt,
-  FaEnvelope,
-  FaIdCard,
-  FaWallet,
-  FaUsers,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
+import { useNavigate } from "react-router";
 
 const USERS_PER_PAGE = 15;
 
@@ -25,15 +21,14 @@ const statusOptions = [
 ];
 
 const AllAffiliateUser = () => {
+  const navigate = useNavigate();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   const [activateModalOpen, setActivateModalOpen] = useState(false);
   const [activatingUser, setActivatingUser] = useState(null);
@@ -109,8 +104,7 @@ const AllAffiliateUser = () => {
   }, [currentPage, totalPages]);
 
   const handleViewDetails = (user) => {
-    setSelectedUser(user);
-    setDetailsModalOpen(true);
+    navigate(`/affiliate-user-details/${user._id}`);
   };
 
   const handleOpenActivateModal = (user) => {
@@ -296,24 +290,28 @@ const AllAffiliateUser = () => {
               </div>
 
               <div className="mt-4 space-y-2 text-sm text-green-100">
-                <div className="flex items-center gap-2">
-                  <FaPhoneAlt className="text-green-400" />
-                  <span>{user.phone || "N/A"}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaWallet className="text-green-400" />
-                  <span>Balance: {user.balance || 0}</span>
-                </div>
+                <p>
+                  <span className="text-green-300">Phone:</span>{" "}
+                  {user.phone || "N/A"}
+                </p>
+                <p>
+                  <span className="text-green-300">Balance:</span>{" "}
+                  {user.balance || 0}
+                </p>
+                <p>
+                  <span className="text-green-300">Referral Code:</span>{" "}
+                  {user.referralCode || "N/A"}
+                </p>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleViewDetails(user)}
                   className="cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30"
                 >
                   <FaEye />
-                  View
+                  View Details
                 </button>
 
                 {user.isActive ? (
@@ -512,95 +510,6 @@ const AllAffiliateUser = () => {
         </div>
       </div>
 
-      {/* View Details Modal */}
-      {detailsModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-green-700/40 bg-gradient-to-b from-black via-green-950/20 to-black shadow-2xl shadow-green-900/30 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-green-700/30 bg-gradient-to-r from-green-700/30 to-emerald-700/20">
-              <h2 className="text-lg md:text-xl font-semibold text-white">
-                Affiliate User Details
-              </h2>
-              <button
-                type="button"
-                onClick={() => setDetailsModalOpen(false)}
-                className="cursor-pointer p-2 rounded-lg hover:bg-green-900/30 text-white"
-              >
-                <FaTimes />
-              </button>
-            </div>
-
-            <div className="p-5 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailCard
-                icon={<FaIdCard />}
-                title="User ID"
-                value={selectedUser.userId}
-              />
-              <DetailCard
-                icon={<FaUsers />}
-                title="Full Name"
-                value={
-                  `${selectedUser.firstName || ""} ${selectedUser.lastName || ""}`.trim() ||
-                  "N/A"
-                }
-              />
-              <DetailCard
-                icon={<FaPhoneAlt />}
-                title="Phone"
-                value={selectedUser.phone || "N/A"}
-              />
-              <DetailCard
-                icon={<FaEnvelope />}
-                title="Email"
-                value={selectedUser.email || "N/A"}
-              />
-              <DetailCard
-                icon={<FaWallet />}
-                title="Balance"
-                value={selectedUser.balance ?? 0}
-              />
-              <DetailCard
-                title="Referral Code"
-                value={selectedUser.referralCode || "N/A"}
-              />
-              <DetailCard
-                title="Status"
-                value={selectedUser.isActive ? "Active" : "Inactive"}
-              />
-              <DetailCard
-                title="Referral Count"
-                value={selectedUser.referralCount ?? 0}
-              />
-              <DetailCard
-                title="Game Loss Commission"
-                value={selectedUser.gameLossCommission ?? 0}
-              />
-              <DetailCard
-                title="Deposit Commission"
-                value={selectedUser.depositCommission ?? 0}
-              />
-              <DetailCard
-                title="Refer Commission"
-                value={selectedUser.referCommission ?? 0}
-              />
-              <DetailCard
-                title="Game Win Commission"
-                value={selectedUser.gameWinCommission ?? 0}
-              />
-            </div>
-
-            <div className="px-5 pb-5 md:px-6 md:pb-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setDetailsModalOpen(false)}
-                className="cursor-pointer px-5 py-2.5 rounded-xl bg-green-500/20 border border-green-500/40 text-green-200 hover:bg-green-500/30"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Activate Modal */}
       {activateModalOpen && activatingUser && (
         <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -625,8 +534,8 @@ const AllAffiliateUser = () => {
                   {activatingUser.userId}
                 </h3>
                 <p className="text-sm text-green-100 mt-1">
-                  {activatingUser.phone}{" "}
-                  {activatingUser.email ? `• ${activatingUser.email}` : ""}
+                  {activatingUser.phone}
+                  {activatingUser.email ? ` • ${activatingUser.email}` : ""}
                 </p>
               </div>
 
@@ -682,18 +591,6 @@ const AllAffiliateUser = () => {
           </div>
         </div>
       )}
-    </div>
-  );
-};
-
-const DetailCard = ({ icon, title, value }) => {
-  return (
-    <div className="rounded-xl border border-green-700/30 bg-black/40 p-4">
-      <div className="flex items-center gap-2 text-green-300/80 text-sm">
-        {icon ? <span>{icon}</span> : null}
-        <span>{title}</span>
-      </div>
-      <p className="mt-2 text-white font-medium break-words">{value}</p>
     </div>
   );
 };

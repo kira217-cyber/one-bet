@@ -2,9 +2,20 @@ import React from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { Home } from "lucide-react";
+import { useSelector } from "react-redux";
+import { selectIsAuthenticated } from "../../features/auth/authSelectors";
 
 const NotFoundPage = () => {
   const navigate = useNavigate();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+
+  const handleNavigate = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/");
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#06110b] via-[#0b1f14] to-[#041008] flex items-center justify-center px-4">
@@ -44,7 +55,7 @@ const NotFoundPage = () => {
           className="mt-8"
         >
           <button
-            onClick={() => navigate("/")}
+            onClick={handleNavigate}
             className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-3 font-bold text-black shadow-lg shadow-green-500/20 transition-all duration-300 hover:scale-105 hover:from-green-400 hover:to-emerald-400"
           >
             <Home size={18} />
