@@ -1,6 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -31,7 +32,7 @@ const generateUniqueReferralCode = async () => {
 };
 
 /**
- * user object sanitize
+ * sanitize user object
  */
 const sanitizeUser = (user) => {
   return {
@@ -63,13 +64,30 @@ const sanitizeUser = (user) => {
 };
 
 /**
+ * create JWT token
+ * ✅ IMPORTANT: id must be user._id for all protected routes
+ */
+const createToken = (user) => {
+  return jwt.sign(
+    {
+      id: String(user._id), // ✅ main field used by other routes
+      _id: String(user._id), // ✅ keep backward compatibility
+      userId: user.userId,
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" },
+  );
+};
+
+/**
  * auth middleware
  */
-const authMiddleware = async (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization || "";
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
@@ -79,7 +97,22 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    const normalizedId = decoded?.id || decoded?._id;
+
+    if (!normalizedId || !mongoose.Types.ObjectId.isValid(normalizedId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid login session",
+      });
+    }
+
+    req.user = {
+      id: String(normalizedId),
+      _id: String(normalizedId),
+      userId: decoded?.userId || "",
+      role: decoded?.role || "user",
+    };
+
     next();
   } catch (error) {
     return res.status(401).json({
@@ -88,6 +121,27 @@ const authMiddleware = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * admin middleware
+ */
+// export const adminMiddleware = async (req, res, next) => {
+//   try {
+//     if (req.user?.role !== "admin") {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Admin only",
+//       });
+//     }
+
+//     next();
+//   } catch (error) {
+//     return res.status(403).json({
+//       success: false,
+//       message: "Admin only",
+//     });
+//   }
+// };
 
 /**
  * REGISTER
@@ -117,7 +171,6 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // ✅ allow letters, numbers, @ . _ -
     const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
     if (!userIdRegex.test(trimmedUserId)) {
       return res.status(400).json({
@@ -197,15 +250,7 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        _id: newUser._id,
-        userId: newUser.userId,
-        role: newUser.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    const token = createToken(newUser);
 
     return res.status(201).json({
       success: true,
@@ -263,15 +308,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        _id: user._id,
-        userId: user.userId,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    const token = createToken(user);
 
     return res.status(200).json({
       success: true,
@@ -295,7 +332,7 @@ router.post("/login", async (req, res) => {
  */
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate(
+    const user = await User.findById(req.user.id).populate(
       "referredBy createdUsers",
       "userId firstName lastName referralCode phone email",
     );
@@ -318,6 +355,66 @@ router.get("/me", authMiddleware, async (req, res) => {
       success: false,
       message: "Server error",
       error: error.message,
+    });
+  }
+});
+
+/**
+ * GET BALANCE ONLY
+ */
+router.get("/balance", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(
+      "userId balance isActive role phone email firstName lastName"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        _id: user._id,
+        userId: user.userId,
+        balance: Number(user.balance || 0),
+        isActive: user.isActive,
+        role: user.role,
+        phone: user.phone,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
+  } catch (error) {
+    console.error("GET BALANCE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch balance",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * OPTIONAL LOGOUT API
+ * JWT stateless বলে server-side এ কিছু clear করা লাগে না
+ * শুধু success response দিচ্ছে
+ */
+router.post("/logout", authMiddleware, async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed",
     });
   }
 });
@@ -493,15 +590,7 @@ router.post("/affiliate/login", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        _id: user._id,
-        userId: user.userId,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    const token = createToken(user);
 
     return res.status(200).json({
       success: true,
@@ -522,26 +611,30 @@ router.post("/affiliate/login", async (req, res) => {
 /**
  * ADMIN - GET ALL AFFILIATE USERS
  */
-router.get("/admin/affiliate-users", authMiddleware, async (req, res) => {
-  try {
-    const users = await User.find({ role: "aff-user" })
-      .select(
-        "userId firstName lastName phone email balance isActive referralCode gameLossCommission depositCommission referCommission gameWinCommission createdAt",
-      )
-      .sort({ createdAt: -1 });
+router.get(
+  "/admin/affiliate-users",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const users = await User.find({ role: "aff-user" })
+        .select(
+          "userId firstName lastName phone email balance isActive referralCode gameLossCommission depositCommission referCommission gameWinCommission createdAt",
+        )
+        .sort({ createdAt: -1 });
 
-    return res.status(200).json({
-      success: true,
-      users,
-    });
-  } catch (error) {
-    console.error("GET AFFILIATE USERS ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load affiliate users",
-    });
-  }
-});
+      return res.status(200).json({
+        success: true,
+        users,
+      });
+    } catch (error) {
+      console.error("GET AFFILIATE USERS ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load affiliate users",
+      });
+    }
+  },
+);
 
 /**
  * ADMIN - ACTIVATE / DEACTIVATE AFFILIATE USER
@@ -604,26 +697,31 @@ router.patch(
 /**
  * GET ALL USERS
  */
-router.get("/admin/all-users", authMiddleware, async (req, res) => {
-  try {
-    const users = await User.find({ role: "user" })
-      .select("userId phone email balance referralCode isActive createdAt")
-      .sort({ createdAt: -1 });
+router.get(
+  "/admin/all-users",
+  authMiddleware,
 
-    return res.status(200).json({
-      success: true,
-      users,
-    });
-  } catch (error) {
-    console.error("GET ALL USERS ERROR:", error);
+  async (req, res) => {
+    try {
+      const users = await User.find({ role: "user" })
+        .select("userId phone email balance referralCode isActive createdAt")
+        .sort({ createdAt: -1 });
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load users",
-      error: error.message,
-    });
-  }
-});
+      return res.status(200).json({
+        success: true,
+        users,
+      });
+    } catch (error) {
+      console.error("GET ALL USERS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load users",
+        error: error.message,
+      });
+    }
+  },
+);
 
 /**
  * TOGGLE USER STATUS
@@ -631,6 +729,7 @@ router.get("/admin/all-users", authMiddleware, async (req, res) => {
 router.patch(
   "/admin/all-users/:id/toggle-status",
   authMiddleware,
+
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -673,338 +772,359 @@ router.patch(
 /**
  * GET SINGLE USER DETAILS
  */
-router.get("/admin/all-users/:id", authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
+router.get(
+  "/admin/all-users/:id",
+  authMiddleware,
 
-    const user = await User.findOne({
-      _id: id,
-      role: "user",
-    })
-      .select(
-        "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
-      )
-      .populate("referredBy", "userId phone");
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    if (!user) {
-      return res.status(404).json({
+      const user = await User.findOne({
+        _id: id,
+        role: "user",
+      })
+        .select(
+          "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
+        )
+        .populate("referredBy", "userId phone");
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        user,
+      });
+    } catch (error) {
+      console.error("GET USER DETAILS ERROR:", error);
+
+      return res.status(500).json({
         success: false,
-        message: "User not found",
+        message: "Failed to load user details",
+        error: error.message,
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    console.error("GET USER DETAILS ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load user details",
-      error: error.message,
-    });
-  }
-});
+  },
+);
 
 /**
  * UPDATE SINGLE USER DETAILS
  */
+router.patch(
+  "/admin/all-users/:id",
+  authMiddleware,
 
-router.patch("/admin/all-users/:id", authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const {
-      userId,
-      email,
-      phone,
-      firstName,
-      lastName,
-      password,
-      isActive,
-      currency,
-      balance,
-      commissionBalance,
-      gameLossCommission,
-      depositCommission,
-      referCommission,
-      gameWinCommission,
-      gameLossCommissionBalance,
-      depositCommissionBalance,
-      referCommissionBalance,
-      gameWinCommissionBalance,
-    } = req.body;
+      const {
+        userId,
+        email,
+        phone,
+        firstName,
+        lastName,
+        password,
+        isActive,
+        currency,
+        balance,
+        commissionBalance,
+        gameLossCommission,
+        depositCommission,
+        referCommission,
+        gameWinCommission,
+        gameLossCommissionBalance,
+        depositCommissionBalance,
+        referCommissionBalance,
+        gameWinCommissionBalance,
+      } = req.body;
 
-    const user = await User.findOne({
-      _id: id,
-      role: "user",
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
+      const user = await User.findOne({
+        _id: id,
+        role: "user",
       });
-    }
 
-    const trimmedUserId = userId?.trim();
-    const trimmedPhone = phone?.trim();
-    const trimmedEmail = email ? email.trim().toLowerCase() : "";
-
-    if (!trimmedUserId || !trimmedPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "userId and phone are required",
-      });
-    }
-
-    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!userIdRegex.test(trimmedUserId)) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
-      });
-    }
-
-    const existingUserId = await User.findOne({
-      userId: trimmedUserId,
-      _id: { $ne: user._id },
-    });
-
-    if (existingUserId) {
-      return res.status(400).json({
-        success: false,
-        message: "This User ID already exists",
-      });
-    }
-
-    const existingPhone = await User.findOne({
-      phone: trimmedPhone,
-      _id: { $ne: user._id },
-    });
-
-    if (existingPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "This phone number already exists",
-      });
-    }
-
-    user.userId = trimmedUserId;
-    user.email = trimmedEmail;
-    user.phone = trimmedPhone;
-    user.firstName = firstName || "";
-    user.lastName = lastName || "";
-    user.isActive = !!isActive;
-    user.currency = currency || "BDT";
-    user.balance = Number(balance) || 0;
-    user.commissionBalance = Number(commissionBalance) || 0;
-    user.gameLossCommission = Number(gameLossCommission) || 0;
-    user.depositCommission = Number(depositCommission) || 0;
-    user.referCommission = Number(referCommission) || 0;
-    user.gameWinCommission = Number(gameWinCommission) || 0;
-    user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
-    user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
-    user.referCommissionBalance = Number(referCommissionBalance) || 0;
-    user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
-
-    if (password && password.trim()) {
-      if (password.trim().length < 6) {
-        return res.status(400).json({
+      if (!user) {
+        return res.status(404).json({
           success: false,
-          message: "Password must be at least 6 characters",
+          message: "User not found",
         });
       }
 
-      user.password = await bcrypt.hash(password.trim(), 10);
+      const trimmedUserId = userId?.trim();
+      const trimmedPhone = phone?.trim();
+      const trimmedEmail = email ? email.trim().toLowerCase() : "";
+
+      if (!trimmedUserId || !trimmedPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "userId and phone are required",
+        });
+      }
+
+      const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+      if (!userIdRegex.test(trimmedUserId)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
+        });
+      }
+
+      const existingUserId = await User.findOne({
+        userId: trimmedUserId,
+        _id: { $ne: user._id },
+      });
+
+      if (existingUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "This User ID already exists",
+        });
+      }
+
+      const existingPhone = await User.findOne({
+        phone: trimmedPhone,
+        _id: { $ne: user._id },
+      });
+
+      if (existingPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "This phone number already exists",
+        });
+      }
+
+      user.userId = trimmedUserId;
+      user.email = trimmedEmail;
+      user.phone = trimmedPhone;
+      user.firstName = firstName || "";
+      user.lastName = lastName || "";
+      user.isActive = !!isActive;
+      user.currency = currency || "BDT";
+      user.balance = Number(balance) || 0;
+      user.commissionBalance = Number(commissionBalance) || 0;
+      user.gameLossCommission = Number(gameLossCommission) || 0;
+      user.depositCommission = Number(depositCommission) || 0;
+      user.referCommission = Number(referCommission) || 0;
+      user.gameWinCommission = Number(gameWinCommission) || 0;
+      user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
+      user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
+      user.referCommissionBalance = Number(referCommissionBalance) || 0;
+      user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
+
+      if (password && password.trim()) {
+        if (password.trim().length < 6) {
+          return res.status(400).json({
+            success: false,
+            message: "Password must be at least 6 characters",
+          });
+        }
+
+        user.password = await bcrypt.hash(password.trim(), 10);
+      }
+
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "User updated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("UPDATE USER DETAILS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update user",
+        error: error.message,
+      });
     }
+  },
+);
 
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "User updated successfully",
-      user,
-    });
-  } catch (error) {
-    console.error("UPDATE USER DETAILS ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update user",
-      error: error.message,
-    });
-  }
-});
 /**
  * GET SINGLE AFFILIATE USER DETAILS
  */
-router.get("/admin/affiliate-users/:id", authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
+router.get(
+  "/admin/affiliate-users/:id",
+  authMiddleware,
 
-    const user = await User.findOne({
-      _id: id,
-      role: "aff-user",
-    })
-      .select(
-        "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
-      )
-      .populate("referredBy", "userId phone");
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Affiliate user not found",
-      });
-    }
+      const user = await User.findOne({
+        _id: id,
+        role: "aff-user",
+      })
+        .select(
+          "userId email phone firstName lastName isActive currency balance commissionBalance gameLossCommission depositCommission referCommission gameWinCommission gameLossCommissionBalance depositCommissionBalance referCommissionBalance gameWinCommissionBalance referralCode role createdAt updatedAt referralCount referredBy",
+        )
+        .populate("referredBy", "userId phone");
 
-    return res.status(200).json({
-      success: true,
-      user,
-    });
-  } catch (error) {
-    console.error("GET AFFILIATE USER DETAILS ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load affiliate user details",
-      error: error.message,
-    });
-  }
-});
-/**
- * UPDATE SINGLE AFFILIATE USER DETAILS
- */
-router.patch("/admin/affiliate-users/:id", authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const {
-      userId,
-      email,
-      phone,
-      firstName,
-      lastName,
-      password,
-      isActive,
-      currency,
-      balance,
-      commissionBalance,
-      gameLossCommission,
-      depositCommission,
-      referCommission,
-      gameWinCommission,
-      gameLossCommissionBalance,
-      depositCommissionBalance,
-      referCommissionBalance,
-      gameWinCommissionBalance,
-    } = req.body;
-
-    const user = await User.findOne({
-      _id: id,
-      role: "aff-user",
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Affiliate user not found",
-      });
-    }
-
-    const trimmedUserId = userId?.trim();
-    const trimmedPhone = phone?.trim();
-    const trimmedEmail = email ? email.trim().toLowerCase() : "";
-
-    if (!trimmedUserId || !trimmedPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "userId and phone are required",
-      });
-    }
-
-    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!userIdRegex.test(trimmedUserId)) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
-      });
-    }
-
-    const existingUserId = await User.findOne({
-      userId: trimmedUserId,
-      _id: { $ne: user._id },
-    });
-
-    if (existingUserId) {
-      return res.status(400).json({
-        success: false,
-        message: "This User ID already exists",
-      });
-    }
-
-    const existingPhone = await User.findOne({
-      phone: trimmedPhone,
-      _id: { $ne: user._id },
-    });
-
-    if (existingPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "This phone number already exists",
-      });
-    }
-
-    user.userId = trimmedUserId;
-    user.email = trimmedEmail;
-    user.phone = trimmedPhone;
-    user.firstName = firstName || "";
-    user.lastName = lastName || "";
-    user.isActive = !!isActive;
-    user.currency = currency || "BDT";
-    user.balance = Number(balance) || 0;
-    user.commissionBalance = Number(commissionBalance) || 0;
-    user.gameLossCommission = Number(gameLossCommission) || 0;
-    user.depositCommission = Number(depositCommission) || 0;
-    user.referCommission = Number(referCommission) || 0;
-    user.gameWinCommission = Number(gameWinCommission) || 0;
-    user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
-    user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
-    user.referCommissionBalance = Number(referCommissionBalance) || 0;
-    user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
-
-    if (password && password.trim()) {
-      if (password.trim().length < 6) {
-        return res.status(400).json({
+      if (!user) {
+        return res.status(404).json({
           success: false,
-          message: "Password must be at least 6 characters",
+          message: "Affiliate user not found",
         });
       }
 
-      user.password = await bcrypt.hash(password.trim(), 10);
+      return res.status(200).json({
+        success: true,
+        user,
+      });
+    } catch (error) {
+      console.error("GET AFFILIATE USER DETAILS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load affiliate user details",
+        error: error.message,
+      });
     }
+  },
+);
 
-    await user.save();
+/**
+ * UPDATE SINGLE AFFILIATE USER DETAILS
+ */
+router.patch(
+  "/admin/affiliate-users/:id",
+  authMiddleware,
 
-    return res.status(200).json({
-      success: true,
-      message: "Affiliate user updated successfully",
-      user,
-    });
-  } catch (error) {
-    console.error("UPDATE AFFILIATE USER DETAILS ERROR:", error);
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update affiliate user",
-      error: error.message,
-    });
-  }
-});
+      const {
+        userId,
+        email,
+        phone,
+        firstName,
+        lastName,
+        password,
+        isActive,
+        currency,
+        balance,
+        commissionBalance,
+        gameLossCommission,
+        depositCommission,
+        referCommission,
+        gameWinCommission,
+        gameLossCommissionBalance,
+        depositCommissionBalance,
+        referCommissionBalance,
+        gameWinCommissionBalance,
+      } = req.body;
+
+      const user = await User.findOne({
+        _id: id,
+        role: "aff-user",
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "Affiliate user not found",
+        });
+      }
+
+      const trimmedUserId = userId?.trim();
+      const trimmedPhone = phone?.trim();
+      const trimmedEmail = email ? email.trim().toLowerCase() : "";
+
+      if (!trimmedUserId || !trimmedPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "userId and phone are required",
+        });
+      }
+
+      const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+      if (!userIdRegex.test(trimmedUserId)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
+        });
+      }
+
+      const existingUserId = await User.findOne({
+        userId: trimmedUserId,
+        _id: { $ne: user._id },
+      });
+
+      if (existingUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "This User ID already exists",
+        });
+      }
+
+      const existingPhone = await User.findOne({
+        phone: trimmedPhone,
+        _id: { $ne: user._id },
+      });
+
+      if (existingPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "This phone number already exists",
+        });
+      }
+
+      user.userId = trimmedUserId;
+      user.email = trimmedEmail;
+      user.phone = trimmedPhone;
+      user.firstName = firstName || "";
+      user.lastName = lastName || "";
+      user.isActive = !!isActive;
+      user.currency = currency || "BDT";
+      user.balance = Number(balance) || 0;
+      user.commissionBalance = Number(commissionBalance) || 0;
+      user.gameLossCommission = Number(gameLossCommission) || 0;
+      user.depositCommission = Number(depositCommission) || 0;
+      user.referCommission = Number(referCommission) || 0;
+      user.gameWinCommission = Number(gameWinCommission) || 0;
+      user.gameLossCommissionBalance = Number(gameLossCommissionBalance) || 0;
+      user.depositCommissionBalance = Number(depositCommissionBalance) || 0;
+      user.referCommissionBalance = Number(referCommissionBalance) || 0;
+      user.gameWinCommissionBalance = Number(gameWinCommissionBalance) || 0;
+
+      if (password && password.trim()) {
+        if (password.trim().length < 6) {
+          return res.status(400).json({
+            success: false,
+            message: "Password must be at least 6 characters",
+          });
+        }
+
+        user.password = await bcrypt.hash(password.trim(), 10);
+      }
+
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Affiliate user updated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("UPDATE AFFILIATE USER DETAILS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update affiliate user",
+        error: error.message,
+      });
+    }
+  },
+);
 
 export default router;

@@ -6,10 +6,15 @@ import connectDB from "./config/db.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import affiliateRoutes from "./routes/affiliateRoutes.js";
+import depositMethodRoutes from "./routes/depositMethodRoutes.js";
+import withdrawMethodRoutes from "./routes/withdrawMethodRoutes.js";
+import depositRequestsRoutes from "./routes/depositRequestsRoutes.js";
+import turnOverRoutes from "./routes/turnOverRoutes.js";
+import withdrawRequestRoutes from "./routes/withdrawRequestRoutes.js";
+
+
+
 // ...
-
-
-
 
 dotenv.config();
 
@@ -36,7 +41,11 @@ app.get("/", (req, res) => {
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/affiliate", affiliateRoutes);
-
+app.use("/api/deposit-methods", depositMethodRoutes);
+app.use("/api/withdraw-methods", withdrawMethodRoutes);
+app.use("/api", depositRequestsRoutes);
+app.use("/api", turnOverRoutes);
+app.use("/api", withdrawRequestRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

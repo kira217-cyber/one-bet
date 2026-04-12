@@ -8,7 +8,7 @@ const RootLayout = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
-  const hideNavbarRoutes = ["/login", "/register"];
+  const hideNavbarRoutes = ["/login", "/register", "/account"];
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);
 
   return (

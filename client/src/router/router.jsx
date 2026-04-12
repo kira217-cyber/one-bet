@@ -7,6 +7,8 @@ import Register from "../pages/Register/Register";
 import Withdraw from "../pages/Withdraw/Withdraw";
 import Deposit from "../pages/Deposit/Deposit";
 import PrivateRoute from "../PrivateRoute/PrivateRoute";
+import Account from "../pages/Account/Account";
+import Promotions from "../pages/Promotions/Promotions";
 
 export const routes = createBrowserRouter([
   {
@@ -32,6 +34,22 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute>
             <Deposit />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "account",
+        element: (
+          <PrivateRoute>
+            <Account />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/promotions",
+        element: (
+          <PrivateRoute>
+            <Promotions />
           </PrivateRoute>
         ),
       },

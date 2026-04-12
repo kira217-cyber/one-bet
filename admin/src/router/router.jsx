@@ -13,6 +13,10 @@ import AllUser from "../pages/AllUser/AllUser";
 import AllAffiliateUser from "../pages/AllAffiliateUser/AllAffiliateUser";
 import UserDetails from "../pages/UserDetails/UserDetails";
 import AffUserDetails from "../pages/AffUserDetails/AffUserDetails";
+import DepositRequest from "../pages/DepositRequest/DepositRequest";
+import DepositRequestDetails from "../pages/DepositRequestDetails/DepositRequestDetails";
+import WithdrawRequestDetails from "../pages/WithdrawRequestDetails/WithdrawRequestDetails";
+import WithdrawRequest from "../pages/WithdrawRequest/WithdrawRequest";
 
 export const routes = createBrowserRouter([
   {
@@ -103,6 +107,40 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="affiliate-user-details">
             <AffUserDetails />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "deposit-request",
+        element: (
+          <PrivateRoute permKey="deposit-request">
+            {" "}
+            <DepositRequest />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "deposit-request/:id",
+        element: (
+          <PrivateRoute permKey="deposit-request-details">
+            {" "}
+            <DepositRequestDetails />{" "}
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "withdraw-request",
+        element: (
+          <PrivateRoute permKey="withdraw-request">
+            <WithdrawRequest />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "withdraw-request/:id",
+        element: (
+          <PrivateRoute permKey="withdraw-request-details">
+            <WithdrawRequestDetails />
           </PrivateRoute>
         ),
       },

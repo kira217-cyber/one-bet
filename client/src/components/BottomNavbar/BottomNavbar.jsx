@@ -61,6 +61,11 @@ const BottomNavbar = () => {
       label: isBangla ? "ডিপোজিট" : "Deposit",
       icon: Wallet,
     },
+     {
+      to: "/account",
+      label: isBangla ? "অ্যাকাউন্ট" : "Account",
+      icon: UserRound,
+    },
   ];
 
   return (
@@ -129,7 +134,7 @@ const BottomNavbar = () => {
             })}
 
             {/* My Account */}
-            <button
+            {/* <button
               type="button"
               onClick={() => setOpenAccount(true)}
               className="flex flex-col items-center justify-center flex-1 cursor-pointer"
@@ -146,7 +151,7 @@ const BottomNavbar = () => {
               <span className="text-[12px] leading-none mt-1">
                 {isBangla ? "আমার অ্যাকাউন্ট" : "My Account"}
               </span>
-            </button>
+            </button> */}
           </div>
         </div>
       )}
