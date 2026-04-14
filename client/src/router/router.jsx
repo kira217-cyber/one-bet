@@ -9,6 +9,8 @@ import Deposit from "../pages/Deposit/Deposit";
 import PrivateRoute from "../PrivateRoute/PrivateRoute";
 import Account from "../pages/Account/Account";
 import Promotions from "../pages/Promotions/Promotions";
+import Games from "../pages/Games/Games";
+import AutoDeposit from "../pages/AutoDeposit/AutoDeposit";
 
 export const routes = createBrowserRouter([
   {
@@ -38,6 +40,14 @@ export const routes = createBrowserRouter([
         ),
       },
       {
+        path: "auto-deposit",
+        element: (
+          <PrivateRoute>
+            <AutoDeposit />
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "account",
         element: (
           <PrivateRoute>
@@ -52,6 +62,10 @@ export const routes = createBrowserRouter([
             <Promotions />
           </PrivateRoute>
         ),
+      },
+      {
+        path: "/category/:categoryId/games",
+        element: <Games />,
       },
       {
         path: "login",

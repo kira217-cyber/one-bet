@@ -10,7 +10,7 @@ const TurnOverSchema = new mongoose.Schema(
 
     sourceType: {
       type: String,
-      enum: ["deposit", "redeem"],
+      enum: ["deposit", "auto-deposit"],
       required: true,
       index: true,
     },

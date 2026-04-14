@@ -17,6 +17,11 @@ import DepositRequest from "../pages/DepositRequest/DepositRequest";
 import DepositRequestDetails from "../pages/DepositRequestDetails/DepositRequestDetails";
 import WithdrawRequestDetails from "../pages/WithdrawRequestDetails/WithdrawRequestDetails";
 import WithdrawRequest from "../pages/WithdrawRequest/WithdrawRequest";
+import AddCategory from "../pages/AddCategory/AddCategory";
+import AddProvider from "../pages/AddProvider/AddProvider";
+import AddGames from "../pages/AddGames/AddGames";
+import AutoDepositHistory from "../pages/AutoDepositHistory/AutoDepositHistory";
+import AutoDepositSetting from "../pages/AutoDepositSetting/AutoDepositSetting";
 
 export const routes = createBrowserRouter([
   {
@@ -141,6 +146,46 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="withdraw-request-details">
             <WithdrawRequestDetails />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-game-category",
+        element: (
+          <PrivateRoute permKey="add-game-category">
+            <AddCategory />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-provider",
+        element: (
+          <PrivateRoute permKey="add-provider">
+            <AddProvider />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-games",
+        element: (
+          <PrivateRoute permKey="add-games">
+            <AddGames />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-auto-deposit",
+        element: (
+          <PrivateRoute permKey="add-auto-deposit">
+            <AutoDepositSetting />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "auto-deposit-history",
+        element: (
+          <PrivateRoute permKey="auto-deposit-history">
+            <AutoDepositHistory />
           </PrivateRoute>
         ),
       },

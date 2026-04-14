@@ -128,10 +128,10 @@ const Sidebar = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white tracking-tight">
-                    ADMIN
+                    AFFILIATE
                   </h2>
                   <p className="text-sm text-green-200/90 font-medium">
-                    Admin Panel
+                    Aff Panel
                   </p>
                 </div>
               </div>

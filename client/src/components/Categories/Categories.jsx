@@ -1,44 +1,77 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Sports from "../Sports/Sports";
+import HotGames from "../HotGames/HotGames";
+import Providers from "../Providers/Providers";
+import { api } from "../../api/axios";
+import { useLanguage } from "../../context/LanguageProvider";
 
 const Categories = () => {
-  const categories = [
-    {
-      name: "Sports",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Sports.svg",
-    },
-    {
-      name: "Hot Games",
-      icon: "https://beit365.bet/assets/images/home-type/exclusive.svg",
-    },
-    {
-      name: "Casino",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Casino.svg",
-    },
-    {
-      name: "Slots",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Slot.svg",
-    },
-    {
-      name: "Type",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Table.svg",
-    },
-    {
-      name: "Fishing",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Fishing.svg",
-    },
-    {
-      name: "Lottery",
-      icon: "https://beit365.bet/assets/images/home-page-menu/Lottery.svg",
-    },
-  ];
-
+  const [dynamicCategories, setDynamicCategories] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const { language } = useLanguage();
 
   const scrollRef = useRef(null);
   const isDown = useRef(false);
   const startX = useRef(0);
   const scrollLeft = useRef(0);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get("/api/game-categories");
+        setDynamicCategories(res?.data?.data || []);
+      } catch (error) {
+        console.error("Failed to fetch game categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const fixedCategories = useMemo(
+    () => [
+      {
+        type: "fixed",
+        name: { bn: "স্পোর্টস", en: "Sports" },
+        title: { bn: "স্পোর্টস", en: "Sports" },
+        icon: "https://beit365.bet/assets/images/home-page-menu/Sports.svg",
+        key: "sports",
+      },
+      {
+        type: "fixed",
+        name: { bn: "হট গেমস", en: "Hot Games" },
+        title: { bn: "হট গেমস", en: "Hot Games" },
+        icon: "https://beit365.bet/assets/images/home-type/exclusive.svg",
+        key: "hot-games",
+      },
+    ],
+    [],
+  );
+
+  const categories = useMemo(() => {
+    const mappedDynamic = dynamicCategories.map((item) => ({
+      type: "dynamic",
+      _id: item._id,
+      name: item.categoryName,
+      title: item.categoryTitle,
+      icon: item.iconImageUrl,
+      status: item.status,
+      order: item.order,
+      key: item._id,
+    }));
+
+    return [...fixedCategories, ...mappedDynamic];
+  }, [dynamicCategories, fixedCategories]);
+
+  const getText = (textObj) => {
+    if (!textObj) return "";
+    return language === "English"
+      ? textObj.en || textObj.bn
+      : textObj.bn || textObj.en;
+  };
+
+  const activeCategory = categories[activeIndex];
 
   const handleMouseDown = (e) => {
     isDown.current = true;
@@ -64,7 +97,6 @@ const Categories = () => {
 
   return (
     <div>
-      {/* Categories Scroll */}
       <div
         ref={scrollRef}
         className="flex overflow-x-auto border-b border-[#0f6b52] cursor-grab no-scrollbar"
@@ -78,22 +110,24 @@ const Categories = () => {
 
           return (
             <div
-              key={index}
+              key={cat.key}
               onClick={() => setActiveIndex(index)}
-              className={`flex flex-col items-center justify-center min-w-[85px] py-4 cursor-pointer relative transition-all duration-200
-                ${isActive ? "bg-[#006c4a]" : ""}
-              `}
+              className={`flex flex-col items-center justify-center min-w-[85px] py-4 px-2 cursor-pointer relative transition-all duration-200 ${
+                isActive ? "bg-[#006c4a]" : ""
+              }`}
             >
-              <img
-                src={cat.icon}
-                alt={cat.name}
-                className={`w-14 h-14 mb-1 bg-[#003F2C] rounded-full p-2 ${
-                  isActive ? "opacity-100" : "opacity-60"
-                }`}
-              />
+              <div className="w-14 h-14 mb-1 bg-[#003F2C] rounded-full p-2 overflow-hidden flex items-center justify-center">
+                <img
+                  src={cat.icon}
+                  alt={getText(cat.name)}
+                  className={`w-full h-full object-contain ${
+                    isActive ? "opacity-100" : "opacity-60"
+                  }`}
+                />
+              </div>
 
-              <span className={`text-md font-bold text-yellow-400`}>
-                {cat.name}
+              <span className="text-md font-bold text-yellow-400 text-center leading-tight">
+                {getText(cat.name)}
               </span>
 
               {isActive && (
@@ -108,17 +142,17 @@ const Categories = () => {
         })}
       </div>
 
-      {/* Active Text */}
-      <div className="px-3 py-2">
-        {categories[activeIndex].name !== "Sports" && (
-          <p className="text-yellow-400 font-semibold text-sm">
-            {categories[activeIndex].name}
-          </p>
+      <div>
+        {activeCategory?.key === "sports" && <Sports />}
+        {activeCategory?.key === "hot-games" && <HotGames />}
+
+        {activeCategory?.type === "dynamic" && (
+          <Providers
+            categoryId={activeCategory?._id}
+            categoryTitle={getText(activeCategory?.title)}
+          />
         )}
       </div>
-
-      {/* 🔥 Dynamic Component Render */}
-      <div>{categories[activeIndex].name === "Sports" && <Sports />}</div>
     </div>
   );
 };

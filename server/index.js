@@ -11,9 +11,10 @@ import withdrawMethodRoutes from "./routes/withdrawMethodRoutes.js";
 import depositRequestsRoutes from "./routes/depositRequestsRoutes.js";
 import turnOverRoutes from "./routes/turnOverRoutes.js";
 import withdrawRequestRoutes from "./routes/withdrawRequestRoutes.js";
-
-
-
+import gameCategoryRoutes from "./routes/gameCategoryRoutes.js";
+import gameProviderRoutes from "./routes/gameProviderRoutes.js";
+import gamesRoutes from "./routes/gamesRoutes.js";
+import autodepositRoutes from "./routes/autodepositRoutes.js";
 // ...
 
 dotenv.config();
@@ -46,6 +47,11 @@ app.use("/api/withdraw-methods", withdrawMethodRoutes);
 app.use("/api", depositRequestsRoutes);
 app.use("/api", turnOverRoutes);
 app.use("/api", withdrawRequestRoutes);
+app.use("/api/game-categories", gameCategoryRoutes);
+app.use("/api/game-providers", gameProviderRoutes);
+app.use("/api/games", gamesRoutes);
+app.use("/api/auto-deposit", autodepositRoutes);
+
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

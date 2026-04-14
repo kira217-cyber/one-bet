@@ -207,7 +207,7 @@ const Account = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00563d] shadow-inner transition-all duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
               <Icon className="h-6 w-6 text-white" strokeWidth={1.8} />
             </div>
-            <span className="mt-3 flex min-h-[34px] items-start justify-center text-[13px] font-medium leading-[1.15] text-white sm:text-[15px]">
+            <span className="mt-3 flex min-h-[34px] items-start justify-center text-[13px] font-bold leading-[1.15] text-white sm:text-[15px]">
               {item.title}
             </span>
           </NavLink>
@@ -228,26 +228,26 @@ const Account = () => {
   return (
     <div className="text-white">
       {/* Top Header */}
-      <div className="relative overflow-hidden rounded-b-[36px] bg-[#d9e400] px-4 pb-7 pt-5">
+      <div className="relative overflow-hidden flex justify-center px-4 pb-7 pt-5 bg-gradient-to-br from-black via-green-950/20 to-black shadow-lg shadow-green-900/20">
         {/* Decorative circles */}
-        <div className="absolute -left-8 -top-10 h-32 w-32 rounded-full bg-[#c3cf00] opacity-80" />
+        {/* <div className="absolute -left-8 -top-10 h-32 w-32 rounded-full bg-[#c3cf00] opacity-80" />
         <div className="absolute right-10 top-4 h-20 w-20 rounded-full bg-[#cad500] opacity-80" />
         <div className="absolute right-2 top-20 h-24 w-24 rounded-full bg-[#bcc800] opacity-60" />
-        <div className="absolute bottom-3 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-[#cfd900] opacity-30" />
+        <div className="absolute bottom-3 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-[#cfd900] opacity-30" /> */}
 
         {/* Close button */}
         <button
           onClick={handleHome}
-          className="absolute right-4 top-4 z-[999] text-[#163d2f] cursor-pointer"
+          className="absolute right-4 top-4 z-[999] text-white cursor-pointer"
         >
           <X className="h-8 w-8" strokeWidth={2.2} />
         </button>
 
-        <div className="relative z-10 flex items-center gap-3 pt-8">
+        <div className="relative z-10 flex items-center gap-3 pt-8 flex-col">
           {/* Avatar */}
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-200 shadow-md">
             <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-b from-[#f6f6f6] via-[#f0f0f0] to-[#ff9800]">
-              <span className="text-[44px] font-normal leading-none text-[#2f9e44]">
+              <span className="text-[44px] font-normal leading-none text-red-600">
                 {String(realUserId || "D")
                   .charAt(0)
                   .toUpperCase()}
@@ -256,26 +256,22 @@ const Account = () => {
           </div>
 
           {/* User info */}
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[18px] font-bold text-[#00693f] sm:text-[22px]">
-              {realUserId}
+          <div className="min-w-0 flex-1 justify-center text-center ">
+            <h2 className="truncate text-[18px] font-bold text-black sm:text-[22px] p-1 rounded-2xl  bg-yellow-400">
+             userId: {realUserId}
             </h2>
-
-            <button className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#2d2d2d] px-3 py-1.5 text-[13px] font-semibold text-white shadow">
-              <span>{text.vipPoints}</span>
-              <span className="opacity-70">|</span>
-              <span>{text.myVip}</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <h2 className="truncate text-[18px] font-bold text-white sm:text-[22px]">
+             Full Name: {realUserId}
+            </h2>
           </div>
         </div>
       </div>
 
       {/* Wallet Card */}
       <div className="mt-2 space-y-2 px-2 pb-2">
-        <div className="overflow-hidden rounded-[4px] bg-[#006b49] shadow-sm">
+        <div className="overflow-hidden rounded-[4px] bg-red-800 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-lg font-bold text-yellow-300 sm:text-xl">
+            <div className="flex items-center gap-2 text-lg font-bold text-whitesm:text-xl">
               <span>{text.mainWallet}</span>
 
               <button
@@ -301,7 +297,7 @@ const Account = () => {
               </button>
             </div>
 
-            <div className="text-[28px] font-bold leading-none text-yellow-300 sm:text-[32px]">
+            <div className="text-[28px] font-bold leading-none text-white sm:text-[32px]">
               {loadingBalance
                 ? text.loading
                 : showBalance
@@ -344,7 +340,7 @@ const Account = () => {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-[4px] bg-[#006b49] px-4 py-4 text-xl font-semibold text-white transition-all duration-200 hover:bg-[#007a54]"
+          className="flex w-full items-center justify-center gap-2 rounded-[4px] bg-red-600 px-4 py-4 text-xl font-semibold text-white transition-all duration-200 hover:bg-red-700"
         >
           <LogOut className="h-5 w-5" />
           <span>{text.logout}</span>

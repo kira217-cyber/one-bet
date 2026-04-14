@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import DepositModal from "./DepositModal";
 import { api } from "../../api/axios";
+import Tab from "../../components/Tab/Tab";
 
 const OptionLogo = ({ type }) => {
   const base = "w-10 h-10 rounded-full flex items-center justify-center";
@@ -286,9 +287,10 @@ const Deposit = () => {
 
   return (
     <>
+      <Tab />
       <div className="w-full text-white">
         <div className="grid grid-cols-1 gap-4 ">
-          <div className="rounded-2xl border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-5 sm:p-6 shadow-lg shadow-green-900/20">
+          <div className=" border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-5 sm:p-6 shadow-lg shadow-green-900/20">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 text-black shadow-lg shadow-green-500/30">
                 <FaWallet className="text-xl" />

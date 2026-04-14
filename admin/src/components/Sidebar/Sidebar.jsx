@@ -118,10 +118,10 @@ const Sidebar = () => {
         text: "Add Provider",
       },
       {
-        key: "add-game",
-        to: "/add-game",
+        key: "add-games",
+        to: "/add-games",
         icon: <FaGamepad className="text-lime-400" />,
-        text: "Add Game",
+        text: "Add Games",
       },
       {
         key: "live-controller",

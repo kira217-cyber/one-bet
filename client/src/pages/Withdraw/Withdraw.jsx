@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 
 import { api } from "../../api/axios";
 import { selectIsAuthenticated, selectUser } from "../../features/auth/authSelectors";
+import Tab from "../../components/Tab/Tab";
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -258,9 +259,11 @@ const Withdraw = () => {
   };
 
   return (
+    <>
+    <Tab />
     <div className="w-full text-white">
       <div className="grid grid-cols-1 gap-4 ">
-        <div className="rounded-2xl border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-5 shadow-lg shadow-green-900/20 sm:p-6">
+        <div className="border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-5 shadow-lg shadow-green-900/20 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 text-black shadow-lg shadow-green-500/30">
               <FaWallet className="text-xl" />
@@ -504,6 +507,7 @@ const Withdraw = () => {
         </div> */}
       </div>
     </div>
+    </>
   );
 };
 
