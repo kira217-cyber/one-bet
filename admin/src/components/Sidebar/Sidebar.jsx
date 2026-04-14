@@ -196,12 +196,6 @@ const Sidebar = () => {
         text: "Add Deposit",
       },
       {
-        key: "add-redeem",
-        to: "/add-redeem",
-        icon: <PiHandDepositBold />,
-        text: "Add Redeem",
-      },
-      {
         key: "deposit-request",
         to: "/deposit-request",
         icon: <FaCodePullRequest />,

@@ -15,6 +15,11 @@ import gameCategoryRoutes from "./routes/gameCategoryRoutes.js";
 import gameProviderRoutes from "./routes/gameProviderRoutes.js";
 import gamesRoutes from "./routes/gamesRoutes.js";
 import autodepositRoutes from "./routes/autodepositRoutes.js";
+import playGameRoutes from "./routes/playGameRoutes.js";
+import callbackRoutes from "./routes/callBackRoutes.js";
+import allHistoryRoutes from "./routes/allHistoryRoutes.js";
+
+
 // ...
 
 dotenv.config();
@@ -51,7 +56,9 @@ app.use("/api/game-categories", gameCategoryRoutes);
 app.use("/api/game-providers", gameProviderRoutes);
 app.use("/api/games", gamesRoutes);
 app.use("/api/auto-deposit", autodepositRoutes);
-
+app.use("/api/play-game", playGameRoutes);
+app.use("/api/callback", callbackRoutes);
+app.use("/api/history", allHistoryRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

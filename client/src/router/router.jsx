@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import RootLayout from "../RootLayout/RootLayout";
 import Home from "../pages/Home/Home";
 import NotFoundPage from "../pages/NotFoundPage/NotFoundPage";
@@ -11,6 +11,14 @@ import Account from "../pages/Account/Account";
 import Promotions from "../pages/Promotions/Promotions";
 import Games from "../pages/Games/Games";
 import AutoDeposit from "../pages/AutoDeposit/AutoDeposit";
+import PlayGame from "../pages/PlayGame/PlayGame";
+import HistoryLayout from "../HistoryLayout/HistoryLayout";
+import DepositHistory from "../pages/DepositHistory/DepositHistory";
+import WithdrawHistory from "../pages/WithdrawHistory/WithdrawHistory";
+import AutoDepositHistory from "../pages/AutoDepositHistory/AutoDepositHistory";
+import BetHistory from "../pages/BetHistory/BetHistory";
+import TurnoverHistory from "../pages/TurnoverHistory/TurnoverHistory";
+
 
 export const routes = createBrowserRouter([
   {
@@ -26,7 +34,6 @@ export const routes = createBrowserRouter([
         path: "withdraw",
         element: (
           <PrivateRoute>
-            {" "}
             <Withdraw />
           </PrivateRoute>
         ),
@@ -48,6 +55,14 @@ export const routes = createBrowserRouter([
         ),
       },
       {
+        path: "play-game/:gameId",
+        element: (
+          <PrivateRoute>
+            <PlayGame />
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "account",
         element: (
           <PrivateRoute>
@@ -56,7 +71,7 @@ export const routes = createBrowserRouter([
         ),
       },
       {
-        path: "/promotions",
+        path: "promotions",
         element: (
           <PrivateRoute>
             <Promotions />
@@ -64,9 +79,46 @@ export const routes = createBrowserRouter([
         ),
       },
       {
-        path: "/category/:categoryId/games",
+        path: "category/:categoryId/games",
         element: <Games />,
       },
+
+      /* ✅ History route RootLayout এর ভিতরে */
+      {
+        path: "history",
+        element: (
+          <PrivateRoute>
+            <HistoryLayout />
+          </PrivateRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="deposit" replace />,
+          },
+          {
+            path: "deposit-history",
+            element: <DepositHistory />,
+          },
+          {
+            path: "withdraw-history",
+            element: <WithdrawHistory />,
+          },
+          {
+            path: "auto-deposit-history",
+            element: <AutoDepositHistory />,
+          },
+          {
+            path: "bet-history",
+            element: <BetHistory />,
+          },
+          {
+            path: "turnover-history",
+            element: <TurnoverHistory />,
+          },
+        ],
+      },
+
       {
         path: "login",
         element: <Login />,

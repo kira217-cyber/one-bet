@@ -5,6 +5,9 @@ import { FaSearch } from "react-icons/fa";
 import { FaRegStar } from "react-icons/fa6";
 import { api } from "../../api/axios";
 import { useLanguage } from "../../context/LanguageProvider";
+import { selectIsAuthenticated } from "../../features/auth/authSelectors";
+import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 const ORACLE_BY_IDS_API = "https://api.oraclegames.live/api/games/by-ids";
 const ORACLE_PROVIDER_API = "https://api.oraclegames.live/api/providers";
@@ -16,6 +19,7 @@ const Games = () => {
   const navigate = useNavigate();
   const { categoryId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   const { isBangla, isEnglish } = useLanguage();
 
   const providerFromQuery = searchParams.get("provider") || "";
@@ -133,8 +137,11 @@ const Games = () => {
 
         const results = await Promise.all(
           chunks.map((chunk) =>
-            axios.get(
-              `${ORACLE_BY_IDS_API}?ids=${encodeURIComponent(chunk.join(","))}`,
+            axios.post(
+              ORACLE_BY_IDS_API,
+              {
+                ids: chunk,
+              },
               {
                 headers: {
                   "x-api-key": ORACLE_KEY,
@@ -216,7 +223,6 @@ const Games = () => {
       });
     }
 
-    // ✅ OLD FIRST (last saved last)
     return filtered.sort((a, b) => {
       return new Date(a.createdAt) - new Date(b.createdAt);
     });
@@ -256,7 +262,20 @@ const Games = () => {
   };
 
   const handleGameClick = (game) => {
-    navigate(`/single-game/${game._id}`);
+    if (!isAuthenticated) {
+      toast.error(isBangla ? "খেলতে লগইন করুন" : "Please login to continue");
+      navigate("/login");
+      return;
+    }
+
+    const targetId = game?._id || game?.gameId;
+
+    if (!targetId) {
+      toast.error(isBangla ? "গেম আইডি পাওয়া যায়নি" : "Game id not found");
+      return;
+    }
+
+    navigate(`/play-game/${targetId}`);
   };
 
   if (!categoryId) return null;
@@ -293,12 +312,6 @@ const Games = () => {
         <div className="flex items-stretch gap-[4px] bg-[#00563c] p-[4px] rounded-[4px]">
           {/* Left Scrollable Tabs */}
           <div className="relative flex-1 min-w-0">
-            {/* Left fade */}
-            {/* <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-5 bg-gradient-to-r from-[#00563c] to-transparent" /> */}
-
-            {/* Right fade */}
-            {/* <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-5 bg-gradient-to-l from-[#00563c] to-transparent" /> */}
-
             <div
               className="flex items-center gap-[4px] overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing"
               onMouseDown={(e) => {

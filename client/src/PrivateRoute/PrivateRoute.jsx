@@ -17,7 +17,7 @@ const PrivateRoute = ({ children }) => {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-orange-200 text-lg font-medium">
-            যাচাই করা হচ্ছে...
+            Loading, please wait...
           </p>
         </div>
       </div>

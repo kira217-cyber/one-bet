@@ -2,7 +2,8 @@ import React from "react";
 import { Download, MessageCircle } from "lucide-react";
 import { BiMenuAltLeft } from "react-icons/bi";
 import { Link } from "react-router";
-import { useLanguage } from "../../Context/LanguageProvider";
+import { useLanguage } from "../../context/LanguageProvider";
+
 
 const Navber = ({ setOpen }) => {
   const { isBangla } = useLanguage();

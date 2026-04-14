@@ -59,10 +59,10 @@ const Account = () => {
     pl: isBangla ? "পি&এল" : "P&L",
     history: isBangla ? "হিস্টোরি" : "History",
     bettingRecords: isBangla ? "বেটিং রেকর্ডস" : "Betting Records",
-    parlayRecords: isBangla ? "পার্লে রেকর্ডস" : "Parlay Records",
+    parlayRecords: isBangla ? "উইথড্র রেকর্ডস" : "Withdrawal Records",
     transactionRecords: isBangla
-      ? "ট্রানজ্যাকশন রেকর্ডস"
-      : "Transaction Records",
+      ? "ডিপোজিট রেকর্ডস"
+      : "Deposit Records",
     profile: isBangla ? "প্রোফাইল" : "Profile",
     personalInfo: isBangla ? "ব্যক্তিগত তথ্য" : "Personal Info",
     resetPassword: isBangla ? "পাসওয়ার্ড রিসেট" : "Reset password",
@@ -131,7 +131,7 @@ const Account = () => {
 
   const plItems = useMemo(
     () => [
-      { title: text.turnover, icon: TrendingUp, to: "/profile/turnover" },
+      { title: text.turnover, icon: TrendingUp, to: "/history/turnover-history" },
       { title: text.myRewards, icon: Gift, to: "/profile/rewards" },
       { title: text.pl, icon: BarChart3, to: "/profile/pl" },
     ],
@@ -143,17 +143,17 @@ const Account = () => {
       {
         title: text.bettingRecords,
         icon: ClipboardList,
-        to: "/profile/betting-records",
+        to: "/history/bet-history",
       },
       {
         title: text.parlayRecords,
         icon: ReceiptText,
-        to: "/profile/parlay-records",
+        to: "/history/withdraw-history",
       },
       {
         title: text.transactionRecords,
         icon: FileText,
-        to: "/profile/history",
+        to: "/history/deposit-history",
       },
     ],
     [text],

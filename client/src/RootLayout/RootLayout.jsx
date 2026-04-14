@@ -8,8 +8,23 @@ const RootLayout = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
-  const hideNavbarRoutes = ["/login", "/register", "/account"];
+  const hideNavbarRoutes = [
+    "/login",
+    "/register",
+    "/account",
+    "/history/deposit-history",
+    "/history/withdraw-history",
+    "/history/auto-deposit-history",
+    "/history/bet-history",
+    "/history/turnover-history",
+  ];
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);
+
+  const hideBottomNavbarRoutes = ["/login",
+    "/register",
+    "/account",];
+
+  const hideBottomNavbar = hideBottomNavbarRoutes.includes(location.pathname);
 
   return (
     <div className="h-screen flex justify-center bg-black overflow-hidden">
@@ -38,7 +53,7 @@ const RootLayout = () => {
         >
           <Outlet />
         </div>
-        {!hideNavbar && <BottomNavbar />}
+        {!hideBottomNavbar && <BottomNavbar />}
       </div>
     </div>
   );

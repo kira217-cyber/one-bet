@@ -26,16 +26,14 @@ const BootstrapAuth = ({ children }) => {
 };
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <BootstrapAuth>
-            <ToastContainer position="top-right" />
-            <RouterProvider router={routes} />
-          </BootstrapAuth>
-        </LanguageProvider>
-      </QueryClientProvider>
-    </Provider>
-  </StrictMode>
+  <Provider store={store}>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <BootstrapAuth>
+          <ToastContainer position="top-right" />
+          <RouterProvider router={routes} />
+        </BootstrapAuth>
+      </LanguageProvider>
+    </QueryClientProvider>
+  </Provider>,
 );

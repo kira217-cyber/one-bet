@@ -1,7 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
 import axios from "axios";
-
 import AutoDepositToken from "../models/AutoDepositToken.js";
 import AutoDeposit from "../models/AutoDeposit.js";
 import User from "../models/User.js";
@@ -605,6 +604,16 @@ router.get("/deposits/admin", async (req, res) => {
 
 /* ----------------------------- WEBHOOK ----------------------------- */
 
+function getDefaultAffiliateCommissionInfo() {
+  return {
+    affiliatorId: "",
+    affiliatorUserId: "",
+    percent: 0,
+    baseAmount: 0,
+    commissionAmount: 0,
+  };
+}
+
 router.post("/webhook", async (req, res) => {
   res.send("OK");
 
@@ -659,10 +668,11 @@ router.post("/webhook", async (req, res) => {
                 creditedAmount: amount,
                 turnoverMultiplier: 1,
                 targetTurnover: amount,
+                affiliateDepositCommission: getDefaultAffiliateCommissionInfo(),
               },
             },
           ],
-          { session },
+          { session }
         ).then((docs) => docs[0]);
       } else {
         dep.transactionId = data.transaction_id || dep.transactionId || "";
@@ -672,8 +682,66 @@ router.post("/webhook", async (req, res) => {
         dep.checkoutItems = data.checkout_items || dep.checkoutItems || {};
         dep.status = isCompleted ? "PAID" : "PENDING";
         dep.paidAt = isCompleted ? new Date() : dep.paidAt;
-        await dep.save({ session });
       }
+
+      const settings = await AutoDepositToken.findOne().session(session);
+
+      const incomingCheckoutItems = data.checkout_items || dep.checkoutItems || {};
+      const selectedBonusId = safeString(
+        incomingCheckoutItems.selectedBonusId ||
+          incomingCheckoutItems.selectedBonusID ||
+          dep?.selectedBonus?.bonusId
+      );
+
+      let selectedBonusDoc = null;
+
+      if (
+        settings &&
+        selectedBonusId &&
+        mongoose.Types.ObjectId.isValid(selectedBonusId)
+      ) {
+        const foundBonus = settings.bonuses.id(selectedBonusId);
+        if (foundBonus && foundBonus.isActive !== false) {
+          selectedBonusDoc = foundBonus;
+        }
+      }
+
+      const calc = computeSelectedBonusAmount({
+        amount,
+        selectedBonus: selectedBonusDoc,
+      });
+
+      dep.amount = amount;
+      dep.checkoutItems = incomingCheckoutItems;
+      dep.selectedBonus = calc.selectedBonus;
+      dep.calc = {
+        depositAmount: Number(calc.depositAmount || 0),
+        bonusAmount: Number(calc.bonusAmount || 0),
+        creditedAmount: Number(calc.creditedAmount || 0),
+        turnoverMultiplier: Number(calc.turnoverMultiplier || 1),
+        targetTurnover: Number(calc.targetTurnover || 0),
+        affiliateDepositCommission:
+          dep?.calc?.affiliateDepositCommission &&
+          typeof dep.calc.affiliateDepositCommission === "object"
+            ? {
+                affiliatorId: String(
+                  dep.calc.affiliateDepositCommission.affiliatorId || ""
+                ),
+                affiliatorUserId: String(
+                  dep.calc.affiliateDepositCommission.affiliatorUserId || ""
+                ),
+                percent: Number(dep.calc.affiliateDepositCommission.percent || 0),
+                baseAmount: Number(
+                  dep.calc.affiliateDepositCommission.baseAmount || 0
+                ),
+                commissionAmount: Number(
+                  dep.calc.affiliateDepositCommission.commissionAmount || 0
+                ),
+              }
+            : getDefaultAffiliateCommissionInfo(),
+      };
+
+      await dep.save({ session });
 
       if (!isCompleted) return;
       if (dep.balanceAdded === true) return;
@@ -682,12 +750,8 @@ router.post("/webhook", async (req, res) => {
       if (!user) throw new Error("User not found");
       if (user.isActive === false) throw new Error("User is inactive");
 
-      const creditedAmount = Number(
-        dep?.calc?.creditedAmount || dep.amount || 0,
-      );
-      const targetTurnover = Number(
-        dep?.calc?.targetTurnover || dep.amount || 0,
-      );
+      const creditedAmount = Number(dep?.calc?.creditedAmount || dep.amount || 0);
+      const targetTurnover = Number(dep?.calc?.targetTurnover || dep.amount || 0);
 
       user.balance = Number(user.balance || 0) + creditedAmount;
       await user.save({ session });
@@ -695,9 +759,7 @@ router.post("/webhook", async (req, res) => {
       let affiliateCommissionInfo = null;
 
       if (user.referredBy) {
-        const affiliator = await User.findById(user.referredBy).session(
-          session,
-        );
+        const affiliator = await User.findById(user.referredBy).session(session);
 
         if (
           affiliator &&
@@ -718,11 +780,11 @@ router.post("/webhook", async (req, res) => {
               await affiliator.save({ session });
 
               affiliateCommissionInfo = {
-                affiliatorId: String(affiliator._id),
-                affiliatorUserId: affiliator.userId,
-                percent: pct,
-                baseAmount: commissionBase,
-                commissionAmount,
+                affiliatorId: String(affiliator._id || ""),
+                affiliatorUserId: String(affiliator.userId || ""),
+                percent: Number(pct || 0),
+                baseAmount: Number(commissionBase || 0),
+                commissionAmount: Number(commissionAmount || 0),
               };
             }
           }
@@ -731,19 +793,24 @@ router.post("/webhook", async (req, res) => {
 
       dep.balanceAdded = true;
       dep.calc = {
-        ...(dep.calc || {}),
         depositAmount: Number(dep?.calc?.depositAmount || dep.amount || 0),
         bonusAmount: Number(dep?.calc?.bonusAmount || 0),
-        creditedAmount,
+        creditedAmount: Number(dep?.calc?.creditedAmount || dep.amount || 0),
         turnoverMultiplier: Number(dep?.calc?.turnoverMultiplier || 1),
-        targetTurnover,
-        affiliateDepositCommission: affiliateCommissionInfo || {
-          affiliatorId: "",
-          affiliatorUserId: "",
-          percent: 0,
-          baseAmount: 0,
-          commissionAmount: 0,
-        },
+        targetTurnover: Number(dep?.calc?.targetTurnover || dep.amount || 0),
+        affiliateDepositCommission: affiliateCommissionInfo
+          ? {
+              affiliatorId: String(affiliateCommissionInfo.affiliatorId || ""),
+              affiliatorUserId: String(
+                affiliateCommissionInfo.affiliatorUserId || ""
+              ),
+              percent: Number(affiliateCommissionInfo.percent || 0),
+              baseAmount: Number(affiliateCommissionInfo.baseAmount || 0),
+              commissionAmount: Number(
+                affiliateCommissionInfo.commissionAmount || 0
+              ),
+            }
+          : getDefaultAffiliateCommissionInfo(),
       };
 
       await dep.save({ session });
@@ -768,9 +835,17 @@ router.post("/webhook", async (req, res) => {
               completedAt: targetTurnover <= 0 ? new Date() : null,
             },
           ],
-          { session },
+          { session }
         );
       }
+
+      console.log("✅ webhook processed:", {
+        invoiceNumber,
+        bonusId: dep?.selectedBonus?.bonusId || "",
+        bonusAmount: dep?.calc?.bonusAmount || 0,
+        creditedAmount: dep?.calc?.creditedAmount || 0,
+        targetTurnover: dep?.calc?.targetTurnover || 0,
+      });
     });
   } catch (err) {
     console.error("auto-deposit webhook error:", err?.message || err);
@@ -778,5 +853,6 @@ router.post("/webhook", async (req, res) => {
     session.endSession();
   }
 });
+
 
 export default router;
