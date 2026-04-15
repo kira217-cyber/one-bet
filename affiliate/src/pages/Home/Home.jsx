@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router";
 import Hero from "../../components/Hero/Hero";
 import Campaigns from "../../components/Campaigns/Campaigns";
 import FAQ from "../../components/FAQ/FAQ";
@@ -12,23 +13,54 @@ import AboutUs from "../../components/AboutUs/AboutUs";
 import WhyUs from "../../components/WhyUs/WhyUs";
 import Supports from "../../components/Supports/Supports";
 
-
 const Home = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) return;
+
+    const id = location.hash.replace("#", "");
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [location]);
+
   return (
     <div>
-      <Hero />
-      <Campaigns />
-      <FAQ />
+      <section id="home">
+        <Hero />
+      </section>
+
+      <section id="campaigns">
+        <Campaigns />
+      </section>
+
+      <section id="help-center">
+        <FAQ />
+      </section>
+
       <Commission />
       <CommissionStructure />
       <Jackpot />
       <JackpotStructure />
       <EliteClub />
       <HowToJoin />
-      <AboutUs />
+
+      <section id="community">
+        <AboutUs />
+      </section>
+
       <WhyUs />
-      <Supports />
-      
+
+      <section id="contact">
+        <Supports />
+      </section>
     </div>
   );
 };

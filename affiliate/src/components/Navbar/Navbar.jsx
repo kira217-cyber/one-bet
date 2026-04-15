@@ -1,15 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, X, ArrowLeftCircle } from "lucide-react";
-import { NavLink } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import { useLanguage } from "../../Context/LanguageProvider";
+import { api } from "../../api/axios";
 
 const Navbar = () => {
   const { language, changeLanguage, isBangla } = useLanguage();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [siteIdentity, setSiteIdentity] = useState(null);
 
   const dropdownRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems = isBangla
     ? [
@@ -31,6 +35,20 @@ const Navbar = () => {
   const mobileLoginText = isBangla ? "লগ-ইন" : "LOG-IN";
   const mobileRegisterText = isBangla ? "রেজিস্টার" : "REGISTER";
   const backText = isBangla ? "মূল মেনুতে ফিরে যান" : "Back to Main Menu";
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/aff-site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch affiliate site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -67,16 +85,54 @@ const Navbar = () => {
     setLangDropdownOpen(false);
   };
 
+  const handleSectionNavigate = (href) => {
+    setMobileMenuOpen(false);
+
+    const sectionMap = {
+      "/": "home",
+      "/campaigns": "campaigns",
+      "/help-center": "help-center",
+      "/contact": "contact",
+      "/community": "community",
+    };
+
+    const targetId = sectionMap[href];
+
+    if (!targetId) {
+      navigate(href);
+      return;
+    }
+
+    if (location.pathname === "/") {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } else {
+      navigate(`/#${targetId}`);
+    }
+  };
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
+
   const Logo = ({ mobile = false }) => (
-    <NavLink to="/" className="flex items-center select-none shrink-0">
+    <button
+      type="button"
+      onClick={() => handleSectionNavigate("/")}
+      className="flex cursor-pointer items-center select-none shrink-0"
+    >
       <img
-        src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
+        src={logoSrc}
         alt="bet365 logo"
         className={`h-auto object-contain ${
           mobile ? "w-[115px] sm:w-[130px]" : "w-[120px] xl:w-[135px]"
         }`}
       />
-    </NavLink>
+    </button>
   );
 
   const BangladeshFlag = ({ className = "w-6 h-6" }) => (
@@ -113,13 +169,14 @@ const Navbar = () => {
             <div className="hidden lg:flex items-center gap-6">
               <nav className="hidden lg:flex items-center gap-10 xl:gap-16 mr-10">
                 {navItems.map((item) => (
-                  <NavLink
+                  <button
                     key={item.label}
-                    to={item.href}
-                    className="text-[13px] xl:text-[14px] font-medium uppercase tracking-[0.04em] text-white transition hover:text-white/80"
+                    type="button"
+                    onClick={() => handleSectionNavigate(item.href)}
+                    className="text-[13px] cursor-pointer xl:text-[14px] font-medium uppercase tracking-[0.04em] text-white transition hover:text-white/80"
                   >
                     {item.label}
-                  </NavLink>
+                  </button>
                 ))}
               </nav>
 
@@ -210,7 +267,6 @@ const Navbar = () => {
         </div>
       </header>
 
-      {/* Navbar fixed হওয়ায় content overlap ঠেকাতে spacer */}
       <div className="h-[82px]" />
 
       <div
@@ -247,14 +303,14 @@ const Navbar = () => {
 
             <div className="mt-16 flex flex-col gap-10">
               {navItems.map((item) => (
-                <NavLink
+                <button
                   key={item.label}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-[24px] font-normal uppercase leading-none tracking-[-0.01em] text-white"
+                  type="button"
+                  onClick={() => handleSectionNavigate(item.href)}
+                  className="text-left text-[24px] font-normal uppercase leading-none tracking-[-0.01em] text-white"
                 >
                   {item.label}
-                </NavLink>
+                </button>
               ))}
             </div>
 

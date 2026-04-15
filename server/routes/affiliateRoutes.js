@@ -109,15 +109,29 @@ router.get("/dashboard/me", authMiddleware, affiliateOnly, async (req, res) => {
     })
       .select("userId phone balance currency isActive createdAt")
       .sort({ createdAt: -1 })
-      .limit(8);
-
-    const thisMonthReferrals = await User.countDocuments({
-      referredBy: affiliate._id,
-      createdAt: { $gte: startOfMonth },
-    });
+      .limit(8)
+      .lean();
 
     const referCommissionPerUser = Number(affiliate.referCommission || 0);
-    const thisMonthEarnings = thisMonthReferrals * referCommissionPerUser;
+    const thisMonthEarnings = thisMonthNewReferrals * referCommissionPerUser;
+
+    const referCommissionBalance = Number(
+      affiliate.referCommissionBalance || 0,
+    );
+    const depositCommissionBalance = Number(
+      affiliate.depositCommissionBalance || 0,
+    );
+    const gameLossCommissionBalance = Number(
+      affiliate.gameLossCommissionBalance || 0,
+    );
+    const gameWinCommissionBalance = Number(
+      affiliate.gameWinCommissionBalance || 0,
+    );
+
+    const totalCommissionEarned =
+      referCommissionBalance +
+      depositCommissionBalance +
+      gameLossCommissionBalance;
 
     return res.status(200).json({
       success: true,
@@ -125,28 +139,44 @@ router.get("/dashboard/me", authMiddleware, affiliateOnly, async (req, res) => {
         affiliate: {
           _id: affiliate._id,
           userId: affiliate.userId,
-          firstName: affiliate.firstName,
-          lastName: affiliate.lastName,
-          fullName: `${affiliate.firstName || ""} ${affiliate.lastName || ""}`.trim(),
-          email: affiliate.email,
-          phone: affiliate.phone,
-          referralCode: affiliate.referralCode,
+          firstName: affiliate.firstName || "",
+          lastName: affiliate.lastName || "",
+          fullName:
+            `${affiliate.firstName || ""} ${affiliate.lastName || ""}`.trim(),
+          email: affiliate.email || "",
+          phone: affiliate.phone || "",
+          referralCode: affiliate.referralCode || "",
           currency: affiliate.currency || "BDT",
-          isActive: affiliate.isActive,
-          balance: affiliate.balance || 0,
-          commissionBalance: affiliate.commissionBalance || 0,
-          referCommission: affiliate.referCommission || 0,
-          gameLossCommission: affiliate.gameLossCommission || 0,
-          depositCommission: affiliate.depositCommission || 0,
-          gameWinCommission: affiliate.gameWinCommission || 0,
+          isActive: !!affiliate.isActive,
+
+          balance: Number(affiliate.balance || 0),
+          commissionBalance: Number(affiliate.commissionBalance || 0),
+
+          referCommission: Number(affiliate.referCommission || 0),
+          gameLossCommission: Number(affiliate.gameLossCommission || 0),
+          depositCommission: Number(affiliate.depositCommission || 0),
+          gameWinCommission: Number(affiliate.gameWinCommission || 0),
+
+          referCommissionBalance,
+          depositCommissionBalance,
+          gameLossCommissionBalance,
+          gameWinCommissionBalance,
         },
+
         stats: {
           totalReferrals,
           activeReferrals,
           thisMonthNewReferrals,
-          totalCommissionEarned: Number(affiliate.commissionBalance || 0),
+
+          referCommissionBalance,
+          depositCommissionBalance,
+          gameLossCommissionBalance,
+          gameWinCommissionBalance,
+
+          totalCommissionEarned,
           thisMonthEarnings,
         },
+
         recentReferrals,
       },
     });
@@ -173,20 +203,23 @@ router.get(
       const affiliate = req.affiliate;
 
       let days = Number(req.query.days || 30);
-
       if (![7, 14, 30, 60].includes(days)) {
         days = 30;
       }
 
       const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+
       const startDate = new Date();
-      startDate.setDate(endDate.getDate() - (days - 1));
+      startDate.setDate(startDate.getDate() - (days - 1));
       startDate.setHours(0, 0, 0, 0);
 
       const referrals = await User.find({
         referredBy: affiliate._id,
         createdAt: { $gte: startDate, $lte: endDate },
-      }).select("createdAt");
+      })
+        .select("createdAt")
+        .lean();
 
       const referCommissionPerUser = Number(affiliate.referCommission || 0);
 
@@ -200,13 +233,14 @@ router.get(
         dateMap.set(key, 0);
       }
 
-      referrals.forEach((user) => {
+      for (const user of referrals) {
         const key = new Date(user.createdAt).toISOString().slice(0, 10);
 
         if (dateMap.has(key)) {
-          dateMap.set(key, dateMap.get(key) + referCommissionPerUser);
+          const currentValue = Number(dateMap.get(key) || 0);
+          dateMap.set(key, currentValue + referCommissionPerUser);
         }
-      });
+      }
 
       const labels = [];
       const dailyEarnings = [];
@@ -240,7 +274,7 @@ router.get(
         error: error.message,
       });
     }
-  }
+  },
 );
 
 /**
@@ -253,7 +287,7 @@ router.get("/me/balance", authMiddleware, affiliateOnly, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      balance: Number(affiliate.commissionBalance || 0),
+      balance: Number(affiliate.balance || 0),
       currency: affiliate.currency || "BDT",
     });
   } catch (error) {
@@ -265,8 +299,6 @@ router.get("/me/balance", authMiddleware, affiliateOnly, async (req, res) => {
     });
   }
 });
-
-
 
 /**
  * GET MY USERS
@@ -296,6 +328,57 @@ router.get("/my-users", authMiddleware, affiliateOnly, async (req, res) => {
     });
   }
 });
+/**
+ * GET Commission Status
+ * /api/affiliate/commission-status
+ */
+router.get(
+  "/commission-status",
+  authMiddleware,
+  affiliateOnly,
+  async (req, res) => {
+    try {
+      const affiliate = req.affiliate;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          _id: affiliate._id,
+          userId: affiliate.userId,
+          currency: affiliate.currency || "BDT",
+
+          mainBalance: Number(affiliate.balance || 0),
+
+          gameLossCommission: Number(affiliate.gameLossCommission || 0),
+          gameWinCommission: Number(affiliate.gameWinCommission || 0),
+          referCommission: Number(affiliate.referCommission || 0),
+          depositCommission: Number(affiliate.depositCommission || 0),
+
+          gameWinCommissionBalance: Number(
+            affiliate.gameWinCommissionBalance || 0,
+          ),
+          referCommissionBalance: Number(
+            affiliate.referCommissionBalance || 0,
+          ),
+          depositCommissionBalance: Number(
+            affiliate.depositCommissionBalance || 0,
+          ),
+          gameLossCommissionBalance: Number(
+            affiliate.gameLossCommissionBalance || 0,
+          ),
+        },
+      });
+    } catch (error) {
+      console.error("AFFILIATE COMMISSION STATUS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load commission status",
+        error: error.message,
+      });
+    }
+  },
+);
 
 /**
  * TOGGLE MY USER ACTIVE / INACTIVE
@@ -347,7 +430,7 @@ router.patch(
         error: error.message,
       });
     }
-  }
+  },
 );
 
 /**

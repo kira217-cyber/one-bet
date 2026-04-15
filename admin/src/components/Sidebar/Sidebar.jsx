@@ -124,16 +124,16 @@ const Sidebar = () => {
         text: "Add Games",
       },
       {
-        key: "live-controller",
-        to: "/live-controller",
+        key: "add-sports",
+        to: "/add-sports",
         icon: <FaStream className="text-green-300" />,
-        text: "Live Controller",
+        text: "Add Sports",
       },
       {
-        key: "all-bet-logs",
-        to: "/all-bet-logs",
+        key: "bet-history",
+        to: "/bet-history",
         icon: <HiMiniCubeTransparent className="text-emerald-300" />,
-        text: "All Bet Logs",
+        text: "Bet History",
       },
     ],
     [],
@@ -154,10 +154,10 @@ const Sidebar = () => {
         text: "All Affiliator",
       },
       {
-        key: "affiliate-user-brige",
-        to: "/affiliate-user-brige",
+        key: "Bulk-adjustment",
+        to: "/bulk-adjustment",
         icon: <PiBridgeBold className="text-lime-400" />,
-        text: "Affiliate User Bridge",
+        text: "Bulk Adjustment",
       },
     ],
     [],
@@ -232,14 +232,14 @@ const Sidebar = () => {
         text: "Withdraw Request",
       },
       {
-        key: "add-aff-withdraw",
-        to: "/add-aff-withdraw",
+        key: "aff-add-withdraw",
+        to: "/aff-add-withdraw",
         icon: <PiHandWithdrawBold />,
-        text: "Add Aff Withdraw",
+        text: "Aff Add Withdraw",
       },
       {
-        key: "affiliate-withdraw-request",
-        to: "/affiliate-withdraw-request",
+        key: "aff-withdraw-request",
+        to: "/aff-withdraw-request",
         icon: <FaCodePullRequest />,
         text: "Aff Withdraw Request",
       },
@@ -250,70 +250,28 @@ const Sidebar = () => {
   const clientItems = useMemo(
     () => [
       {
-        key: "fav-icon-and-logo-controller",
-        to: "/fav-icon-and-logo-controller",
+        key: "site-identity-controller",
+        to: "/site-identity-controller",
         icon: <FaCog />,
-        text: "Favicon & Logo Controller",
+        text: "Site Identity Controller",
       },
       {
-        key: "jackpot-controller",
-        to: "/jackpot-controller",
-        icon: <GiCardJackClubs />,
-        text: "Jackpot Controller",
-      },
-      {
-        key: "download-header-controller",
-        to: "/download-header-controller",
-        icon: <FaDownload />,
-        text: "Download Header Controller",
-      },
-      {
-        key: "slider-controller",
-        to: "/slider-controller",
+        key: "add-slider",
+        to: "/add-slider",
         icon: <FaImage />,
-        text: "Slider Controller",
+        text: "Add Slider",
       },
       {
-        key: "notice-controller",
-        to: "/notice-controller",
+        key: "add-notice",
+        to: "/add-notice",
         icon: <FaBullhorn />,
-        text: "Notice Controller",
+        text: "Add Notice",
       },
       {
-        key: "two-banner-controller",
-        to: "/two-banner-controller",
+        key: "add-social-link",
+        to: "/add-social-link",
         icon: <FaImage />,
-        text: "Two Banner Controller",
-      },
-      {
-        key: "single-banner-controller",
-        to: "/single-banner-controller",
-        icon: <FaImage />,
-        text: "Single Banner Controller",
-      },
-      {
-        key: "download-banner-controller",
-        to: "/download-banner-controller",
-        icon: <FaDownload />,
-        text: "Download Banner Controller",
-      },
-      {
-        key: "banner-video-controller",
-        to: "/banner-video-controller",
-        icon: <FaVideo />,
-        text: "Banner Video Controller",
-      },
-      {
-        key: "floating-social-controller",
-        to: "/floating-social-controller",
-        icon: <FaLink />,
-        text: "Social Link Controller",
-      },
-      {
-        key: "footer-controller",
-        to: "/footer-controller",
-        icon: <FaGlobe />,
-        text: "Footer Controller",
+        text: "Add Social Link",
       },
     ],
     [],
@@ -322,52 +280,16 @@ const Sidebar = () => {
   const affiliateItems = useMemo(
     () => [
       {
-        key: "aff-footer-controller",
-        to: "/aff-footer-controller",
-        icon: <FaGlobe />,
-        text: "Aff Footer Controller",
-      },
-      {
-        key: "aff-slider-controller",
-        to: "/aff-slider-controller",
-        icon: <FaImage />,
-        text: "Aff Slider Controller",
-      },
-      {
-        key: "aff-whyus-controller",
-        to: "/aff-whyus-controller",
-        icon: <FaStickyNote />,
-        text: "Aff WhyUs Controller",
-      },
-      {
-        key: "aff-agent-controller",
-        to: "/aff-agent-controller",
-        icon: <FaUsers />,
-        text: "Aff Agent Controller",
-      },
-      {
-        key: "aff-notice-controller",
-        to: "/aff-notice-controller",
-        icon: <FaBullhorn />,
-        text: "Aff Notice Controller",
-      },
-      {
-        key: "aff-fav-and-title-controller",
-        to: "/aff-fav-and-title-controller",
+        key: "aff-site-identity-controller",
+        to: "/aff-site-identity-controller",
         icon: <FaCog />,
-        text: "Aff Fav & Title Controller",
+        text: "Aff Site Identity Controller",
       },
       {
-        key: "aff-floating-social-controller",
-        to: "/aff-floating-social-controller",
-        icon: <FaLink />,
-        text: "Aff Floating Social Controller",
-      },
-      {
-        key: "aff-commission-controller",
-        to: "/aff-commission-controller",
-        icon: <FaWallet />,
-        text: "Aff Commission Controller",
+        key: "add-aff-social-link",
+        to: "/add-aff-social-link",
+        icon: <FaImage />,
+        text: "Add Affiliate Social Link",
       },
     ],
     [],
@@ -615,7 +537,7 @@ const Sidebar = () => {
                 />
               )}
 
-              {/* {showClient && (
+              {showClient && (
                 <DropdownSection
                   title="Client Site Controller"
                   icon={<GrAnnounce />}
@@ -625,9 +547,9 @@ const Sidebar = () => {
                   items={visibleClientItems}
                   onClose={() => setOpen(false)}
                 />
-              )} */}
+              )}
 
-              {/* {showAffiliate && (
+              {showAffiliate && (
                 <DropdownSection
                   title="Aff Site Controller"
                   icon={<IoAppsSharp />}
@@ -637,7 +559,7 @@ const Sidebar = () => {
                   items={visibleAffiliateItems}
                   onClose={() => setOpen(false)}
                 />
-              )} */}
+              )}
             </nav>
 
             <div className="p-5 border-t border-green-700/40 mt-auto shrink-0">

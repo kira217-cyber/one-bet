@@ -11,6 +11,9 @@ import AffiliateLayout from "../AffiliateLayout/AffiliateLayout";
 import Dashboard from "../components/Dashboard/Dashboard";
 import MyUsers from "../pages/MyUsers/MyUsers";
 import Profile from "../pages/Profile/Profile";
+import WithdrawHistory from "../pages/WithdrawHistory/WithdrawHistory";
+import WithdrawHistoryDetails from "../pages/WithdrawHistoryDetails/WithdrawHistoryDetails";
+import CommissionStatus from "../pages/CommissionStatus/CommissionStatus";
 
 export const routes = createBrowserRouter([
   {
@@ -52,6 +55,18 @@ export const routes = createBrowserRouter([
       {
         path: "withdraw",
         element: <Withdraw />,
+      },
+      {
+        path: "withdraw-history",
+        element: <WithdrawHistory />,
+      },
+      {
+        path: "withdraw-history/:id",
+        element: <WithdrawHistoryDetails />,
+      },
+       {
+        path: "commission-status",
+        element: <CommissionStatus />,
       },
       {
         path: "my-users",

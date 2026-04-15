@@ -1,8 +1,30 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLanguage } from "../../Context/LanguageProvider";
+import { api } from "../../api/axios";
 
 const Footer = () => {
   const { isBangla } = useLanguage();
+  const [siteIdentity, setSiteIdentity] = useState(null);
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   return (
     <div className="bg-[#063D2E] text-white px-4 py-6 text-sm">
@@ -140,8 +162,9 @@ const Footer = () => {
       <div className="flex justify-start gap-4 items-center">
         <div>
           <img
-            src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
-            alt=""
+            src={logoSrc}
+            alt="site-logo"
+            className="max-w-[120px] h-auto object-contain"
           />
         </div>
         <div>

@@ -18,6 +18,7 @@ import WithdrawHistory from "../pages/WithdrawHistory/WithdrawHistory";
 import AutoDepositHistory from "../pages/AutoDepositHistory/AutoDepositHistory";
 import BetHistory from "../pages/BetHistory/BetHistory";
 import TurnoverHistory from "../pages/TurnoverHistory/TurnoverHistory";
+import SportsPlayGame from "../pages/SportsPlayGame/SportsPlayGame";
 
 
 export const routes = createBrowserRouter([
@@ -59,6 +60,14 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute>
             <PlayGame />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/sports/:gameId",
+        element: (
+          <PrivateRoute>
+            <SportsPlayGame />
           </PrivateRoute>
         ),
       },

@@ -1,11 +1,32 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
-import { NavLink } from "react-router";
 import { useLanguage } from "../../Context/LanguageProvider";
 import { Link } from "react-router";
+import { api } from "../../api/axios";
 
 const Hero = () => {
   const { isBangla } = useLanguage();
+  const [siteIdentity, setSiteIdentity] = useState(null);
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/aff-site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch affiliate site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   const content = isBangla
     ? {
@@ -34,8 +55,6 @@ const Hero = () => {
         }}
       />
 
-
-
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center px-5 pt-4 sm:px-8 sm:pt-5 md:px-10 lg:px-16">
         {/* Logo */}
@@ -44,7 +63,7 @@ const Hero = () => {
           className="inline-flex items-center justify-center select-none"
         >
           <img
-            src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
+            src={logoSrc}
             alt="bet365 logo"
             className="h-auto w-[180px] sm:w-[220px] lg:w-[250px] xl:w-[260px] object-contain"
           />

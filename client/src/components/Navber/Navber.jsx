@@ -1,12 +1,33 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Download, MessageCircle } from "lucide-react";
 import { BiMenuAltLeft } from "react-icons/bi";
 import { Link } from "react-router";
 import { useLanguage } from "../../context/LanguageProvider";
-
+import { api } from "../../api/axios";
 
 const Navber = ({ setOpen }) => {
   const { isBangla } = useLanguage();
+  const [siteIdentity, setSiteIdentity] = useState(null);
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   return (
     <>
@@ -21,13 +42,15 @@ const Navber = ({ setOpen }) => {
 
           <Link to="/" className="flex items-center gap-3">
             <img
-              src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
-              className="w-28 h-12"
+              src={logoSrc}
+              alt="site-logo"
+              className="w-28 h-12 object-contain"
             />
 
             <img
               src="https://beit365.bet/assets/images/sponser-icons/deccan-gladiators%20(1).png"
-              className="w-12 h-10"
+              alt="sponsor"
+              className="w-12 h-10 object-contain"
             />
           </Link>
         </div>

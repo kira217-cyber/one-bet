@@ -18,8 +18,18 @@ import autodepositRoutes from "./routes/autodepositRoutes.js";
 import playGameRoutes from "./routes/playGameRoutes.js";
 import callbackRoutes from "./routes/callBackRoutes.js";
 import allHistoryRoutes from "./routes/allHistoryRoutes.js";
-
-
+import bulkAdjustmentRoutes from "./routes/bulkAdjustmentRoutes.js";
+import affWithdrawMethodRoutes from "./routes/AffWithdrawMethodRoutes.js";
+import affWithdrawRequestRoutes from "./routes/AffWithdrawRequestRoutes.js";
+import sportsRoutes from "./routes/sportsRoutes.js";
+import sportsPlayGameRoutes from "./routes/sportsPlayGameRoutes.js";
+import sliderRoutes from "./routes/sliderRoutes.js";
+import noticeRoutes from "./routes/noticeRoutes.js";
+import siteIdentityRoutes from "./routes/siteIdentityRoutes.js";
+import affSiteIdentityRoutes from "./routes/affSiteIdentityRoutes.js";
+import socialLinkRoutes from "./routes/socialLinkRoutes.js";
+import affSocialLinkRoutes from "./routes/affSocialLinkRoutes.js";
+import promotionRoutes from "./routes/promotionRoutes.js";
 // ...
 
 dotenv.config();
@@ -59,6 +69,18 @@ app.use("/api/auto-deposit", autodepositRoutes);
 app.use("/api/play-game", playGameRoutes);
 app.use("/api/callback", callbackRoutes);
 app.use("/api/history", allHistoryRoutes);
+app.use("/api/admin", bulkAdjustmentRoutes);
+app.use("/api", affWithdrawMethodRoutes);
+app.use("/api", affWithdrawRequestRoutes);
+app.use("/api", sportsRoutes);
+app.use("/api/sports-play-game", sportsPlayGameRoutes);
+app.use("/api", sliderRoutes);
+app.use("/api", noticeRoutes);
+app.use("/api", siteIdentityRoutes);
+app.use("/api", affSiteIdentityRoutes);
+app.use("/api", socialLinkRoutes);    
+app.use("/api", affSocialLinkRoutes);  
+app.use("/api", promotionRoutes);   
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

@@ -181,6 +181,11 @@ const Dashboard = () => {
   const stats = useMemo(() => {
     const s = dash?.stats || {};
 
+    const totalCommissionBalance =
+      Number(s.referCommissionBalance || 0) +
+      Number(s.depositCommissionBalance || 0) +
+      Number(s.gameLossCommissionBalance || 0);
+
     return [
       {
         title: "Total Referrals",
@@ -200,7 +205,7 @@ const Dashboard = () => {
       },
       {
         title: "Total Commission",
-        value: money(s.totalCommissionEarned ?? 0, currency),
+        value: money(totalCommissionBalance, currency),
         change: "",
         changeHint: "total wallet",
         icon: <FaWallet className="text-3xl" />,

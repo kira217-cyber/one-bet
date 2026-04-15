@@ -1,8 +1,30 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLanguage } from "../../Context/LanguageProvider";
+import { api } from "../../api/axios";
 
 const EliteClub = () => {
   const { isBangla } = useLanguage();
+  const [siteIdentity, setSiteIdentity] = useState(null);
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/aff-site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch affiliate site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   const content = isBangla
     ? {
@@ -30,7 +52,7 @@ const EliteClub = () => {
         <div className="hidden w-full lg:block">
           <div className="max-w-[900px] pl-[140px] xl:pl-[140px]">
             <img
-              src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
+              src={logoSrc}
               alt="bet365 logo"
               className="h-auto w-[110px] object-contain xl:w-[135px]"
             />
@@ -61,7 +83,7 @@ const EliteClub = () => {
 
           {/* Logo */}
           <img
-            src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
+            src={logoSrc}
             alt="bet365 logo"
             className="mt-5 h-auto w-[130px] object-contain sm:w-[155px]"
           />

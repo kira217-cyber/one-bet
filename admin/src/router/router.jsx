@@ -22,6 +22,18 @@ import AddProvider from "../pages/AddProvider/AddProvider";
 import AddGames from "../pages/AddGames/AddGames";
 import AutoDepositHistory from "../pages/AutoDepositHistory/AutoDepositHistory";
 import AutoDepositSetting from "../pages/AutoDepositSetting/AutoDepositSetting";
+import BulkAdjustment from "../pages/BulkAdjustment/BulkAdjustment";
+import AffAddWithdraw from "../pages/AffAddWithdraw/AffAddWithdraw";
+import AffWithdrawRequest from "../pages/AffWithdrawRequest/AffWithdrawRequest";
+import AffWithdrawRequestDetails from "../pages/AffWithdrawRequestDetails/AffWithdrawRequestDetails";
+import BetHistory from "../pages/BetHistory/BetHistory";
+import AddSports from "../pages/AddSports/AddSports";
+import AddSlider from "../pages/AddSlider/AddSlider";
+import AddNotice from "../pages/AddNotice/AddNotice";
+import SiteIdentityController from "../pages/SiteIdentityController/SiteIdentityController";
+import AffSiteIdentityController from "../pages/AffSiteIdentityController/AffSiteIdentityController";
+import AddSocialLink from "../pages/AddSocialLink/AddSocialLink";
+import AddAffSocialLink from "../pages/AddAffSocialLink/AddAffSocialLink";
 
 export const routes = createBrowserRouter([
   {
@@ -186,6 +198,102 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="auto-deposit-history">
             <AutoDepositHistory />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "bulk-adjustment",
+        element: (
+          <PrivateRoute permKey="bulk-adjustment">
+            <BulkAdjustment />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-add-withdraw",
+        element: (
+          <PrivateRoute permKey="aff-add-withdraw">
+            <AffAddWithdraw />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-withdraw-request",
+        element: (
+          <PrivateRoute permKey="aff-withdraw-request">
+            <AffWithdrawRequest />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/aff-withdraw-request-details/:id",
+        element: (
+          <PrivateRoute permKey="aff-withdraw-request-details">
+            <AffWithdrawRequestDetails />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "bet-history",
+        element: (
+          <PrivateRoute permKey="bet-history">
+            <BetHistory />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-sports",
+        element: (
+          <PrivateRoute permKey="add-sports">
+            <AddSports />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-slider",
+        element: (
+          <PrivateRoute permKey="add-slider">
+            <AddSlider />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-notice",
+        element: (
+          <PrivateRoute permKey="add-notice">
+            <AddNotice />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "site-identity-controller",
+        element: (
+          <PrivateRoute permKey="site-identity-controller">
+            <SiteIdentityController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-site-identity-controller",
+        element: (
+          <PrivateRoute permKey="aff-site-identity-controller">
+            <AffSiteIdentityController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-social-link",
+        element: (
+          <PrivateRoute permKey="add-social-link">
+            <AddSocialLink />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "add-aff-social-link",
+        element: (
+          <PrivateRoute permKey="add-aff-social-link">
+            <AddAffSocialLink />
           </PrivateRoute>
         ),
       },

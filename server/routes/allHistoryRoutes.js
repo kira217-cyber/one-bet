@@ -8,7 +8,6 @@ import TurnOver from "../models/TurnOver.js";
 import GameHistory from "../models/gameHistory.js";
 import { authMiddleware } from "./userRoutes.js";
 
-
 const router = express.Router();
 
 /* -------------------------------------------------------------------------- */
@@ -45,9 +44,6 @@ const buildDateFilter = (query) => {
   return Object.keys(filter).length ? filter : null;
 };
 
-
-
-
 const getLoggedInUserMongoId = (req) => {
   return req.user?._id || req.user?.id || null;
 };
@@ -78,7 +74,6 @@ const buildMeta = (page, limit, total) => ({
   total,
   totalPages: Math.ceil(total / limit),
 });
-
 
 /* -------------------------------------------------------------------------- */
 /*                          ADMIN: TURNOVER HISTORY                           */
@@ -177,6 +172,7 @@ router.get("/admin/games", async (req, res) => {
     const { page, limit, skip } = getPagination(req);
     const {
       userId = "",
+      phone = "",
       provider_code = "",
       game_code = "",
       bet_type = "",
@@ -191,6 +187,10 @@ router.get("/admin/games", async (req, res) => {
 
     if (userId.trim()) {
       query.userId = new RegExp(`^${escapeRegex(userId.trim())}$`, "i");
+    }
+
+    if (phone.trim()) {
+      query.phone = new RegExp(escapeRegex(phone.trim()), "i");
     }
 
     if (provider_code.trim()) {
@@ -384,7 +384,7 @@ router.get("/me/deposits", authMiddleware, async (req, res) => {
 /**
  * GET /api/history/me/withdraws
  */
-router.get("/me/withdraws",authMiddleware, async (req, res) => {
+router.get("/me/withdraws", authMiddleware, async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
 
@@ -755,6 +755,5 @@ router.get("/me/all", async (req, res) => {
     });
   }
 });
-
 
 export default router;

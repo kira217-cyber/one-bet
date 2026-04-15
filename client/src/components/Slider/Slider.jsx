@@ -1,20 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
+import { api } from "../../api/axios";
 
 // Swiper styles
 import "swiper/css";
 import "swiper/css/pagination";
 
 const Slider = () => {
-  const images = [
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/4588cdaf-7d5d-4281-38a9-612ec9c66f00/public",
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/1c683c87-8034-4bdd-d1ab-176742ec0400/public",
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/86a2bd48-e943-4b63-d5fb-c68d83eeab00/public",
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/300bb928-b649-488d-6ef5-f4bad52e5100/public",
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/d3f2577c-984c-4fa7-4a92-df1b08de6100/public",
-    "https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/300bb928-b649-488d-6ef5-f4bad52e5100/public",
-  ];
+  const [images, setImages] = useState([]);
+
+  useEffect(() => {
+    const fetchSliders = async () => {
+      try {
+        const res = await api.get("/api/sliders");
+        const sliderData = Array.isArray(res?.data?.data) ? res.data.data : [];
+
+        const formattedImages = sliderData
+          .filter((item) => item?.image)
+          .map((item) =>
+            item.image.startsWith("http")
+              ? item.image
+              : `${import.meta.env.VITE_APP_URL}${item.image}`,
+          );
+
+        setImages(formattedImages);
+      } catch (error) {
+        console.error("Failed to fetch sliders:", error);
+        setImages([]);
+      }
+    };
+
+    fetchSliders();
+  }, []);
+
+  if (!images.length) return null;
 
   return (
     <div className=" mt-3">
@@ -23,14 +43,11 @@ const Slider = () => {
         spaceBetween={12}
         slidesPerView={1.5}
         centeredSlides={true}
-        loop={true}
+        loop={images.length > 1}
         autoplay={{
-          delay: 2000, // 🔥 2 sec autoplay
+          delay: 2000,
           disableOnInteraction: false,
         }}
-        // pagination={{
-        //   clickable: true,
-        // }}
       >
         {images.map((img, index) => (
           <SwiperSlide key={index}>

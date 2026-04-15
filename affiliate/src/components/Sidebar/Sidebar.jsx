@@ -1,27 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import {
   FaHome,
   FaUsers,
-  FaWallet,
-  FaChartLine,
   FaBullhorn,
   FaSignOutAlt,
   FaUserCircle,
   FaTimes,
+  FaSyncAlt,
+  FaWallet,
 } from "react-icons/fa";
+import { RiMoneyDollarCircleFill } from "react-icons/ri";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { motion } from "framer-motion";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { logout } from "../../features/auth/authSlice";
+import { FaChartBar } from "react-icons/fa";
+import {
+  selectAuth,
+  selectUser,
+  selectToken,
+} from "../../features/auth/authSelectors";
+import { api } from "../../api/axios";
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [liveBalance, setLiveBalance] = useState(0);
+  const [liveCurrency, setLiveCurrency] = useState("BDT");
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const auth = useSelector(selectAuth);
+  const user = useSelector(selectUser);
+  const tokenFromSelector = useSelector(selectToken);
+  const token = tokenFromSelector || auth?.token || "";
 
   useEffect(() => {
     const handleResize = () => {
@@ -35,6 +51,55 @@ const Sidebar = () => {
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    setLiveBalance(Number(user?.commissionBalance || 0));
+    setLiveCurrency(user?.currency || "BDT");
+  }, [user?.commissionBalance, user?.currency]);
+
+  const formatMoney = useCallback((amount, currency = "BDT") => {
+    const num = Number(amount || 0);
+    const symbol =
+      String(currency || "BDT").toUpperCase() === "USDT" ? "$" : "৳";
+
+    return `${symbol} ${num.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }, []);
+
+  const fetchBalance = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      setBalanceLoading(true);
+
+      const { data } = await api.get("/api/affiliate/me/balance", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Failed to load balance");
+      }
+
+      setLiveBalance(Number(data?.balance || 0));
+      setLiveCurrency(data?.currency || "BDT");
+    } catch (e) {
+      toast.error(
+        e?.response?.data?.message || e?.message || "Failed to refresh balance",
+      );
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchBalance();
+    }
+  }, [token, fetchBalance]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -59,24 +124,19 @@ const Sidebar = () => {
         text: "My Users",
       },
       {
-        to: "/dashboard/all-affiliate-user",
-        icon: <FaUsers />,
-        text: "All Affiliate Users",
-      },
-      {
-        to: "/dashboard/deposit",
-        icon: <FaWallet />,
-        text: "Deposit",
-      },
-      {
         to: "/dashboard/withdraw",
-        icon: <FaChartLine />,
+        icon: <RiMoneyDollarCircleFill />,
         text: "Withdraw",
       },
       {
-        to: "/dashboard/notices",
+        to: "/dashboard/withdraw-history",
         icon: <FaBullhorn />,
-        text: "Notices",
+        text: "Withdraw History",
+      },
+      {
+        to: "/dashboard/commission-status",
+        icon: <FaChartBar  />,
+        text: "Commission Status",
       },
     ],
     [],
@@ -93,6 +153,24 @@ const Sidebar = () => {
         >
           <RxHamburgerMenu className="text-2xl text-white" />
         </button>
+
+        <div className="flex items-center gap-2 rounded-xl bg-black/25 border border-white/10 px-3 py-2">
+          <FaWallet className="text-white text-sm" />
+          <span className="text-[12px] font-extrabold text-white whitespace-nowrap">
+            {formatMoney(liveBalance, liveCurrency)}
+          </span>
+          <button
+            type="button"
+            onClick={fetchBalance}
+            disabled={balanceLoading || !token}
+            className="cursor-pointer disabled:opacity-50"
+            title="Refresh balance"
+          >
+            <FaSyncAlt
+              className={`text-white text-xs ${balanceLoading ? "animate-spin" : ""}`}
+            />
+          </button>
+        </div>
 
         <div className="flex items-center gap-5">
           <Link to="/dashboard/profile" className="cursor-pointer">
@@ -133,6 +211,34 @@ const Sidebar = () => {
                   <p className="text-sm text-green-200/90 font-medium">
                     Aff Panel
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Card */}
+            <div className="px-4 pt-4 shrink-0">
+              <div className="rounded-2xl border border-green-700/40 bg-gradient-to-r from-black/70 to-green-950/30 p-4 shadow-lg shadow-green-900/20">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[12px] text-green-200/70 font-bold">
+                      Commission Balance
+                    </div>
+                    <div className="mt-1 text-[20px] font-extrabold text-white truncate">
+                      {formatMoney(liveBalance, liveCurrency)}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={fetchBalance}
+                    disabled={balanceLoading || !token}
+                    className="cursor-pointer h-10 w-10 rounded-xl border border-green-600/40 bg-green-900/20 hover:bg-green-800/30 flex items-center justify-center transition disabled:opacity-50"
+                    title="Refresh balance"
+                  >
+                    <FaSyncAlt
+                      className={`text-green-200 ${balanceLoading ? "animate-spin" : ""}`}
+                    />
+                  </button>
                 </div>
               </div>
             </div>
@@ -205,11 +311,38 @@ const Sidebar = () => {
                 Dashboard
               </h1>
               <p className="text-sm text-green-300/80 mt-1">
-                Welcome to your admin control panel
+                Welcome to your affiliate control panel
               </p>
             </div>
 
             <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 rounded-2xl border border-green-700/40 bg-black/40 px-4 py-3 shadow-lg shadow-green-900/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 border border-green-500/25">
+                  <FaWallet className="text-green-300 text-lg" />
+                </div>
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-green-200/70 font-bold">
+                    Commission Balance
+                  </div>
+                  <div className="text-[18px] font-extrabold text-white leading-none mt-1">
+                    {formatMoney(liveBalance, liveCurrency)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={fetchBalance}
+                  disabled={balanceLoading || !token}
+                  className="cursor-pointer h-10 w-10 rounded-xl border border-green-600/40 bg-green-900/20 hover:bg-green-800/30 flex items-center justify-center transition disabled:opacity-50"
+                  title="Refresh balance"
+                >
+                  <FaSyncAlt
+                    className={`text-green-200 ${balanceLoading ? "animate-spin" : ""}`}
+                  />
+                </button>
+              </div>
+
               <Link
                 to="/dashboard/profile"
                 className="p-1 hover:bg-green-800/40 rounded-full transition-colors cursor-pointer"
@@ -234,3 +367,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+
