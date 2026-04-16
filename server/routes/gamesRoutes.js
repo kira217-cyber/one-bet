@@ -1,4 +1,3 @@
-// routes/gamesRoutes.js
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -97,8 +96,9 @@ router.post("/", async (req, res) => {
       categoryId,
       providerDbId,
       gameId: String(gameId).trim(),
-      image: "", // create time always empty
+      image: "",
       isHot: false,
+      isFavourite: false,
       status: status === "inactive" ? "inactive" : "active",
     });
 
@@ -219,7 +219,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
       });
     }
 
-    const { status, removeOldImage, isHot } = req.body || {};
+    const { status, removeOldImage, isHot, isFavourite } = req.body || {};
     const oldImagePath = game.image;
 
     if (req.file) {
@@ -234,6 +234,10 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 
     if (typeof isHot !== "undefined") {
       game.isHot = String(isHot) === "true";
+    }
+
+    if (typeof isFavourite !== "undefined") {
+      game.isFavourite = String(isFavourite) === "true";
     }
 
     await game.save();

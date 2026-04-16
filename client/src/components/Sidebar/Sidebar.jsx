@@ -26,6 +26,7 @@ const Sidebar = ({ open, setOpen }) => {
   const [providers, setProviders] = useState([]);
   const [oracleProviders, setOracleProviders] = useState([]);
   const [sportsList, setSportsList] = useState([]);
+  const [siteIdentity, setSiteIdentity] = useState(null);
 
   const [providerPanelOpen, setProviderPanelOpen] = useState(false);
   const [sportsPanelOpen, setSportsPanelOpen] = useState(false);
@@ -75,6 +76,25 @@ const Sidebar = ({ open, setOpen }) => {
 
     return "";
   };
+
+  const openExternal = (url) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -140,6 +160,12 @@ const Sidebar = ({ open, setOpen }) => {
     }
   };
 
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
+
   const fixedMenus = useMemo(
     () => [
       {
@@ -192,7 +218,7 @@ const Sidebar = ({ open, setOpen }) => {
           setOpen(false);
           setProviderPanelOpen(false);
           setSportsPanelOpen(false);
-          navigate("/referral-program");
+          openExternal(`${import.meta.env.VITE_AFF_URL}`);
         },
       },
     ],
@@ -261,10 +287,15 @@ const Sidebar = ({ open, setOpen }) => {
       >
         {/* Logo */}
         <div className="p-4 text-2xl flex justify-center font-bold text-white border-b border-white/10 shrink-0">
-          <img
-            src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
-            className="w-32 h-12"
-          />
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt="site-logo"
+              className="w-32 h-12 object-contain"
+            />
+          ) : (
+            <div className="w-32 h-12 bg-white/10 rounded animate-pulse" />
+          )}
         </div>
 
         {/* Scrollable Content */}
@@ -320,6 +351,7 @@ const Sidebar = ({ open, setOpen }) => {
             <InfoCard
               icon={<Users className="text-white w-6 h-6" />}
               title={isBangla ? "এফিলিয়েট প্রোগ্রাম" : "Affiliate Program"}
+              onClick={() => openExternal(`${import.meta.env.VITE_AFF_URL}`)}
             />
 
             <InfoCard
@@ -330,11 +362,13 @@ const Sidebar = ({ open, setOpen }) => {
                   ? "২৪/৭ মানসম্মত সেবা"
                   : "Provides 24/7 Quality service"
               }
+              onClick={() => openExternal(`${import.meta.env.VITE_AFF_URL}`)}
             />
 
             <InfoCard
               icon={<PiPhoneCallBold className="text-white w-6 h-6" />}
               title={isBangla ? "ফোরাম" : "Forum"}
+              onClick={() => openExternal(`${import.meta.env.VITE_AFF_URL}`)}
             />
 
             <InfoCard
@@ -342,11 +376,13 @@ const Sidebar = ({ open, setOpen }) => {
                 <HiOutlineExclamationCircle className="text-white w-6 h-6" />
               }
               title={isBangla ? "হেল্প" : "Help"}
+              onClick={() => openExternal(`${import.meta.env.VITE_AFF_URL}`)}
             />
 
             <InfoCard
               icon={<FaPlayCircle className="text-white w-6 h-6" />}
               title={isBangla ? "টিউটোরিয়াল" : "Tutorials"}
+              onClick={() => openExternal(`${import.meta.env.VITE_AFF_URL}`)}
             />
           </div>
         </div>
@@ -383,7 +419,7 @@ const Sidebar = ({ open, setOpen }) => {
 
       {/* Provider Panel */}
       <div
-        className={`absolute top-0 left-0 h-full w-[150px] bg-[#063c2b] z-[60] transform transition-transform duration-300 ease-in-out ${
+        className={`absolute top-0 left-0 h-full w-[120px] bg-[#063c2b] z-[60] transform transition-transform duration-300 ease-in-out ${
           open && providerPanelOpen
             ? "translate-x-[260px]"
             : "translate-x-0 -ml-[220px]"
@@ -434,7 +470,7 @@ const Sidebar = ({ open, setOpen }) => {
 
       {/* Sports Panel */}
       <div
-        className={`absolute top-0 left-0 h-full w-[150px] bg-[#063c2b] z-[60] transform transition-transform duration-300 ease-in-out ${
+        className={`absolute top-0 left-0 h-full w-[120px] bg-[#063c2b] z-[60] transform transition-transform duration-300 ease-in-out ${
           open && sportsPanelOpen
             ? "translate-x-[260px]"
             : "translate-x-0 -ml-[220px]"
@@ -533,8 +569,11 @@ const MenuItem = ({
 
 const Divider = () => <div className="h-3 bg-black/40 my-2" />;
 
-const InfoCard = ({ icon, title, subtitle }) => (
-  <div className="border border-green-400/30 rounded-lg p-4 flex gap-4 bg-[#0F6A45] hover:bg-[#0d5a3a] cursor-pointer transition">
+const InfoCard = ({ icon, title, subtitle, onClick }) => (
+  <div
+    onClick={onClick}
+    className="border border-green-400/30 rounded-lg p-4 flex gap-4 bg-[#0F6A45] hover:bg-[#0d5a3a] cursor-pointer transition"
+  >
     <div className="w-10 h-10 flex items-center justify-center rounded-full bg-[#0B5E3C] shrink-0">
       {icon}
     </div>

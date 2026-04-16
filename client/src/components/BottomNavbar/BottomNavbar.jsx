@@ -57,7 +57,7 @@ const BottomNavbar = () => {
       icon: Ticket,
     },
     {
-      to: "/deposit",
+      to: "/auto-deposit",
       label: isBangla ? "ডিপোজিট" : "Deposit",
       icon: Wallet,
     },

@@ -154,7 +154,7 @@ const Sidebar = () => {
         text: "All Affiliator",
       },
       {
-        key: "Bulk-adjustment",
+        key: "bulk-adjustment",
         to: "/bulk-adjustment",
         icon: <PiBridgeBold className="text-lime-400" />,
         text: "Bulk Adjustment",

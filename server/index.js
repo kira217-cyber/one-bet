@@ -30,6 +30,7 @@ import affSiteIdentityRoutes from "./routes/affSiteIdentityRoutes.js";
 import socialLinkRoutes from "./routes/socialLinkRoutes.js";
 import affSocialLinkRoutes from "./routes/affSocialLinkRoutes.js";
 import promotionRoutes from "./routes/promotionRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 // ...
 
 dotenv.config();
@@ -81,6 +82,7 @@ app.use("/api", affSiteIdentityRoutes);
 app.use("/api", socialLinkRoutes);    
 app.use("/api", affSocialLinkRoutes);  
 app.use("/api", promotionRoutes);   
+app.use("/api/dashboard", dashboardRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

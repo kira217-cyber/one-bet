@@ -17,28 +17,30 @@ const CreateAdmin = () => {
         label: "All Affiliate Users ( /all-affiliate-user )",
       },
       {
-        key: "affiliate-user-brige",
-        label: "Affiliate User Bridge ( /affiliate-user-brige )",
+        key: "all-user-details",
+        label: "User Details ( /all-user-details/:id )",
       },
       {
         key: "affiliate-user-details",
-        label: "Affiliate User Details ( /affiliate-users/:id )",
+        label: "Affiliate User Details ( /affiliate-user-details/:id )",
       },
-      { key: "user-details", label: "User Details ( /users/:id )" },
 
       { key: "add-deposit", label: "Add Deposit ( /add-deposit )" },
       {
+        key: "deposit-request",
+        label: "Deposit Request ( /deposit-request )",
+      },
+      {
+        key: "deposit-request-details",
+        label: "Deposit Request Details ( /deposit-request/:id )",
+      },
+      {
         key: "add-auto-deposit",
-        label: "Add Auto Deposit ( /add-auto-deposit )",
+        label: "Auto Deposit Setting ( /add-auto-deposit )",
       },
       {
         key: "auto-deposit-history",
         label: "Auto Deposit History ( /auto-deposit-history )",
-      },
-      { key: "deposit-request", label: "Deposit Request ( /deposit-request )" },
-      {
-        key: "deposit-request-details",
-        label: "Deposit Request Details ( /deposit-request/:id )",
       },
 
       { key: "add-withdraw", label: "Add Withdraw ( /add-withdraw )" },
@@ -52,124 +54,57 @@ const CreateAdmin = () => {
       },
 
       {
-        key: "add-aff-withdraw",
-        label: "Add Affiliate Withdraw ( /add-aff-withdraw )",
+        key: "aff-add-withdraw",
+        label: "Aff Add Withdraw ( /aff-add-withdraw )",
       },
       {
-        key: "affiliate-withdraw-request",
-        label: "Affiliate Withdraw Request ( /affiliate-withdraw-request )",
+        key: "aff-withdraw-request",
+        label: "Aff Withdraw Request ( /aff-withdraw-request )",
       },
       {
-        key: "affiliate-withdraw-request-details",
+        key: "aff-withdraw-request-details",
         label:
-          "Affiliate Withdraw Request Details ( /affiliate-withdraw-request/:id )",
+          "Aff Withdraw Request Details ( /aff-withdraw-request-details/:id )",
       },
-      { key: "add-redeem", label: "Add Redeem ( /add-redeem )" },
 
       {
         key: "add-game-category",
         label: "Add Game Category ( /add-game-category )",
       },
       { key: "add-provider", label: "Add Provider ( /add-provider )" },
-      { key: "add-game", label: "Add Game ( /add-game )" },
+      { key: "add-games", label: "Add Games ( /add-games )" },
+      { key: "add-sports", label: "Add Sports ( /add-sports )" },
+      { key: "bet-history", label: "Bet History ( /bet-history )" },
+
+      { key: "bulk-adjustment", label: "Bulk Adjustment ( /bulk-adjustment )" },
 
       { key: "add-promotion", label: "Add Promotion ( /add-promotion )" },
 
       {
-        key: "slider-controller",
-        label: "Slider Controller ( /slider-controller )",
+        key: "add-slider",
+        label: "Add Slider ( /add-slider )",
       },
       {
-        key: "footer-controller",
-        label: "Footer Controller ( /footer-controller )",
+        key: "add-notice",
+        label: "Add Notice ( /add-notice )",
       },
       {
-        key: "jackpot-controller",
-        label: "Jackpot Controller ( /jackpot-controller )",
+        key: "site-identity-controller",
+        label: "Site Identity Controller ( /site-identity-controller )",
       },
       {
-        key: "notice-controller",
-        label: "Notice Controller ( /notice-controller )",
-      },
-      {
-        key: "download-banner-controller",
-        label: "Download Banner Controller ( /download-banner-controller )",
-      },
-      {
-        key: "banner-video-controller",
-        label: "Banner Video Controller ( /banner-video-controller )",
-      },
-      {
-        key: "two-banner-controller",
-        label: "Two Banner Controller ( /two-banner-controller )",
-      },
-      {
-        key: "single-banner-controller",
-        label: "Single Banner Controller ( /single-banner-controller )",
-      },
-      {
-        key: "fav-icon-and-logo-controller",
-        label: "Favicon & Logo Controller ( /fav-icon-and-logo-controller )",
-      },
-      {
-        key: "floating-social-controller",
-        label: "Floating Social Controller ( /floating-social-controller )",
-      },
-      {
-        key: "download-header-controller",
-        label: "Download Header Controller ( /download-header-controller )",
+        key: "add-social-link",
+        label: "Add Social Link ( /add-social-link )",
       },
 
       {
-        key: "aff-footer-controller",
-        label: "Affiliate Footer Controller ( /aff-footer-controller )",
-      },
-      {
-        key: "aff-slider-controller",
-        label: "Affiliate Slider Controller ( /aff-slider-controller )",
-      },
-      {
-        key: "aff-whyus-controller",
-        label: "Affiliate Why Us Controller ( /aff-whyus-controller )",
-      },
-      {
-        key: "aff-agent-controller",
-        label: "Affiliate Agent Controller ( /aff-agent-controller )",
-      },
-      {
-        key: "aff-notice-controller",
-        label: "Affiliate Notice Controller ( /aff-notice-controller )",
-      },
-      {
-        key: "aff-fav-and-title-controller",
+        key: "aff-site-identity-controller",
         label:
-          "Affiliate Fav & Title Controller ( /aff-fav-and-title-controller )",
+          "Affiliate Site Identity Controller ( /aff-site-identity-controller )",
       },
       {
-        key: "aff-floating-social-controller",
-        label:
-          "Affiliate Floating Social Controller ( /aff-floating-social-controller )",
-      },
-      {
-        key: "aff-commission-controller",
-        label: "Affiliate Commission Controller ( /aff-commission-controller )",
-      },
-
-      {
-        key: "color-controller-client",
-        label: "Color Controller Client ( /color-controller-client )",
-      },
-      {
-        key: "aff-color-controller-client",
-        label: "Color Controller Affiliate ( /aff-color-controller-client )",
-      },
-      {
-        key: "live-controller",
-        label: "Live Game Controller ( /live-controller )",
-      },
-      {
-        key: "all-bet-logs",
-        label: "All Bet Logs ( /all-bet-logs )",
+        key: "add-aff-social-link",
+        label: "Add Affiliate Social Link ( /add-aff-social-link )",
       },
     ],
     [],
@@ -371,7 +306,11 @@ const CreateAdmin = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-[42px] text-green-400 hover:text-green-300 transition-colors cursor-pointer"
                 >
-                  {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                  {showPassword ? (
+                    <FaEyeSlash size={20} />
+                  ) : (
+                    <FaEye size={20} />
+                  )}
                 </button>
               </div>
             </div>
@@ -466,9 +405,10 @@ const CreateAdmin = () => {
                           </span>
                         </p>
                         {a.role !== "mother" && (
-                          <p className="text-sm text-green-200/80 mt-1">
+                          <p className="text-sm text-green-200/80 mt-1 break-words">
                             Permissions:{" "}
-                            {Array.isArray(a.permissions) && a.permissions.length > 0
+                            {Array.isArray(a.permissions) &&
+                            a.permissions.length > 0
                               ? a.permissions.join(", ")
                               : "None"}
                           </p>
@@ -552,7 +492,9 @@ const CreateAdmin = () => {
                           />
                           <button
                             type="button"
-                            onClick={() => setShowEditPassword(!showEditPassword)}
+                            onClick={() =>
+                              setShowEditPassword(!showEditPassword)
+                            }
                             className="absolute right-4 top-[42px] text-green-400 hover:text-green-300 transition-colors cursor-pointer"
                           >
                             {showEditPassword ? (

@@ -19,6 +19,13 @@ const RootLayout = () => {
     "/history/auto-deposit-history",
     "/history/bet-history",
     "/history/turnover-history",
+    "/reset-password",
+    "/personal-info",
+    "/inbox",
+    "/pl",
+    "/dispute",
+    "/rewards",
+    "/wallet",
   ];
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);
   const hideBottomNavbarRoutes = ["/login", "/register", "/account"];

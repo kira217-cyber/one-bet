@@ -1,4 +1,3 @@
-// models/Game.js
 import mongoose from "mongoose";
 
 const GameSchema = new mongoose.Schema(
@@ -31,6 +30,11 @@ const GameSchema = new mongoose.Schema(
     },
 
     isHot: {
+      type: Boolean,
+      default: false,
+    },
+
+    isFavourite: {
       type: Boolean,
       default: false,
     },

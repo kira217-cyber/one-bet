@@ -17,7 +17,6 @@ import {
   MessageCircle,
   Mail,
   LogOut,
-  ChevronRight,
   X,
 } from "lucide-react";
 import { useLanguage } from "../../Context/LanguageProvider";
@@ -60,9 +59,7 @@ const Account = () => {
     history: isBangla ? "হিস্টোরি" : "History",
     bettingRecords: isBangla ? "বেটিং রেকর্ডস" : "Betting Records",
     parlayRecords: isBangla ? "উইথড্র রেকর্ডস" : "Withdrawal Records",
-    transactionRecords: isBangla
-      ? "ডিপোজিট রেকর্ডস"
-      : "Deposit Records",
+    transactionRecords: isBangla ? "ডিপোজিট রেকর্ডস" : "Deposit Records",
     profile: isBangla ? "প্রোফাইল" : "Profile",
     personalInfo: isBangla ? "ব্যক্তিগত তথ্য" : "Personal Info",
     resetPassword: isBangla ? "পাসওয়ার্ড রিসেট" : "Reset password",
@@ -73,6 +70,7 @@ const Account = () => {
     logout: isBangla ? "লগ আউট" : "Log out",
     loading: isBangla ? "লোড হচ্ছে..." : "Loading...",
     guest: isBangla ? "গেস্ট" : "Guest",
+    fullName: isBangla ? "পূর্ণ নাম" : "Full Name",
   };
 
   const formatMoney = (value) => {
@@ -117,13 +115,16 @@ const Account = () => {
 
   const realUser = profile || authUser || null;
   const realUserId = realUser?.userId || text.guest;
+  const realFullName =
+    `${realUser?.firstName || ""} ${realUser?.lastName || ""}`.trim() ||
+    realUserId;
   const realBalance = formatMoney(realUser?.balance || 0);
 
   const fundsItems = useMemo(
     () => [
-      { title: text.deposit, icon: Wallet, to: "/deposit" },
-      { title: text.dispute, icon: AlertCircle, to: "/profile/dispute" },
-      { title: text.myWallet, icon: Wallet, to: "/profile/wallet" },
+      { title: text.deposit, icon: Wallet, to: "/auto-deposit" },
+      { title: text.dispute, icon: AlertCircle, to: "/dispute" },
+      { title: text.myWallet, icon: Wallet, to: "/wallet" },
       { title: text.withdrawal, icon: Wallet, to: "/withdraw" },
     ],
     [text],
@@ -131,9 +132,13 @@ const Account = () => {
 
   const plItems = useMemo(
     () => [
-      { title: text.turnover, icon: TrendingUp, to: "/history/turnover-history" },
-      { title: text.myRewards, icon: Gift, to: "/profile/rewards" },
-      { title: text.pl, icon: BarChart3, to: "/profile/pl" },
+      {
+        title: text.turnover,
+        icon: TrendingUp,
+        to: "/history/turnover-history",
+      },
+      { title: text.myRewards, icon: Gift, to: "/rewards" },
+      { title: text.pl, icon: BarChart3, to: "/pl" },
     ],
     [text],
   );
@@ -161,17 +166,27 @@ const Account = () => {
 
   const profileItems = useMemo(
     () => [
-      { title: text.personalInfo, icon: User, to: "/profile/personal-info" },
-      { title: text.resetPassword, icon: Lock, to: "/profile/reset-password" },
-      { title: text.inbox, icon: Inbox, to: "/profile/inbox" },
+      { title: text.personalInfo, icon: User, to: "/personal-info" },
+      { title: text.resetPassword, icon: Lock, to: "/reset-password" },
+      { title: text.inbox, icon: Inbox, to: "/inbox" },
     ],
     [text],
   );
 
   const contactItems = useMemo(
     () => [
-      { title: text.whatsapp, icon: MessageCircle, to: "/contact/whatsapp" },
-      { title: text.email, icon: Mail, to: "/contact/email" },
+      {
+        title: text.whatsapp,
+        icon: MessageCircle,
+        to: "http://whatsapp.com/",
+        external: true,
+      },
+      {
+        title: text.email,
+        icon: Mail,
+        to: "https://mail.google.com/",
+        external: true,
+      },
     ],
     [text],
   );
@@ -198,6 +213,25 @@ const Account = () => {
       {items.map((item, index) => {
         const Icon = item.icon;
 
+        if (item.external) {
+          return (
+            <a
+              key={index}
+              href={item.to}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex flex-col items-center justify-start text-center"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00563d] shadow-inner transition-all duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
+                <Icon className="h-6 w-6 text-white" strokeWidth={1.8} />
+              </div>
+              <span className="mt-3 flex min-h-[34px] items-start justify-center text-[13px] font-bold leading-[1.15] text-white sm:text-[15px]">
+                {item.title}
+              </span>
+            </a>
+          );
+        }
+
         return (
           <NavLink
             key={index}
@@ -221,6 +255,7 @@ const Account = () => {
     toast.success(isBangla ? "সফলভাবে লগআউট হয়েছে" : "Logged out successfully");
     navigate("/");
   };
+
   const handleHome = () => {
     navigate("/");
   };
@@ -228,22 +263,16 @@ const Account = () => {
   return (
     <div className="text-white">
       {/* Top Header */}
-      <div className="relative overflow-hidden flex justify-center px-4 pb-7 pt-5 bg-gradient-to-br from-black via-green-950/20 to-black shadow-lg shadow-green-900/20">
-        {/* Decorative circles */}
-        {/* <div className="absolute -left-8 -top-10 h-32 w-32 rounded-full bg-[#c3cf00] opacity-80" />
-        <div className="absolute right-10 top-4 h-20 w-20 rounded-full bg-[#cad500] opacity-80" />
-        <div className="absolute right-2 top-20 h-24 w-24 rounded-full bg-[#bcc800] opacity-60" />
-        <div className="absolute bottom-3 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-[#cfd900] opacity-30" /> */}
-
+      <div className="relative flex justify-center overflow-hidden bg-gradient-to-br from-black via-green-950/20 to-black px-4 pb-7 pt-5 shadow-lg shadow-green-900/20">
         {/* Close button */}
         <button
           onClick={handleHome}
-          className="absolute right-4 top-4 z-[999] text-white cursor-pointer"
+          className="absolute right-4 top-4 z-[999] cursor-pointer text-white"
         >
           <X className="h-8 w-8" strokeWidth={2.2} />
         </button>
 
-        <div className="relative z-10 flex items-center gap-3 pt-8 flex-col">
+        <div className="relative z-10 flex flex-col items-center gap-3 pt-8">
           {/* Avatar */}
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-200 shadow-md">
             <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-b from-[#f6f6f6] via-[#f0f0f0] to-[#ff9800]">
@@ -256,12 +285,12 @@ const Account = () => {
           </div>
 
           {/* User info */}
-          <div className="min-w-0 flex-1 justify-center text-center ">
-            <h2 className="truncate text-[18px] font-bold text-black sm:text-[22px] p-1 rounded-2xl  bg-yellow-400">
-             userId: {realUserId}
+          <div className="min-w-0 flex-1 justify-center text-center">
+            <h2 className="truncate rounded-2xl bg-yellow-400 p-1 text-[18px] font-bold text-black sm:text-[22px]">
+              userId: {realUserId}
             </h2>
             <h2 className="truncate text-[18px] font-bold text-white sm:text-[22px]">
-             Full Name: {realUserId}
+              {text.fullName}: {realFullName}
             </h2>
           </div>
         </div>
@@ -271,7 +300,7 @@ const Account = () => {
       <div className="mt-2 space-y-2 px-2 pb-2">
         <div className="overflow-hidden rounded-[4px] bg-red-800 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-lg font-bold text-whitesm:text-xl">
+            <div className="flex items-center gap-2 text-lg font-bold text-white sm:text-xl">
               <span>{text.mainWallet}</span>
 
               <button

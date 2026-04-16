@@ -19,7 +19,13 @@ import AutoDepositHistory from "../pages/AutoDepositHistory/AutoDepositHistory";
 import BetHistory from "../pages/BetHistory/BetHistory";
 import TurnoverHistory from "../pages/TurnoverHistory/TurnoverHistory";
 import SportsPlayGame from "../pages/SportsPlayGame/SportsPlayGame";
-
+import ResetPassword from "../pages/ResetPassword/ResetPassword";
+import PersonalInfo from "../pages/PersonalInfo/PersonalInfo";
+import Inbox from "../pages/Inbox/Inbox";
+import PL from "../pages/PL/PL";
+import Reward from "../pages/Reward/Reward";
+import Dispute from "../pages/Dispute/Dispute";
+import Wallet from "../pages/Wallet/Wallet";
 
 export const routes = createBrowserRouter([
   {
@@ -91,7 +97,70 @@ export const routes = createBrowserRouter([
         path: "category/:categoryId/games",
         element: <Games />,
       },
+      {
+        path: "reset-password",
 
+        element: (
+          <PrivateRoute>
+            {" "}
+            <ResetPassword />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "personal-info",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <PersonalInfo />
+          </PrivateRoute>
+        ),
+      },
+       {
+        path: "inbox",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <Inbox />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "pl",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <PL />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "rewards",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <Reward />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "dispute",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <Dispute />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "wallet",
+        element: (
+          <PrivateRoute>
+            {" "}
+            <Wallet />
+          </PrivateRoute>
+        ),
+      },
       /* ✅ History route RootLayout এর ভিতরে */
       {
         path: "history",

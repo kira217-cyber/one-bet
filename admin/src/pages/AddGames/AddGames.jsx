@@ -41,6 +41,7 @@ const AddGames = () => {
     image: null,
     status: "active",
     isHot: false,
+    isFavourite: false,
   });
   const [editPreview, setEditPreview] = useState("");
   const [removeOldImage, setRemoveOldImage] = useState(false);
@@ -364,6 +365,7 @@ const AddGames = () => {
       image: null,
       status: gameDoc?.status || "active",
       isHot: !!gameDoc?.isHot,
+      isFavourite: !!gameDoc?.isFavourite,
     });
     setRemoveOldImage(false);
 
@@ -383,6 +385,7 @@ const AddGames = () => {
       image: null,
       status: "active",
       isHot: false,
+      isFavourite: false,
     });
     setEditPreview("");
     setRemoveOldImage(false);
@@ -396,6 +399,7 @@ const AddGames = () => {
       const fd = new FormData();
       fd.append("status", editForm.status);
       fd.append("isHot", String(!!editForm.isHot));
+      fd.append("isFavourite", String(!!editForm.isFavourite));
       fd.append("removeOldImage", removeOldImage ? "true" : "false");
 
       if (editForm.image instanceof File) {
@@ -683,6 +687,12 @@ const AddGames = () => {
                             HOT
                           </div>
                         )}
+
+                        {selectedDoc?.isFavourite && (
+                          <div className="absolute top-3 left-[72px] rounded-full bg-pink-500 text-white text-xs font-bold px-3 py-1">
+                            FAVOURITE
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-5">
@@ -702,6 +712,10 @@ const AddGames = () => {
                               <div>Status: {selectedDoc?.status}</div>
                               <div>
                                 Hot: {selectedDoc?.isHot ? "Yes" : "No"}
+                              </div>
+                              <div>
+                                Favourite:{" "}
+                                {selectedDoc?.isFavourite ? "Yes" : "No"}
                               </div>
                             </>
                           )}
@@ -749,6 +763,7 @@ const AddGames = () => {
           </div>
         </div>
       </div>
+
       {totalPages > 1 && (
         <div className="flex flex-wrap justify-center items-center gap-3 pt-1">
           <button
@@ -865,6 +880,23 @@ const AddGames = () => {
                   className="w-5 h-5 accent-yellow-500"
                 />
                 <span className="text-yellow-200 font-medium">Mark as Hot</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer rounded-2xl border border-green-700/40 bg-black/40 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={!!editForm.isFavourite}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      isFavourite: e.target.checked,
+                    }))
+                  }
+                  className="w-5 h-5 accent-pink-500"
+                />
+                <span className="text-pink-200 font-medium">
+                  Mark as Favourite
+                </span>
               </label>
 
               <div className="flex flex-wrap gap-3">

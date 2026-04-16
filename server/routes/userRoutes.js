@@ -80,6 +80,18 @@ const createToken = (user) => {
   );
 };
 
+const isStrongPassword = (password) => {
+  return (
+    typeof password === "string" &&
+    password.length >= 8 &&
+    password.length <= 20 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+};
+
 /**
  * auth middleware
  */
@@ -122,26 +134,6 @@ export const authMiddleware = async (req, res, next) => {
   }
 };
 
-/**
- * admin middleware
- */
-// export const adminMiddleware = async (req, res, next) => {
-//   try {
-//     if (req.user?.role !== "admin") {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Admin only",
-//       });
-//     }
-
-//     next();
-//   } catch (error) {
-//     return res.status(403).json({
-//       success: false,
-//       message: "Admin only",
-//     });
-//   }
-// };
 
 /**
  * REGISTER
@@ -359,6 +351,123 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
+
+/**
+ * UPDATE OWN PROFILE
+ * Logged in user can update own personal info
+ */
+router.patch("/update-profile", authMiddleware, async (req, res) => {
+  try {
+    const userObjectId = req.user?.id || req.user?._id;
+    const { userId, email, phone, firstName, lastName } = req.body;
+
+    if (!userObjectId || !mongoose.Types.ObjectId.isValid(userObjectId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid login session",
+      });
+    }
+
+    const trimmedUserId = userId?.trim();
+    const trimmedPhone = phone?.trim();
+    const trimmedEmail = email ? email.trim().toLowerCase() : "";
+    const trimmedFirstName = firstName ? firstName.trim() : "";
+    const trimmedLastName = lastName ? lastName.trim() : "";
+
+    if (!trimmedUserId || !trimmedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID and phone are required",
+      });
+    }
+
+    if (trimmedUserId.length < 4 || trimmedUserId.length > 15) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID must be between 4 and 15 characters",
+      });
+    }
+
+    const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+    if (!userIdRegex.test(trimmedUserId)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
+      });
+    }
+
+    const existingUserId = await User.findOne({
+      userId: trimmedUserId,
+      _id: { $ne: userObjectId },
+    });
+
+    if (existingUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "This User ID already exists",
+      });
+    }
+
+    const existingPhone = await User.findOne({
+      phone: trimmedPhone,
+      _id: { $ne: userObjectId },
+    });
+
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number already exists",
+      });
+    }
+
+    if (trimmedEmail) {
+      const existingEmail = await User.findOne({
+        email: trimmedEmail,
+        _id: { $ne: userObjectId },
+      });
+
+      if (existingEmail) {
+        return res.status(400).json({
+          success: false,
+          message: "This email already exists",
+        });
+      }
+    }
+
+    const user = await User.findById(userObjectId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.userId = trimmedUserId;
+    user.email = trimmedEmail;
+    user.phone = trimmedPhone;
+    user.firstName = trimmedFirstName;
+    user.lastName = trimmedLastName;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Personal info updated successfully",
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    console.error("UPDATE PROFILE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update personal info",
+      error: error.message,
+    });
+  }
+});
+
 /**
  * GET BALANCE ONLY
  */
@@ -415,6 +524,102 @@ router.post("/logout", authMiddleware, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Logout failed",
+    });
+  }
+});
+
+
+/**
+ * RESET PASSWORD
+ * Logged in user only
+ */
+router.put("/reset-password", authMiddleware, async (req, res) => {
+  try {
+    const userObjectId = req.user?.id || req.user?._id;
+    const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+    if (!userObjectId || !mongoose.Types.ObjectId.isValid(userObjectId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid login session",
+      });
+    }
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password, new password and confirm password are required",
+      });
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password and confirm password do not match",
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+      });
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be 8-20 characters and include at least 1 uppercase letter, 1 lowercase letter, 1 number and 1 special character",
+      });
+    }
+
+    const user = await User.findById(userObjectId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const isCurrentPasswordMatched = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordMatched) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+
+    const isSameAsOldPassword = await bcrypt.compare(newPassword, user.password);
+
+    if (isSameAsOldPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+      error: error.message,
     });
   }
 });

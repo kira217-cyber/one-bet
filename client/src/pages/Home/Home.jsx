@@ -16,7 +16,6 @@ const Home = () => {
       <FeatureGames />
       <FavouriteGames />
       <Footer />
-      
     </div>
   );
 };
