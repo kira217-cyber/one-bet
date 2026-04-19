@@ -9,11 +9,14 @@ import {
   selectIsAuthenticated,
   selectUser,
 } from "../../features/auth/authSelectors";
+import { useLanguage } from "../../Context/LanguageProvider";
 
 const Sports = () => {
   const [sportsList, setSportsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [checkingSportId, setCheckingSportId] = useState("");
+
+const { isBangla } = useLanguage();
 
   const navigate = useNavigate();
 
@@ -79,7 +82,6 @@ const Sports = () => {
         currentUser = reduxUser || null;
       }
 
-      const balance = Number(currentUser?.balance || 0);
       const isActive = currentUser?.isActive === true;
 
       if (!currentUser) {
@@ -94,11 +96,7 @@ const Sports = () => {
         return;
       }
 
-      if (!Number.isFinite(balance) || balance <= 0) {
-        toast.error("No balance, please deposit");
-        navigate("/deposit");
-        return;
-      }
+      // ✅ balance check remove — 0 holeo game open hobe
 
       navigate(`/sports/${sport.gameId}`);
     } catch (error) {
@@ -116,7 +114,9 @@ const Sports = () => {
     <div className="px-3 py-4">
       <div className="flex items-center mb-4">
         <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-        <h2 className="text-yellow-400 font-semibold text-lg">Sports</h2>
+        <h2 className="text-yellow-400 font-semibold text-lg">
+          {isBangla ? "স্পোর্টস" : "Sports"}
+        </h2>
       </div>
 
       {loading ? (
@@ -160,7 +160,7 @@ const Sports = () => {
                   )}
                 </div>
 
-                <p className="text-white text-md text-center leading-tight px-1">
+                <p className="text-white text-md text-center leading-tight px-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
                   {isChecking ? "Checking..." : sport?.name?.en || "Sport"}
                 </p>
               </button>

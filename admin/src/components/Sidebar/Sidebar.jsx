@@ -34,6 +34,7 @@ import {
   PiHandDepositBold,
 } from "react-icons/pi";
 import { HiMiniCubeTransparent } from "react-icons/hi2";
+import { RiFootprintFill } from "react-icons/ri";
 import { GiCardJackClubs } from "react-icons/gi";
 import { IoAppsSharp } from "react-icons/io5";
 import { GrAnnounce, GrUserAdmin } from "react-icons/gr";
@@ -128,6 +129,12 @@ const Sidebar = () => {
         to: "/add-sports",
         icon: <FaStream className="text-green-300" />,
         text: "Add Sports",
+      },
+      {
+        key: "add-feature-games",
+        to: "/add-feature-games",
+        icon: <FaStream className="text-green-300" />,
+        text: "Add Feature Games",
       },
       {
         key: "bet-history",
@@ -272,6 +279,12 @@ const Sidebar = () => {
         to: "/add-social-link",
         icon: <FaImage />,
         text: "Add Social Link",
+      },
+      {
+        key: "footer-controller",
+        to: "/footer-controller",
+        icon: <RiFootprintFill />,
+        text: "Footer Controller",
       },
     ],
     [],

@@ -617,8 +617,6 @@ function getDefaultAffiliateCommissionInfo() {
 router.post("/webhook", async (req, res) => {
   res.send("OK");
 
-  const session = await mongoose.startSession();
-
   try {
     const data = req.body || {};
 
@@ -636,221 +634,207 @@ router.post("/webhook", async (req, res) => {
 
     const isCompleted = statusRaw === "COMPLETED";
 
-    await session.withTransaction(async () => {
-      let dep = await AutoDeposit.findOne({ invoiceNumber }).session(session);
+    let dep = await AutoDeposit.findOne({ invoiceNumber });
 
-      if (!dep) {
-        dep = await AutoDeposit.create(
-          [
-            {
-              userIdentity: userId,
-              amount,
-              invoiceNumber,
-              status: isCompleted ? "PAID" : "PENDING",
-              transactionId: data.transaction_id || "",
-              sessionCode: data.session_code || "",
-              bank: data.bank || "",
-              footprint: data.footprint || "",
-              checkoutItems: data.checkout_items || {},
-              paidAt: isCompleted ? new Date() : null,
-              balanceAdded: false,
-              selectedBonus: {
-                bonusId: "",
-                title: { bn: "", en: "" },
-                bonusType: "",
-                bonusValue: 0,
-                bonusAmount: 0,
-                turnoverMultiplier: 1,
-              },
-              calc: {
-                depositAmount: amount,
-                bonusAmount: 0,
-                creditedAmount: amount,
-                turnoverMultiplier: 1,
-                targetTurnover: amount,
-                affiliateDepositCommission: getDefaultAffiliateCommissionInfo(),
-              },
-            },
-          ],
-          { session }
-        ).then((docs) => docs[0]);
-      } else {
-        dep.transactionId = data.transaction_id || dep.transactionId || "";
-        dep.sessionCode = data.session_code || dep.sessionCode || "";
-        dep.bank = data.bank || dep.bank || "";
-        dep.footprint = data.footprint || dep.footprint || "";
-        dep.checkoutItems = data.checkout_items || dep.checkoutItems || {};
-        dep.status = isCompleted ? "PAID" : "PENDING";
-        dep.paidAt = isCompleted ? new Date() : dep.paidAt;
-      }
-
-      const settings = await AutoDepositToken.findOne().session(session);
-
-      const incomingCheckoutItems = data.checkout_items || dep.checkoutItems || {};
-      const selectedBonusId = safeString(
-        incomingCheckoutItems.selectedBonusId ||
-          incomingCheckoutItems.selectedBonusID ||
-          dep?.selectedBonus?.bonusId
-      );
-
-      let selectedBonusDoc = null;
-
-      if (
-        settings &&
-        selectedBonusId &&
-        mongoose.Types.ObjectId.isValid(selectedBonusId)
-      ) {
-        const foundBonus = settings.bonuses.id(selectedBonusId);
-        if (foundBonus && foundBonus.isActive !== false) {
-          selectedBonusDoc = foundBonus;
-        }
-      }
-
-      const calc = computeSelectedBonusAmount({
+    if (!dep) {
+      dep = await AutoDeposit.create({
+        userIdentity: userId,
         amount,
-        selectedBonus: selectedBonusDoc,
+        invoiceNumber,
+        status: isCompleted ? "PAID" : "PENDING",
+        transactionId: data.transaction_id || "",
+        sessionCode: data.session_code || "",
+        bank: data.bank || "",
+        footprint: data.footprint || "",
+        checkoutItems: data.checkout_items || {},
+        paidAt: isCompleted ? new Date() : null,
+        balanceAdded: false,
+        selectedBonus: {
+          bonusId: "",
+          title: { bn: "", en: "" },
+          bonusType: "",
+          bonusValue: 0,
+          bonusAmount: 0,
+          turnoverMultiplier: 1,
+        },
+        calc: {
+          depositAmount: amount,
+          bonusAmount: 0,
+          creditedAmount: amount,
+          turnoverMultiplier: 1,
+          targetTurnover: amount,
+          affiliateDepositCommission: getDefaultAffiliateCommissionInfo(),
+        },
       });
+    } else {
+      dep.transactionId = data.transaction_id || dep.transactionId || "";
+      dep.sessionCode = data.session_code || dep.sessionCode || "";
+      dep.bank = data.bank || dep.bank || "";
+      dep.footprint = data.footprint || dep.footprint || "";
+      dep.checkoutItems = data.checkout_items || dep.checkoutItems || {};
+      dep.status = isCompleted ? "PAID" : "PENDING";
+      dep.paidAt = isCompleted ? new Date() : dep.paidAt;
+    }
 
-      dep.amount = amount;
-      dep.checkoutItems = incomingCheckoutItems;
-      dep.selectedBonus = calc.selectedBonus;
-      dep.calc = {
-        depositAmount: Number(calc.depositAmount || 0),
-        bonusAmount: Number(calc.bonusAmount || 0),
-        creditedAmount: Number(calc.creditedAmount || 0),
-        turnoverMultiplier: Number(calc.turnoverMultiplier || 1),
-        targetTurnover: Number(calc.targetTurnover || 0),
-        affiliateDepositCommission:
-          dep?.calc?.affiliateDepositCommission &&
-          typeof dep.calc.affiliateDepositCommission === "object"
-            ? {
-                affiliatorId: String(
-                  dep.calc.affiliateDepositCommission.affiliatorId || ""
-                ),
-                affiliatorUserId: String(
-                  dep.calc.affiliateDepositCommission.affiliatorUserId || ""
-                ),
-                percent: Number(dep.calc.affiliateDepositCommission.percent || 0),
-                baseAmount: Number(
-                  dep.calc.affiliateDepositCommission.baseAmount || 0
-                ),
-                commissionAmount: Number(
-                  dep.calc.affiliateDepositCommission.commissionAmount || 0
-                ),
-              }
-            : getDefaultAffiliateCommissionInfo(),
-      };
+    const settings = await AutoDepositToken.findOne();
 
-      await dep.save({ session });
+    const incomingCheckoutItems = data.checkout_items || dep.checkoutItems || {};
+    const selectedBonusId = safeString(
+      incomingCheckoutItems.selectedBonusId ||
+        incomingCheckoutItems.selectedBonusID ||
+        dep?.selectedBonus?.bonusId
+    );
 
-      if (!isCompleted) return;
-      if (dep.balanceAdded === true) return;
+    let selectedBonusDoc = null;
 
-      const user = await User.findById(userId).session(session);
-      if (!user) throw new Error("User not found");
-      if (user.isActive === false) throw new Error("User is inactive");
-
-      const creditedAmount = Number(dep?.calc?.creditedAmount || dep.amount || 0);
-      const targetTurnover = Number(dep?.calc?.targetTurnover || dep.amount || 0);
-
-      user.balance = Number(user.balance || 0) + creditedAmount;
-      await user.save({ session });
-
-      let affiliateCommissionInfo = null;
-
-      if (user.referredBy) {
-        const affiliator = await User.findById(user.referredBy).session(session);
-
-        if (
-          affiliator &&
-          affiliator.role === "aff-user" &&
-          affiliator.isActive
-        ) {
-          const pct = Number(affiliator.depositCommission || 0);
-
-          if (Number.isFinite(pct) && pct > 0) {
-            const commissionBase = Number(dep.amount || 0);
-            const commissionAmount = (commissionBase * pct) / 100;
-
-            if (commissionAmount > 0) {
-              affiliator.depositCommissionBalance =
-                Number(affiliator.depositCommissionBalance || 0) +
-                commissionAmount;
-
-              await affiliator.save({ session });
-
-              affiliateCommissionInfo = {
-                affiliatorId: String(affiliator._id || ""),
-                affiliatorUserId: String(affiliator.userId || ""),
-                percent: Number(pct || 0),
-                baseAmount: Number(commissionBase || 0),
-                commissionAmount: Number(commissionAmount || 0),
-              };
-            }
-          }
-        }
+    if (
+      settings &&
+      selectedBonusId &&
+      mongoose.Types.ObjectId.isValid(selectedBonusId)
+    ) {
+      const foundBonus = settings.bonuses.id(selectedBonusId);
+      if (foundBonus && foundBonus.isActive !== false) {
+        selectedBonusDoc = foundBonus;
       }
+    }
 
-      dep.balanceAdded = true;
-      dep.calc = {
-        depositAmount: Number(dep?.calc?.depositAmount || dep.amount || 0),
-        bonusAmount: Number(dep?.calc?.bonusAmount || 0),
-        creditedAmount: Number(dep?.calc?.creditedAmount || dep.amount || 0),
-        turnoverMultiplier: Number(dep?.calc?.turnoverMultiplier || 1),
-        targetTurnover: Number(dep?.calc?.targetTurnover || dep.amount || 0),
-        affiliateDepositCommission: affiliateCommissionInfo
+    const calc = computeSelectedBonusAmount({
+      amount,
+      selectedBonus: selectedBonusDoc,
+    });
+
+    dep.amount = amount;
+    dep.checkoutItems = incomingCheckoutItems;
+    dep.selectedBonus = calc.selectedBonus;
+    dep.calc = {
+      depositAmount: Number(calc.depositAmount || 0),
+      bonusAmount: Number(calc.bonusAmount || 0),
+      creditedAmount: Number(calc.creditedAmount || 0),
+      turnoverMultiplier: Number(calc.turnoverMultiplier || 1),
+      targetTurnover: Number(calc.targetTurnover || 0),
+      affiliateDepositCommission:
+        dep?.calc?.affiliateDepositCommission &&
+        typeof dep.calc.affiliateDepositCommission === "object"
           ? {
-              affiliatorId: String(affiliateCommissionInfo.affiliatorId || ""),
-              affiliatorUserId: String(
-                affiliateCommissionInfo.affiliatorUserId || ""
+              affiliatorId: String(
+                dep.calc.affiliateDepositCommission.affiliatorId || ""
               ),
-              percent: Number(affiliateCommissionInfo.percent || 0),
-              baseAmount: Number(affiliateCommissionInfo.baseAmount || 0),
+              affiliatorUserId: String(
+                dep.calc.affiliateDepositCommission.affiliatorUserId || ""
+              ),
+              percent: Number(dep.calc.affiliateDepositCommission.percent || 0),
+              baseAmount: Number(
+                dep.calc.affiliateDepositCommission.baseAmount || 0
+              ),
               commissionAmount: Number(
-                affiliateCommissionInfo.commissionAmount || 0
+                dep.calc.affiliateDepositCommission.commissionAmount || 0
               ),
             }
           : getDefaultAffiliateCommissionInfo(),
-      };
+    };
 
-      await dep.save({ session });
+    await dep.save();
 
-      const existingTo = await TurnOver.findOne({
+    if (!isCompleted) return;
+    if (dep.balanceAdded === true) return;
+
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+    if (user.isActive === false) throw new Error("User is inactive");
+
+    const creditedAmount = Number(dep?.calc?.creditedAmount || dep.amount || 0);
+    const targetTurnover = Number(dep?.calc?.targetTurnover || dep.amount || 0);
+
+    user.balance = Number(user.balance || 0) + creditedAmount;
+    await user.save();
+
+    let affiliateCommissionInfo = null;
+
+    if (user.referredBy) {
+      const affiliator = await User.findById(user.referredBy);
+
+      if (
+        affiliator &&
+        affiliator.role === "aff-user" &&
+        affiliator.isActive
+      ) {
+        const pct = Number(affiliator.depositCommission || 0);
+
+        if (Number.isFinite(pct) && pct > 0) {
+          const commissionBase = Number(dep.amount || 0);
+          const commissionAmount = (commissionBase * pct) / 100;
+
+          if (commissionAmount > 0) {
+            affiliator.depositCommissionBalance =
+              Number(affiliator.depositCommissionBalance || 0) +
+              commissionAmount;
+
+            await affiliator.save();
+
+            affiliateCommissionInfo = {
+              affiliatorId: String(affiliator._id || ""),
+              affiliatorUserId: String(affiliator.userId || ""),
+              percent: Number(pct || 0),
+              baseAmount: Number(commissionBase || 0),
+              commissionAmount: Number(commissionAmount || 0),
+            };
+          }
+        }
+      }
+    }
+
+    dep.balanceAdded = true;
+    dep.calc = {
+      depositAmount: Number(dep?.calc?.depositAmount || dep.amount || 0),
+      bonusAmount: Number(dep?.calc?.bonusAmount || 0),
+      creditedAmount: Number(dep?.calc?.creditedAmount || dep.amount || 0),
+      turnoverMultiplier: Number(dep?.calc?.turnoverMultiplier || 1),
+      targetTurnover: Number(dep?.calc?.targetTurnover || dep.amount || 0),
+      affiliateDepositCommission: affiliateCommissionInfo
+        ? {
+            affiliatorId: String(affiliateCommissionInfo.affiliatorId || ""),
+            affiliatorUserId: String(
+              affiliateCommissionInfo.affiliatorUserId || ""
+            ),
+            percent: Number(affiliateCommissionInfo.percent || 0),
+            baseAmount: Number(affiliateCommissionInfo.baseAmount || 0),
+            commissionAmount: Number(
+              affiliateCommissionInfo.commissionAmount || 0
+            ),
+          }
+        : getDefaultAffiliateCommissionInfo(),
+    };
+
+    await dep.save();
+
+    const existingTo = await TurnOver.findOne({
+      user: user._id,
+      sourceType: "auto-deposit",
+      sourceId: dep._id,
+    });
+
+    if (!existingTo) {
+      await TurnOver.create({
         user: user._id,
         sourceType: "auto-deposit",
         sourceId: dep._id,
-      }).session(session);
-
-      if (!existingTo) {
-        await TurnOver.create(
-          [
-            {
-              user: user._id,
-              sourceType: "auto-deposit",
-              sourceId: dep._id,
-              required: targetTurnover,
-              progress: 0,
-              status: targetTurnover <= 0 ? "completed" : "running",
-              creditedAmount,
-              completedAt: targetTurnover <= 0 ? new Date() : null,
-            },
-          ],
-          { session }
-        );
-      }
-
-      console.log("✅ webhook processed:", {
-        invoiceNumber,
-        bonusId: dep?.selectedBonus?.bonusId || "",
-        bonusAmount: dep?.calc?.bonusAmount || 0,
-        creditedAmount: dep?.calc?.creditedAmount || 0,
-        targetTurnover: dep?.calc?.targetTurnover || 0,
+        required: targetTurnover,
+        progress: 0,
+        status: targetTurnover <= 0 ? "completed" : "running",
+        creditedAmount,
+        completedAt: targetTurnover <= 0 ? new Date() : null,
       });
+    }
+
+    console.log("✅ webhook processed:", {
+      invoiceNumber,
+      bonusId: dep?.selectedBonus?.bonusId || "",
+      bonusAmount: dep?.calc?.bonusAmount || 0,
+      creditedAmount: dep?.calc?.creditedAmount || 0,
+      targetTurnover: dep?.calc?.targetTurnover || 0,
     });
   } catch (err) {
     console.error("auto-deposit webhook error:", err?.message || err);
-  } finally {
-    session.endSession();
   }
 });
 

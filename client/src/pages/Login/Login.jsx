@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FaAngleLeft } from "react-icons/fa6";
 import { useNavigate } from "react-router";
@@ -15,6 +15,7 @@ const Login = () => {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [siteIdentity, setSiteIdentity] = useState(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -40,6 +41,26 @@ const Login = () => {
     }),
     [isBangla],
   );
+
+  useEffect(() => {
+    const fetchSiteIdentity = async () => {
+      try {
+        const res = await api.get("/api/site-identity");
+        setSiteIdentity(res?.data?.data || null);
+      } catch (error) {
+        console.error("Failed to fetch site identity:", error);
+        setSiteIdentity(null);
+      }
+    };
+
+    fetchSiteIdentity();
+  }, []);
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -100,10 +121,17 @@ const Login = () => {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <h1 className="text-center font-bold">
-            <img
-              src="https://imagedelivery.net/HUCIz1_hKgf2q2UoNlOq1w/7cbc1ab7-a435-460a-2a83-e69643e58000/public"
-              className="w-60 h-14"
-            />
+            {logoSrc ? (
+              <img
+                src={logoSrc}
+                alt="site-logo"
+                className="w-60 h-14 object-contain"
+              />
+            ) : (
+              <div className="w-60 h-14 flex items-center justify-center text-white/70">
+                Logo
+              </div>
+            )}
           </h1>
         </div>
 

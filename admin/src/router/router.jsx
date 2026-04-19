@@ -34,6 +34,8 @@ import SiteIdentityController from "../pages/SiteIdentityController/SiteIdentity
 import AffSiteIdentityController from "../pages/AffSiteIdentityController/AffSiteIdentityController";
 import AddSocialLink from "../pages/AddSocialLink/AddSocialLink";
 import AddAffSocialLink from "../pages/AddAffSocialLink/AddAffSocialLink";
+import AddFeaturedGames from "../pages/AddFeaturedGames/AddFeaturedGames";
+import FooterController from "../pages/FooterController/FooterController";
 
 export const routes = createBrowserRouter([
   {
@@ -186,6 +188,14 @@ export const routes = createBrowserRouter([
         ),
       },
       {
+        path: "add-feature-games",
+        element: (
+          <PrivateRoute permKey="add-feature-games">
+            <AddFeaturedGames />
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "add-auto-deposit",
         element: (
           <PrivateRoute permKey="add-auto-deposit">
@@ -262,6 +272,14 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="add-notice">
             <AddNotice />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "footer-controller",
+        element: (
+          <PrivateRoute permKey="footer-controller">
+            <FooterController />
           </PrivateRoute>
         ),
       },

@@ -1,9 +1,8 @@
 import express from "express";
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import qs from "qs";
 import User from "../models/User.js";
-import Sports from "../models/Sports.js";
+import FeaturedGame from "../models/FeaturedGame.js";
 
 const router = express.Router();
 
@@ -87,12 +86,12 @@ const fetchOracleGameDetailsByIds = async ({ oracleGameId, apiKey }) => {
 };
 
 /**
- * POST /api/sports-play-game/playgame
+ * POST /api/featured-play-game/playgame
  * body: { gameID }
  *
  * gameID can be:
- * - Sports._id
- * - Sports.gameId
+ * - FeaturedGame._id
+ * - FeaturedGame.gameId
  */
 router.post("/playgame", requireAuth, async (req, res) => {
   try {
@@ -122,14 +121,14 @@ router.post("/playgame", requireAuth, async (req, res) => {
         .json({ success: false, message: "Your account is not active" });
     }
 
-    // ✅ balance 0 holeo sports game launch hobe
     let balance = Number(user.balance || 0);
     if (!Number.isFinite(balance) || balance < 0) {
       balance = 0;
     }
 
     const ORACLE_API_KEY = process.env.DSTGAME_TOKEN;
-    // test er jonno hardcode kore dilam
+
+    // test
     const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
 
     // live
@@ -142,36 +141,38 @@ router.post("/playgame", requireAuth, async (req, res) => {
       });
     }
 
-    let sportsDoc = null;
+    let featuredDoc = null;
 
     if (isObjectIdLike(gameID)) {
-      sportsDoc = await Sports.findById(gameID);
+      featuredDoc = await FeaturedGame.findById(gameID);
     }
 
-    if (!sportsDoc) {
-      sportsDoc = await Sports.findOne({ gameId: String(gameID).trim() });
+    if (!featuredDoc) {
+      featuredDoc = await FeaturedGame.findOne({
+        gameId: String(gameID).trim(),
+      });
     }
 
-    if (!sportsDoc) {
+    if (!featuredDoc) {
       return res.status(404).json({
         success: false,
         message:
-          "Sports game not found in DB (gameID must be Sports._id or Sports.gameId)",
+          "Featured game not found in DB (gameID must be FeaturedGame._id or FeaturedGame.gameId)",
       });
     }
 
-    if (sportsDoc.isActive !== true) {
+    if (featuredDoc.isActive !== true) {
       return res.status(403).json({
         success: false,
-        message: "This sports game is inactive",
+        message: "This featured game is inactive",
       });
     }
 
-    const oracleGameId = String(sportsDoc.gameId || "").trim();
+    const oracleGameId = String(featuredDoc.gameId || "").trim();
     if (!oracleGameId) {
       return res.status(400).json({
         success: false,
-        message: "Oracle sports game id missing in Sports DB",
+        message: "Oracle featured game id missing in DB",
       });
     }
 
@@ -209,44 +210,26 @@ router.post("/playgame", requireAuth, async (req, res) => {
     }
 
     const payload = {
-      username: user.userId, // ✅ current schema অনুযায়ী userId use করা হয়েছে
-      money: Math.max(0, Math.floor(balance)), // ✅ 0 allowed
+      username: user.userId,
+      money: Math.max(0, Math.floor(balance)),
       currency: user.currency || "BDT",
       game_code,
       provider_code,
       game_type,
     };
 
-    console.log("Launching sports game payload:", payload);
+    console.log("Launching featured game payload:", payload);
 
-    // const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
-    //   headers: {
-    //     "Content-Type": "application/x-www-form-urlencoded",
-    //     "x-dstgame-key": ORACLE_API_KEY,
-
-    //     // eikhane dstgame key hobe onnota hard coded live korar somoi,
-    //     // "x-dstgame-key": "",
-    //   },
-    //   timeout: 30000,
-    // });
-
-    // test er jonno json format e pathalam
-
-    const response = await fetch(
-      "https://api.oraclegames.live/api/admin/games/launch",
-      {
-        method: "POST",
-        headers: {
-          "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    const response = await fetch(LAUNCH_URL, {
+      method: "POST",
+      headers: {
+        "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
+        "Content-Type": "application/json",
       },
-    );
-    // test er jonno
+      body: JSON.stringify(payload),
+    });
+
     const responseData = await response.json();
-    // live er jonno
-    // const responseData = response.data;
 
     let gameUrl = "";
 
@@ -266,8 +249,9 @@ router.post("/playgame", requireAuth, async (req, res) => {
     if (!gameUrl || typeof gameUrl !== "string") {
       return res.status(502).json({
         success: false,
-        message: "No game URL received from sports launch API",
+        message: "No game URL received from featured launch API",
         error: responseData,
+        payloadUsed: payload,
       });
     }
 
@@ -275,7 +259,7 @@ router.post("/playgame", requireAuth, async (req, res) => {
       success: true,
       gameUrl,
       used: {
-        sports_db_id: String(sportsDoc._id),
+        featured_db_id: String(featuredDoc._id),
         oracle_game_id: oracleGameId,
         game_code,
         provider_code,
@@ -284,13 +268,13 @@ router.post("/playgame", requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error(
-      "SportsPlayGame API Error:",
+      "FeaturedPlayGame API Error:",
       error.response?.data || error.message,
     );
 
     return res.status(error.response?.status || 500).json({
       success: false,
-      message: "Failed to launch sports game",
+      message: "Failed to launch featured game",
       error: error.response?.data || error.message,
     });
   }

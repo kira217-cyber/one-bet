@@ -31,6 +31,10 @@ import socialLinkRoutes from "./routes/socialLinkRoutes.js";
 import affSocialLinkRoutes from "./routes/affSocialLinkRoutes.js";
 import promotionRoutes from "./routes/promotionRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import featuredGamesRoutes from "./routes/featuredGamesRoutes.js";
+import featuredPlayGameRoutes from "./routes/featuredPlayGameRoutes.js";
+import footerContentRoutes from "./routes/footerContentRoutes.js";
+
 // ...
 
 dotenv.config();
@@ -83,6 +87,10 @@ app.use("/api", socialLinkRoutes);
 app.use("/api", affSocialLinkRoutes);  
 app.use("/api", promotionRoutes);   
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api", featuredGamesRoutes);
+app.use("/api/featured-play-game", featuredPlayGameRoutes);
+app.use("/api", footerContentRoutes);
+
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

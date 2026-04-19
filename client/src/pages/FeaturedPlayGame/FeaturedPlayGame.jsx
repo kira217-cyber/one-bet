@@ -21,7 +21,7 @@ const fetchSiteIdentity = async () => {
   return data?.data || null;
 };
 
-const PlayGame = () => {
+const FeaturedPlayGame = () => {
   const navigate = useNavigate();
   const { gameId } = useParams();
   const { isBangla } = useLanguage();
@@ -42,7 +42,7 @@ const PlayGame = () => {
     isError: profileError,
     refetch: refetchProfile,
   } = useQuery({
-    queryKey: ["my-profile-play-game"],
+    queryKey: ["my-profile-featured-play-game"],
     queryFn: fetchMyProfile,
     enabled: !!token && !!isAuthenticated,
     staleTime: 0,
@@ -51,7 +51,7 @@ const PlayGame = () => {
   });
 
   const { data: siteIdentity } = useQuery({
-    queryKey: ["site-identity-play-game"],
+    queryKey: ["site-identity-featured-play-game"],
     queryFn: fetchSiteIdentity,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
@@ -74,7 +74,7 @@ const PlayGame = () => {
   const playMutation = useMutation({
     mutationFn: async () => {
       const res = await axios.post(
-        `${API_BASE}/api/play-game/playgame`,
+        `${API_BASE}/api/featured-play-game/playgame`,
         { gameID: gameId },
         {
           headers: {
@@ -95,7 +95,7 @@ const PlayGame = () => {
     onError: (error) => {
       toast.error(
         error?.response?.data?.message ||
-          t("গেম চালু হয়নি", "Failed to start game"),
+          t("ফিচার গেম চালু হয়নি", "Failed to start featured game"),
       );
       navigate("/");
     },
@@ -131,11 +131,9 @@ const PlayGame = () => {
       return;
     }
 
-    // ✅ balance 0 হলেও game play হবে
     if (!gameUrl && !playMutation.isPending) {
       playMutation.mutate();
     }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     gameId,
@@ -168,22 +166,15 @@ const PlayGame = () => {
               </div>
             )}
 
-            {/* logo er moddhe loading */}
             <div className="inset-0 flex items-center justify-center">
               <div className="w-10 h-10 border-[3px] border-yellow-400/25 border-t-yellow-400 rounded-full animate-spin" />
             </div>
           </div>
 
-          {/* <p className="text-lg font-semibold">
-            {profileLoading
-              ? t("প্রোফাইল যাচাই হচ্ছে...", "Checking profile...")
-              : t("গেম লোড হচ্ছে...", "Loading game...")}
-          </p> */}
-
           <p className="mt-2 text-sm text-white/65">
             {t(
               "অনুগ্রহ করে অপেক্ষা করুন",
-              "Please wait while your game is being prepared",
+              "Please wait while your featured game is being prepared",
             )}
           </p>
 
@@ -199,7 +190,7 @@ const PlayGame = () => {
       ) : (
         <iframe
           src={gameUrl}
-          title="Game"
+          title="Featured Game"
           className="w-full h-full border-0"
           allow="fullscreen"
           allowFullScreen
@@ -209,4 +200,4 @@ const PlayGame = () => {
   );
 };
 
-export default PlayGame;
+export default FeaturedPlayGame;

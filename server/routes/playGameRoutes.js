@@ -121,19 +121,19 @@ router.post("/playgame", requireAuth, async (req, res) => {
         .json({ success: false, message: "Your account is not active" });
     }
 
-    const balance = Number(user.balance || 0);
-    if (!Number.isFinite(balance) || balance <= 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Insufficient balance" });
+    // ✅ balance 0 holeo game launch hobe
+    let balance = Number(user.balance || 0);
+    if (!Number.isFinite(balance) || balance < 0) {
+      balance = 0;
     }
 
     const ORACLE_API_KEY = process.env.DSTGAME_TOKEN;
+
     // test er jonno hardcode kore dilam
-    // const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
+    const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
 
     // live
-    const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
+    // const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
 
     if (!ORACLE_API_KEY) {
       return res.status(500).json({
@@ -228,7 +228,7 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
     const payload = {
       username: user.userId, // ✅ current schema অনুযায়ী userId use করা হয়েছে
-      money: parseInt(balance, 0),
+      money: Math.max(0, Math.floor(balance)), // ✅ 0 allowed
       currency: user.currency || "BDT",
       game_code,
       provider_code,
@@ -237,36 +237,34 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
     console.log("Launching game payload:", payload);
 
-    const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "x-dstgame-key": ORACLE_API_KEY,
-        
-        // eikhane dstgame key hobe onnota hard coded live korar somoi,
-        // "x-dstgame-key": "",
+    // const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
+    //   headers: {
+    //     "Content-Type": "application/x-www-form-urlencoded",
+    //     "x-dstgame-key": ORACLE_API_KEY,
 
-
-      },
-      timeout: 30000,
-    });
+    //     // eikhane dstgame key hobe onnota hard coded live korar somoi,
+    //     // "x-dstgame-key": "",
+    //   },
+    //   timeout: 30000,
+    // });
 
     // test er jonno json format e pathalam
 
-    // const response = await fetch(
-    //   "https://api.oraclegames.live/api/admin/games/launch",
-    //   {
-    //     method: "POST",
-    //     headers: {
-    //       "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify(payload),
-    //   },
-    // );
-
-    // const responseData = await response.json();
-
-    const responseData = response.data;
+    const response = await fetch(
+      "https://api.oraclegames.live/api/admin/games/launch",
+      {
+        method: "POST",
+        headers: {
+          "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    // test er jonno
+    const responseData = await response.json();
+    // Live er jonno
+    // const responseData = response.data;
 
     let gameUrl = "";
 

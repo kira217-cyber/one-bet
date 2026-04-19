@@ -37,7 +37,7 @@ const Slider = () => {
   if (!images.length) return null;
 
   return (
-    <div className=" mt-3">
+    <div className="">
       <Swiper
         modules={[Autoplay, Pagination]}
         spaceBetween={12}

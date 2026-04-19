@@ -9,7 +9,6 @@ const router = express.Router();
 
 const requireAuth = authMiddleware;
 
-
 /**
  * USER: eligibility
  * block withdraw if user has any running turnover
@@ -73,8 +72,6 @@ router.get("/withdraw-requests/eligibility", requireAuth, async (req, res) => {
  * - balance hold instantly
  */
 router.post("/withdraw-requests", requireAuth, async (req, res) => {
-  const session = await mongoose.startSession();
-
   try {
     const userId = req.user?.id || req.user?._id;
 
@@ -103,7 +100,7 @@ router.post("/withdraw-requests", requireAuth, async (req, res) => {
     if (running) {
       const remaining = Math.max(
         0,
-        Number(running.required || 0) - Number(running.progress || 0)
+        Number(running.required || 0) - Number(running.progress || 0),
       );
 
       return res.status(403).json({
@@ -113,54 +110,45 @@ router.post("/withdraw-requests", requireAuth, async (req, res) => {
       });
     }
 
-    await session.withTransaction(async () => {
-      const user = await User.findById(userId).session(session);
+    const user = await User.findById(userId);
 
-      if (!user) {
-        throw Object.assign(new Error("User not found"), { statusCode: 404 });
-      }
+    if (!user) {
+      throw Object.assign(new Error("User not found"), { statusCode: 404 });
+    }
 
-      if (user.isActive === false) {
-        throw Object.assign(new Error("User is inactive"), { statusCode: 403 });
-      }
+    if (user.isActive === false) {
+      throw Object.assign(new Error("User is inactive"), { statusCode: 403 });
+    }
 
-      const currentBalance = Number(user.balance || 0);
+    const currentBalance = Number(user.balance || 0);
 
-      if (currentBalance < amt) {
-        throw Object.assign(new Error("Insufficient balance"), {
-          statusCode: 400,
-        });
-      }
+    if (currentBalance < amt) {
+      throw Object.assign(new Error("Insufficient balance"), {
+        statusCode: 400,
+      });
+    }
 
-      const balanceAfter = currentBalance - amt;
+    const balanceAfter = currentBalance - amt;
 
-      const doc = await WithdrawRequest.create(
-        [
-          {
-            user: user._id,
-            methodId: String(methodId),
-            amount: amt,
-            fields: fields && typeof fields === "object" ? fields : {},
-            status: "pending",
-            balanceBefore: currentBalance,
-            balanceAfter,
-          },
-        ],
-        { session }
-      );
-
-      await User.updateOne(
-        { _id: user._id },
-        { $set: { balance: balanceAfter } }
-      ).session(session);
-
-      res.locals.__created = doc?.[0];
+    const doc = await WithdrawRequest.create({
+      user: user._id,
+      methodId: String(methodId),
+      amount: amt,
+      fields: fields && typeof fields === "object" ? fields : {},
+      status: "pending",
+      balanceBefore: currentBalance,
+      balanceAfter,
     });
+
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { balance: balanceAfter } },
+    );
 
     return res.json({
       success: true,
       message: "Withdraw request created successfully",
-      data: res.locals.__created,
+      data: doc,
     });
   } catch (e) {
     const status = e?.statusCode || 500;
@@ -168,8 +156,6 @@ router.post("/withdraw-requests", requireAuth, async (req, res) => {
       success: false,
       message: e?.message || "Server error",
     });
-  } finally {
-    session.endSession();
   }
 });
 
@@ -298,7 +284,7 @@ router.get("/admin/withdraw-requests/:id", requireAuth, async (req, res) => {
   try {
     const doc = await WithdrawRequest.findById(req.params.id).populate(
       "user",
-      "userId phone email balance role isActive"
+      "userId phone email balance role isActive",
     );
 
     if (!doc) {
@@ -324,58 +310,62 @@ router.get("/admin/withdraw-requests/:id", requireAuth, async (req, res) => {
  * ADMIN: approve
  * balance already held on create
  */
-router.patch("/admin/withdraw-requests/:id/approve", requireAuth, async (req, res) => {
-  try {
-    const { adminNote } = req.body || {};
+router.patch(
+  "/admin/withdraw-requests/:id/approve",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { adminNote } = req.body || {};
 
-    const doc = await WithdrawRequest.findById(req.params.id);
+      const doc = await WithdrawRequest.findById(req.params.id);
 
-    if (!doc) {
-      return res.status(404).json({
+      if (!doc) {
+        return res.status(404).json({
+          success: false,
+          message: "Not found",
+        });
+      }
+
+      if (doc.status !== "pending") {
+        return res.status(400).json({
+          success: false,
+          message: "Only pending requests can be approved",
+        });
+      }
+
+      doc.status = "approved";
+      doc.approvedAt = new Date();
+      doc.adminNote = adminNote || "";
+      doc.adminId = req.user?.id || req.user?._id || null;
+
+      await doc.save();
+
+      return res.json({
+        success: true,
+        message: "Approved successfully",
+        data: doc,
+      });
+    } catch (e) {
+      return res.status(500).json({
         success: false,
-        message: "Not found",
+        message: "Approve failed",
       });
     }
-
-    if (doc.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Only pending requests can be approved",
-      });
-    }
-
-    doc.status = "approved";
-    doc.approvedAt = new Date();
-    doc.adminNote = adminNote || "";
-    doc.adminId = req.user?.id || req.user?._id || null;
-
-    await doc.save();
-
-    return res.json({
-      success: true,
-      message: "Approved successfully",
-      data: doc,
-    });
-  } catch (e) {
-    return res.status(500).json({
-      success: false,
-      message: "Approve failed",
-    });
-  }
-});
+  },
+);
 
 /**
  * ADMIN: reject
  * refund held balance
  */
-router.patch("/admin/withdraw-requests/:id/reject", requireAuth, async (req, res) => {
-  const session = await mongoose.startSession();
+router.patch(
+  "/admin/withdraw-requests/:id/reject",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const { adminNote } = req.body || {};
 
-  try {
-    const { adminNote } = req.body || {};
-
-    await session.withTransaction(async () => {
-      const doc = await WithdrawRequest.findById(req.params.id).session(session);
+      const doc = await WithdrawRequest.findById(req.params.id);
 
       if (!doc) {
         throw Object.assign(new Error("Not found"), { statusCode: 404 });
@@ -390,33 +380,29 @@ router.patch("/admin/withdraw-requests/:id/reject", requireAuth, async (req, res
       await User.updateOne(
         { _id: doc.user },
         { $inc: { balance: Number(doc.amount || 0) } }
-      ).session(session);
+      );
 
       doc.status = "rejected";
       doc.rejectedAt = new Date();
       doc.adminNote = adminNote || "";
       doc.adminId = req.user?.id || req.user?._id || null;
 
-      await doc.save({ session });
+      await doc.save();
 
-      res.locals.__doc = doc;
-    });
+      return res.json({
+        success: true,
+        message: "Rejected successfully and balance refunded",
+        data: doc,
+      });
+    } catch (e) {
+      const status = e?.statusCode || 500;
 
-    return res.json({
-      success: true,
-      message: "Rejected successfully and balance refunded",
-      data: res.locals.__doc,
-    });
-  } catch (e) {
-    const status = e?.statusCode || 500;
-
-    return res.status(status).json({
-      success: false,
-      message: e?.message || "Reject failed",
-    });
-  } finally {
-    session.endSession();
+      return res.status(status).json({
+        success: false,
+        message: e?.message || "Reject failed",
+      });
+    }
   }
-});
+);
 
 export default router;

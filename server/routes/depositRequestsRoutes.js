@@ -50,7 +50,7 @@ const computeBonuses = ({ amount, methodDoc, channelId, promoId }) => {
   const channels = Array.isArray(methodDoc?.channels) ? methodDoc.channels : [];
 
   const ch = channels.find(
-    (c) => String(c?.id) === String(channelId) && c?.isActive !== false
+    (c) => String(c?.id) === String(channelId) && c?.isActive !== false,
   );
 
   if (!ch) throw new Error("Invalid channel");
@@ -69,7 +69,7 @@ const computeBonuses = ({ amount, methodDoc, channelId, promoId }) => {
 
   const promo = promos.find(
     (p) =>
-      String(p?.id || "").toLowerCase() === String(promoId || "").toLowerCase()
+      String(p?.id || "").toLowerCase() === String(promoId || "").toLowerCase(),
   );
 
   // ✅ promo selected থাকলে promo turnover use হবে
@@ -87,7 +87,7 @@ const computeBonuses = ({ amount, methodDoc, channelId, promoId }) => {
     }
 
     turnoverMultiplier = Number(
-      promo?.turnoverMultiplier ?? turnoverMultiplier
+      promo?.turnoverMultiplier ?? turnoverMultiplier,
     );
   }
 
@@ -318,216 +318,204 @@ router.get("/admin/deposit-requests/:id", requireAuth, async (req, res) => {
   }
 });
 
-/* ---------------- ADMIN: APPROVE ---------------- */
-router.post("/admin/deposit-requests/:id/approve", requireAuth, async (req, res) => {
-  const session = await mongoose.startSession();
+// ! ---------------- ADMIN: APPROVE ---------------- */
+router.post(
+  "/admin/deposit-requests/:id/approve",
+  requireAuth,
+  async (req, res) => {
+    console.log(">>> [Approve Start] ID:", req.params.id);
 
-  try {
-    const adminNote = String(req.body.adminNote || "");
+    try {
+      const adminNote = String(req.body.adminNote || "");
 
-    await session.withTransaction(async () => {
-      const doc = await DepositRequest.findById(req.params.id).session(session);
-      if (!doc) throw new Error("Not found");
+      // ১. রিকোয়েস্ট খুঁজে বের করা (সেশন ছাড়া)
+      const doc = await DepositRequest.findById(req.params.id);
+      if (!doc) {
+        console.log("!!! [Error] DepositRequest not found");
+        throw new Error("Not found");
+      }
+      console.log("1. Found Request. Current Status:", doc.status);
 
-      // ✅ approved হয়ে গেলে turnover আছে কিনা চেক
+      // ২. অলরেডি এপ্রুভড কিনা চেক
       if (doc.status === "approved") {
+        console.log("... Request already approved. Checking TurnOver record.");
         const exists = await TurnOver.findOne({
           user: doc.user,
           sourceType: "deposit",
           sourceId: doc._id,
-        }).session(session);
+        });
 
         if (!exists) {
-          const creditedAmount = Number(doc?.calc?.creditedAmount || doc.amount || 0);
+          console.log("... TurnOver missing, creating now");
+          const creditedAmount = Number(
+            doc?.calc?.creditedAmount || doc.amount || 0,
+          );
           const targetTurnover = Number(doc?.calc?.targetTurnover || 0);
 
-          await TurnOver.create(
-            [
-              {
-                user: doc.user,
-                sourceType: "deposit",
-                sourceId: doc._id,
-                required: targetTurnover,
-                progress: 0,
-                status: targetTurnover <= 0 ? "completed" : "running",
-                creditedAmount,
-                completedAt: targetTurnover <= 0 ? new Date() : null,
-              },
-            ],
-            { session }
-          );
+          await TurnOver.create({
+            user: doc.user,
+            sourceType: "deposit",
+            sourceId: doc._id,
+            required: targetTurnover,
+            progress: 0,
+            status: targetTurnover <= 0 ? "completed" : "running",
+            creditedAmount,
+            completedAt: targetTurnover <= 0 ? new Date() : null,
+          });
+          console.log("... TurnOver created for already approved doc");
         }
-
-        return;
+        return res.json({ success: true, message: "Already Approved" });
       }
 
-      if (doc.status !== "pending") throw new Error("Already processed");
+      if (doc.status !== "pending") {
+        console.log("!!! [Error] Status is not pending:", doc.status);
+        throw new Error("Already processed");
+      }
 
+      // ৩. পেমেন্ট মেথড চেক
       const methodDoc = await DepositMethod.findOne({
         methodId: String(doc.methodId).toLowerCase(),
-      }).session(session);
+      });
 
       if (!methodDoc || methodDoc.isActive === false) {
+        console.log("!!! [Error] Invalid or Inactive Method:", doc.methodId);
         throw new Error("Invalid deposit method");
       }
 
+      // ৪. ইউজার এবং বোনাস ক্যালকুলেশন
       const depositAmount = Number(doc.amount || 0);
-      if (!Number.isFinite(depositAmount) || depositAmount <= 0) {
-        throw new Error("Invalid amount");
+      const user = await User.findById(doc.user);
+
+      if (!user || user.isActive === false) {
+        console.log("!!! [Error] User not found or inactive");
+        throw new Error("User not found or inactive");
       }
 
-      // ✅ আবার recalc হবে
       const calc = computeBonuses({
         amount: depositAmount,
         methodDoc,
         channelId: doc.channelId,
         promoId: doc.promoId,
       });
+      console.log("2. Calc Result:", calc);
 
       const creditedAmount = depositAmount + Number(calc.totalBonus || 0);
 
-      const user = await User.findById(doc.user).session(session);
-      if (!user) throw new Error("User not found");
-      if (user.isActive === false) throw new Error("User not active");
-
-      // ✅ balance add
+      // ৫. ইউজারের ব্যালেন্স আপডেট
       user.balance = Number(user.balance || 0) + creditedAmount;
-      await user.save({ session });
+      await user.save();
+      console.log("3. User Balance Updated. New Balance:", user.balance);
 
-      // ✅ affiliate commission logic
+      // ৬. অ্যাফিলিয়েট কমিশন লজিক
       let affiliateCommissionInfo = null;
-
       if (user.referredBy) {
-        const affiliator = await User.findById(user.referredBy).session(session);
-
+        const affiliator = await User.findById(user.referredBy);
         if (
           affiliator &&
           affiliator.role === "aff-user" &&
           affiliator.isActive
         ) {
           const pct = Number(affiliator.depositCommission || 0);
+          if (pct > 0) {
+            const commissionAmount = (depositAmount * pct) / 100;
+            affiliator.depositCommissionBalance =
+              Number(affiliator.depositCommissionBalance || 0) +
+              commissionAmount;
+            await affiliator.save();
 
-          if (Number.isFinite(pct) && pct > 0) {
-            const commissionBase = depositAmount;
-            const commissionAmount = (commissionBase * pct) / 100;
-
-            if (commissionAmount > 0) {
-              affiliator.depositCommissionBalance =
-                Number(affiliator.depositCommissionBalance || 0) +
-                commissionAmount;
-
-              await affiliator.save({ session });
-
-              affiliateCommissionInfo = {
-                affiliatorId: String(affiliator._id),
-                affiliatorUserId: affiliator.userId,
-                percent: pct,
-                baseAmount: commissionBase,
-                commissionAmount,
-              };
-            }
+            affiliateCommissionInfo = {
+              affiliatorId: String(affiliator._id),
+              affiliatorUserId: affiliator.userId,
+              percent: pct,
+              baseAmount: depositAmount,
+              commissionAmount,
+            };
+            console.log("4. Affiliate Commission Added:", commissionAmount);
           }
         }
       }
 
-      // ✅ approve save
+      // ৭. ডিপোজিট রিকোয়েস্ট আপডেট
       doc.status = "approved";
       doc.adminNote = adminNote;
       doc.approvedBy = req.user.id;
       doc.approvedAt = new Date();
-
       doc.calc = {
-        channelPercent: calc.channelPercent,
-        percentBonus: calc.percentBonus,
-        promoBonus: calc.promoBonus,
-        totalBonus: calc.totalBonus,
-        turnoverMultiplier: calc.turnoverMultiplier,
-        targetTurnover: calc.targetTurnover,
+        ...calc,
         creditedAmount,
         affiliateDepositCommission: affiliateCommissionInfo,
       };
 
-      await doc.save({ session });
+      await doc.save();
+      console.log("5. Deposit Request Updated to Approved");
 
-      // ✅ turnover create
-      const existingTo = await TurnOver.findOne({
+      // ৮. টার্নওভার ক্রিয়েট
+      const target = Number(calc.targetTurnover || 0);
+      await TurnOver.create({
         user: user._id,
         sourceType: "deposit",
         sourceId: doc._id,
-      }).session(session);
-
-      if (!existingTo) {
-        const target = Number(calc.targetTurnover || 0);
-
-        await TurnOver.create(
-          [
-            {
-              user: user._id,
-              sourceType: "deposit",
-              sourceId: doc._id,
-              required: target,
-              progress: 0,
-              status: target <= 0 ? "completed" : "running",
-              creditedAmount,
-              completedAt: target <= 0 ? new Date() : null,
-            },
-          ],
-          { session }
-        );
-      }
-    });
-
-    return res.json({
-      success: true,
-      message: "Approved",
-    });
-  } catch (e) {
-    return res.status(400).json({
-      success: false,
-      message: e?.message || "Approve failed",
-    });
-  } finally {
-    session.endSession();
-  }
-});
-
-/* ---------------- ADMIN: REJECT ---------------- */
-router.post("/admin/deposit-requests/:id/reject", requireAuth, async (req, res) => {
-  try {
-    const adminNote = String(req.body.adminNote || "");
-
-    const doc = await DepositRequest.findById(req.params.id);
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        message: "Not found",
+        required: target,
+        progress: 0,
+        status: target <= 0 ? "completed" : "running",
+        creditedAmount,
+        completedAt: target <= 0 ? new Date() : null,
       });
-    }
+      console.log("6. TurnOver Record Created. Target:", target);
 
-    if (doc.status !== "pending") {
+      console.log(">>> [Success] Approve Process Finished");
+      return res.json({ success: true, message: "Approved" });
+    } catch (e) {
+      console.error("XXX [Error Log]:", e.message);
       return res.status(400).json({
         success: false,
-        message: "Already processed",
+        message: e?.message || "Approve failed",
       });
     }
+  },
+);
 
-    doc.status = "rejected";
-    doc.adminNote = adminNote;
-    doc.rejectedBy = req.user.id;
-    doc.rejectedAt = new Date();
+/* ---------------- ADMIN: REJECT ---------------- */
+router.post(
+  "/admin/deposit-requests/:id/reject",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const adminNote = String(req.body.adminNote || "");
 
-    await doc.save();
+      const doc = await DepositRequest.findById(req.params.id);
+      if (!doc) {
+        return res.status(404).json({
+          success: false,
+          message: "Not found",
+        });
+      }
 
-    res.json({
-      success: true,
-      message: "Rejected",
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: e?.message || "Reject failed",
-    });
-  }
-});
+      if (doc.status !== "pending") {
+        return res.status(400).json({
+          success: false,
+          message: "Already processed",
+        });
+      }
+
+      doc.status = "rejected";
+      doc.adminNote = adminNote;
+      doc.rejectedBy = req.user.id;
+      doc.rejectedAt = new Date();
+
+      await doc.save();
+
+      res.json({
+        success: true,
+        message: "Rejected",
+      });
+    } catch (e) {
+      res.status(500).json({
+        success: false,
+        message: e?.message || "Reject failed",
+      });
+    }
+  },
+);
 
 export default router;

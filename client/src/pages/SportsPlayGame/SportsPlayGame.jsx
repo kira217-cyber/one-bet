@@ -4,7 +4,6 @@ import { useSelector } from "react-redux";
 import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { FaTimes } from "react-icons/fa";
 import {
   selectIsAuthenticated,
   selectUser,
@@ -15,6 +14,11 @@ import { useLanguage } from "../../context/LanguageProvider";
 const fetchMyProfile = async () => {
   const { data } = await api.get("/api/users/me");
   return data?.user || data?.data || null;
+};
+
+const fetchSiteIdentity = async () => {
+  const { data } = await api.get("/api/site-identity");
+  return data?.data || null;
 };
 
 const SportsPlayGame = () => {
@@ -46,12 +50,26 @@ const SportsPlayGame = () => {
     retry: 1,
   });
 
+  const { data: siteIdentity } = useQuery({
+    queryKey: ["site-identity-sports-play-game"],
+    queryFn: fetchSiteIdentity,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+    retry: 1,
+  });
+
   const realUser = profile || reduxUser || null;
   const balance = useMemo(() => Number(realUser?.balance || 0), [realUser]);
   const isActiveUser = realUser?.isActive === true;
 
   const API_BASE =
     import.meta.env.VITE_API_URL || import.meta.env.VITE_APP_URL || "";
+
+  const logoSrc = siteIdentity?.logo
+    ? siteIdentity.logo.startsWith("http")
+      ? siteIdentity.logo
+      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
+    : null;
 
   const playMutation = useMutation({
     mutationFn: async () => {
@@ -113,17 +131,11 @@ const SportsPlayGame = () => {
       return;
     }
 
-    if (balance <= 0) {
-      toast.error(
-        t("ব্যালেন্স নেই, ডিপোজিট করুন", "No balance, please deposit"),
-      );
-      navigate("/deposit");
-      return;
-    }
-
+    // ✅ balance 0 holeo sports game play hobe
     if (!gameUrl && !playMutation.isPending) {
       playMutation.mutate();
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     gameId,
@@ -137,32 +149,41 @@ const SportsPlayGame = () => {
     gameUrl,
   ]);
 
-  const closeGame = () => {
-    setGameUrl("");
-    navigate("/");
-  };
-
   const isLoading = profileLoading || playMutation.isPending || !gameUrl;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black">
-      {/* Close button */}
-      {/* <button
-        onClick={closeGame}
-        className="fixed top-4 right-4 z-[10000] text-white bg-red-600 hover:bg-red-700 p-3 rounded-full cursor-pointer shadow-lg"
-        title={t("বন্ধ করুন", "Close")}
-      >
-        <FaTimes size={22} />
-      </button> */}
-
       {isLoading ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-6 text-center">
-          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-5" />
+          <div className="relative mb-6 flex-col items-center justify-center">
+            {logoSrc ? (
+              <img
+                src={logoSrc}
+                alt="site-logo"
+                className="w-40 h-20 object-contain opacity-95"
+              />
+            ) : (
+              <div className="w-40 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70 text-sm">
+                {t("লোড হচ্ছে...", "Loading...")}
+              </div>
+            )}
 
-          <p className="text-lg font-semibold">
+            <div className="inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 border-[3px] border-yellow-400/25 border-t-yellow-400 rounded-full animate-spin" />
+            </div>
+          </div>
+
+          {/* <p className="text-lg font-semibold">
             {profileLoading
-              ? t("ব্যালেন্স যাচাই হচ্ছে...", "Checking balance...")
+              ? t("প্রোফাইল যাচাই হচ্ছে...", "Checking profile...")
               : t("স্পোর্টস গেম লোড হচ্ছে...", "Loading sports game...")}
+          </p> */}
+
+          <p className="mt-2 text-sm text-white/65">
+            {t(
+              "অনুগ্রহ করে অপেক্ষা করুন",
+              "Please wait while your sports game is being prepared",
+            )}
           </p>
 
           <button

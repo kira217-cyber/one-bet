@@ -32,7 +32,7 @@ const Navber = ({ setOpen }) => {
   return (
     <>
       {/* Navbar */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-[480px] text-white px-3 py-2 flex items-center justify-between bg-[#01372A]">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-[480px] text-white px-3 py-2 flex items-center justify-between bg-[#005C40]">
         {/* Left */}
         <div className="flex items-center gap-3">
           <BiMenuAltLeft

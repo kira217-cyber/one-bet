@@ -212,7 +212,7 @@ const HotGames = () => {
                 <img
                   src={game.displayImage}
                   alt={game.displayName}
-                  className="w-full h-full object-contain"
+                  className="w-full h-[120px] sm:h-[145px] object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-[#0b6e4d] text-white/70 text-xs text-center px-2">

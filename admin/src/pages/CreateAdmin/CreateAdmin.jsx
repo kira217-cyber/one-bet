@@ -74,6 +74,10 @@ const CreateAdmin = () => {
       { key: "add-provider", label: "Add Provider ( /add-provider )" },
       { key: "add-games", label: "Add Games ( /add-games )" },
       { key: "add-sports", label: "Add Sports ( /add-sports )" },
+      {
+        key: "add-feature-games",
+        label: "Add Feature Games ( /add-feature-games )",
+      },
       { key: "bet-history", label: "Bet History ( /bet-history )" },
 
       { key: "bulk-adjustment", label: "Bulk Adjustment ( /bulk-adjustment )" },
@@ -87,6 +91,10 @@ const CreateAdmin = () => {
       {
         key: "add-notice",
         label: "Add Notice ( /add-notice )",
+      },
+      {
+        key: "footer-controller",
+        label: "Footer Controller ( /footer-controller )",
       },
       {
         key: "site-identity-controller",

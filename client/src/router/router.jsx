@@ -26,6 +26,7 @@ import PL from "../pages/PL/PL";
 import Reward from "../pages/Reward/Reward";
 import Dispute from "../pages/Dispute/Dispute";
 import Wallet from "../pages/Wallet/Wallet";
+import FeaturedPlayGame from "../pages/FeaturedPlayGame/FeaturedPlayGame";
 
 export const routes = createBrowserRouter([
   {
@@ -78,6 +79,14 @@ export const routes = createBrowserRouter([
         ),
       },
       {
+        path: "/featured-games/:gameId",
+        element: (
+          <PrivateRoute>
+            <FeaturedPlayGame />
+          </PrivateRoute>
+        ),
+      },
+      {
         path: "account",
         element: (
           <PrivateRoute>
@@ -116,7 +125,7 @@ export const routes = createBrowserRouter([
           </PrivateRoute>
         ),
       },
-       {
+      {
         path: "inbox",
         element: (
           <PrivateRoute>

@@ -126,7 +126,7 @@ const Categories = () => {
                 />
               </div>
 
-              <span className="text-md font-bold text-yellow-400 text-center leading-tight">
+              <span className="text-md font-bold text-yellow-400 text-center leading-tight whitespace-nowrap">
                 {getText(cat.name)}
               </span>
 
