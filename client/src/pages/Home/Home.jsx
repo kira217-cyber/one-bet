@@ -3,6 +3,7 @@ import Categories from "../../components/Categories/Categories";
 import FavouriteGames from "../../components/FavouriteGames/FavouriteGames";
 import FeatureGames from "../../components/FeatureGames/FeatureGames";
 import Footer from "../../components/Footer/Footer";
+import HotGames from "../../components/HotGames/HotGames";
 import Notice from "../../components/Notice/Notice";
 import Slider from "../../components/Slider/Slider";
 import Sports from "../../components/Sports/Sports";
@@ -13,9 +14,7 @@ const Home = () => {
       <Slider />
       <Notice />
       <Categories />
-      <FeatureGames />
-      <FavouriteGames />
-      <Footer />
+      
     </div>
   );
 };

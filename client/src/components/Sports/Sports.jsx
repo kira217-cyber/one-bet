@@ -10,13 +10,18 @@ import {
   selectUser,
 } from "../../features/auth/authSelectors";
 import { useLanguage } from "../../Context/LanguageProvider";
+import HotGames from "../HotGames/HotGames";
+import Provider from "../Provider/Provider";
+import FeatureGames from "../FeatureGames/FeatureGames";
+import FavouriteGames from "../FavouriteGames/FavouriteGames";
+import Footer from "../Footer/Footer";
 
 const Sports = () => {
   const [sportsList, setSportsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [checkingSportId, setCheckingSportId] = useState("");
 
-const { isBangla } = useLanguage();
+  const { isBangla } = useLanguage();
 
   const navigate = useNavigate();
 
@@ -111,68 +116,75 @@ const { isBangla } = useLanguage();
   };
 
   return (
-    <div className="px-3 py-4">
-      <div className="flex items-center mb-4">
-        <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-        <h2 className="text-yellow-400 font-semibold text-lg">
-          {isBangla ? "স্পোর্টস" : "Sports"}
-        </h2>
+    <>
+      <div className="px-3 py-4">
+        <div className="flex items-center mb-4">
+          <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
+          <h2 className="text-yellow-400 font-semibold text-lg">
+            {isBangla ? "স্পোর্টস" : "Sports"}
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-4 gap-1">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-[#005C40] rounded-sm py-4 px-2 animate-pulse h-[116px]"
+              />
+            ))}
+          </div>
+        ) : sportsList.length ? (
+          <div className="grid grid-cols-4 gap-1">
+            {sportsList.map((sport) => {
+              const iconUrl = sport?.iconImage
+                ? `${import.meta.env.VITE_APP_URL}${sport.iconImage}`
+                : "";
+
+              const isChecking =
+                checkingSportId === String(sport._id || sport.gameId);
+
+              return (
+                <button
+                  key={sport._id}
+                  type="button"
+                  onClick={() => handleClick(sport)}
+                  disabled={!!checkingSportId}
+                  className="flex flex-col items-center justify-center bg-[#005C40] rounded-sm py-2 sm:py-4 cursor-pointer transition hover:bg-[#0a6b4b] disabled:opacity-70"
+                >
+                  <div className="mb-2 flex items-center justify-center h-10 w-10">
+                    {iconUrl ? (
+                      <img
+                        src={iconUrl}
+                        alt={sport?.name?.en || "sport"}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : sport?.name?.en?.toLowerCase() === "cricket" ? (
+                      <GiCricketBat className="text-4xl text-yellow-400" />
+                    ) : (
+                      <FaFutbol className="text-4xl text-yellow-400" />
+                    )}
+                  </div>
+
+                  <p className="text-white text-md text-center leading-tight px-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
+                    {isChecking ? "Checking..." : sport?.name?.en || "Sport"}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center text-white/70 py-6 bg-[#005C40] rounded-sm">
+            No sports found
+          </div>
+        )}
       </div>
-
-      {loading ? (
-        <div className="grid grid-cols-4 gap-1">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-[#005C40] rounded-sm py-4 px-2 animate-pulse h-[116px]"
-            />
-          ))}
-        </div>
-      ) : sportsList.length ? (
-        <div className="grid grid-cols-4 gap-1">
-          {sportsList.map((sport) => {
-            const iconUrl = sport?.iconImage
-              ? `${import.meta.env.VITE_APP_URL}${sport.iconImage}`
-              : "";
-
-            const isChecking =
-              checkingSportId === String(sport._id || sport.gameId);
-
-            return (
-              <button
-                key={sport._id}
-                type="button"
-                onClick={() => handleClick(sport)}
-                disabled={!!checkingSportId}
-                className="flex flex-col items-center justify-center bg-[#005C40] rounded-sm py-2 sm:py-4 cursor-pointer transition hover:bg-[#0a6b4b] disabled:opacity-70"
-              >
-                <div className="mb-2 flex items-center justify-center h-10 w-10">
-                  {iconUrl ? (
-                    <img
-                      src={iconUrl}
-                      alt={sport?.name?.en || "sport"}
-                      className="h-full w-full object-contain"
-                    />
-                  ) : sport?.name?.en?.toLowerCase() === "cricket" ? (
-                    <GiCricketBat className="text-4xl text-yellow-400" />
-                  ) : (
-                    <FaFutbol className="text-4xl text-yellow-400" />
-                  )}
-                </div>
-
-                <p className="text-white text-md text-center leading-tight px-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
-                  {isChecking ? "Checking..." : sport?.name?.en || "Sport"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center text-white/70 py-6 bg-[#005C40] rounded-sm">
-          No sports found
-        </div>
-      )}
-    </div>
+      <HotGames />
+      <Provider />
+      <FeatureGames />
+      <FavouriteGames />
+      <Footer />
+    </>
   );
 };
 

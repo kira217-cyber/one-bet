@@ -15,6 +15,10 @@ import {
   FaIdCard,
 } from "react-icons/fa";
 import { api } from "../../api/axios";
+import SingleUserGameHistory from "../../components/SingleUserGameHistory/SingleUserGameHistory";
+import SingleUserMenualDepositHisotry from "../../components/SingleUserMenualDepositHisotry/SingleUserMenualDepositHisotry";
+import SingleUserAutoDepositHisotry from "../../components/SingleUserAutoDepositHisotry/SingleUserAutoDepositHisotry";
+import SingleUserWithdrawHisotry from "../../components/SingleUserWithdrawHisotry/SingleUserWithdrawHisotry";
 
 const UserDetails = () => {
   const { id } = useParams();
@@ -204,380 +208,386 @@ const UserDetails = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-120px)] text-white">
-      {/* Header */}
-      <div className={`${cardClass} p-4 md:p-6 mb-6`}>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              User Details
-            </h1>
-            <p className="text-sm text-green-200/80 mt-1">
-              View and manage full user information
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="cursor-pointer px-4 py-3 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
-            >
-              <FaArrowLeft />
-              Back
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fetchUserDetails(true)}
-              disabled={refreshing}
-              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-4 py-3 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
-            >
-              <FaSyncAlt className={refreshing ? "animate-spin" : ""} />
-              Refresh
-            </button>
-
-            <button
-              type="button"
-              onClick={handleUpdate}
-              disabled={saving}
-              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-5 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black font-semibold shadow-lg shadow-green-600/30 flex items-center gap-2"
-            >
-              <FaSave />
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Status */}
-      <div className={`${cardClass} p-4 md:p-5 mb-6`}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <span
-            className={`inline-flex w-fit px-4 py-2 rounded-full text-sm font-bold border ${
-              formData.isActive
-                ? "bg-green-500/20 text-green-300 border-green-500/40"
-                : "bg-red-500/20 text-red-300 border-red-500/40"
-            }`}
-          >
-            {formData.isActive ? "Active" : "Inactive"}
-          </span>
-
-          <button
-            type="button"
-            onClick={() =>
-              setFormData((prev) => ({
-                ...prev,
-                isActive: !prev.isActive,
-              }))
-            }
-            className={`cursor-pointer px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium ${
-              formData.isActive
-                ? "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30"
-                : "bg-green-500/20 border border-green-500/40 text-green-300 hover:bg-green-500/30"
-            }`}
-          >
-            {formData.isActive ? <FaUserSlash /> : <FaUserCheck />}
-            {formData.isActive ? "Set Inactive" : "Set Active"}
-          </button>
-        </div>
-      </div>
-
-      {/* Editable Information */}
-      <div className={`${cardClass} p-4 md:p-6 mb-6`}>
-        <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
-          <FaInfoCircle />
-          Editable Information
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <Field label="User ID">
-            <input
-              type="text"
-              name="userId"
-              value={formData.userId}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Email">
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Phone">
-            <input
-              type="text"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="First Name">
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Last Name">
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Currency">
-            <select
-              name="currency"
-              value={formData.currency}
-              onChange={handleChange}
-              className={inputClass}
-            >
-              <option value="BDT">BDT</option>
-              <option value="USDT">USDT</option>
-            </select>
-          </Field>
-
-          <Field label="New Password">
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Leave blank to keep current password"
-                className={`${inputClass} pr-12`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-green-300 hover:text-white"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </Field>
-
-          <Field label="Balance">
-            <input
-              type="number"
-              name="balance"
-              value={formData.balance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Commission Balance">
-            <input
-              type="number"
-              name="commissionBalance"
-              value={formData.commissionBalance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-      </div>
-
-      {/* Commission Fields */}
-      <div className={`${cardClass} p-4 md:p-6 mb-6`}>
-        <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
-          <FaWallet />
-          Commission Settings
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <Field label="Game Loss Commission">
-            <input
-              type="number"
-              name="gameLossCommission"
-              value={formData.gameLossCommission}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Deposit Commission">
-            <input
-              type="number"
-              name="depositCommission"
-              value={formData.depositCommission}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Refer Commission">
-            <input
-              type="number"
-              name="referCommission"
-              value={formData.referCommission}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Game Win Commission">
-            <input
-              type="number"
-              name="gameWinCommission"
-              value={formData.gameWinCommission}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Game Loss Commission Balance">
-            <input
-              type="number"
-              name="gameLossCommissionBalance"
-              value={formData.gameLossCommissionBalance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Deposit Commission Balance">
-            <input
-              type="number"
-              name="depositCommissionBalance"
-              value={formData.depositCommissionBalance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Refer Commission Balance">
-            <input
-              type="number"
-              name="referCommissionBalance"
-              value={formData.referCommissionBalance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Game Win Commission Balance">
-            <input
-              type="number"
-              name="gameWinCommissionBalance"
-              value={formData.gameWinCommissionBalance}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-      </div>
-
-      {/* Read-only Information */}
-      <div className={`${cardClass} p-4 md:p-6`}>
-        <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
-          <FaIdCard />
-          Read Only Information
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <Field label="Role">
-            <input
-              type="text"
-              readOnly
-              value={formData.role || "user"}
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Referral Code">
-            <input
-              type="text"
-              readOnly
-              value={formData.referralCode || "—"}
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Referral Count">
-            <input
-              type="text"
-              readOnly
-              value={formData.referralCount}
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Referred By User ID">
-            <input
-              type="text"
-              readOnly
-              value={formData.referredByUserId || "—"}
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Referred By Phone">
-            <input
-              type="text"
-              readOnly
-              value={formData.referredByPhone || "—"}
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Created At">
-            <input
-              type="text"
-              readOnly
-              value={
-                formData.createdAt
-                  ? new Date(formData.createdAt).toLocaleString()
-                  : "—"
-              }
-              className={readOnlyClass}
-            />
-          </Field>
-
-          <Field label="Updated At">
-            <input
-              type="text"
-              readOnly
-              value={
-                formData.updatedAt
-                  ? new Date(formData.updatedAt).toLocaleString()
-                  : "—"
-              }
-              className={readOnlyClass}
-            />
-          </Field>
-        </div>
-
-        {formData.password.trim().length > 0 && (
-          <div className="mt-5 rounded-xl border border-green-700/40 bg-green-950/20 p-4 text-sm text-green-200">
-            <div className="flex items-start gap-2">
-              <FaLock className="mt-0.5" />
-              <p>
-                A new password has been entered. Click{" "}
-                <strong>Save Changes</strong> to update it.
+    <>
+      <div className="min-h-[calc(100vh-120px)] text-white">
+        {/* Header */}
+        <div className={`${cardClass} p-4 md:p-6 mb-6`}>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                User Details
+              </h1>
+              <p className="text-sm text-green-200/80 mt-1">
+                View and manage full user information
               </p>
             </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="cursor-pointer px-4 py-3 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
+              >
+                <FaArrowLeft />
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fetchUserDetails(true)}
+                disabled={refreshing}
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-4 py-3 rounded-xl bg-black/60 border border-green-700/50 text-white hover:bg-green-900/30 flex items-center gap-2"
+              >
+                <FaSyncAlt className={refreshing ? "animate-spin" : ""} />
+                Refresh
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUpdate}
+                disabled={saving}
+                className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 px-5 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black font-semibold shadow-lg shadow-green-600/30 flex items-center gap-2"
+              >
+                <FaSave />
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Status */}
+        <div className={`${cardClass} p-4 md:p-5 mb-6`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <span
+              className={`inline-flex w-fit px-4 py-2 rounded-full text-sm font-bold border ${
+                formData.isActive
+                  ? "bg-green-500/20 text-green-300 border-green-500/40"
+                  : "bg-red-500/20 text-red-300 border-red-500/40"
+              }`}
+            >
+              {formData.isActive ? "Active" : "Inactive"}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isActive: !prev.isActive,
+                }))
+              }
+              className={`cursor-pointer px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium ${
+                formData.isActive
+                  ? "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30"
+                  : "bg-green-500/20 border border-green-500/40 text-green-300 hover:bg-green-500/30"
+              }`}
+            >
+              {formData.isActive ? <FaUserSlash /> : <FaUserCheck />}
+              {formData.isActive ? "Set Inactive" : "Set Active"}
+            </button>
+          </div>
+        </div>
+
+        {/* Editable Information */}
+        <div className={`${cardClass} p-4 md:p-6 mb-6`}>
+          <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
+            <FaInfoCircle />
+            Editable Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <Field label="User ID">
+              <input
+                type="text"
+                name="userId"
+                value={formData.userId}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Email">
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Phone">
+              <input
+                type="text"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="First Name">
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Last Name">
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Currency">
+              <select
+                name="currency"
+                value={formData.currency}
+                onChange={handleChange}
+                className={inputClass}
+              >
+                <option value="BDT">BDT</option>
+                <option value="USDT">USDT</option>
+              </select>
+            </Field>
+
+            <Field label="New Password">
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Leave blank to keep current password"
+                  className={`${inputClass} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 text-green-300 hover:text-white"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </Field>
+
+            <Field label="Balance">
+              <input
+                type="number"
+                name="balance"
+                value={formData.balance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Commission Balance">
+              <input
+                type="number"
+                name="commissionBalance"
+                value={formData.commissionBalance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Commission Fields */}
+        <div className={`${cardClass} p-4 md:p-6 mb-6`}>
+          <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
+            <FaWallet />
+            Commission Settings
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <Field label="Game Loss Commission">
+              <input
+                type="number"
+                name="gameLossCommission"
+                value={formData.gameLossCommission}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Deposit Commission">
+              <input
+                type="number"
+                name="depositCommission"
+                value={formData.depositCommission}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Refer Commission">
+              <input
+                type="number"
+                name="referCommission"
+                value={formData.referCommission}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Game Win Commission">
+              <input
+                type="number"
+                name="gameWinCommission"
+                value={formData.gameWinCommission}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Game Loss Commission Balance">
+              <input
+                type="number"
+                name="gameLossCommissionBalance"
+                value={formData.gameLossCommissionBalance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Deposit Commission Balance">
+              <input
+                type="number"
+                name="depositCommissionBalance"
+                value={formData.depositCommissionBalance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Refer Commission Balance">
+              <input
+                type="number"
+                name="referCommissionBalance"
+                value={formData.referCommissionBalance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Game Win Commission Balance">
+              <input
+                type="number"
+                name="gameWinCommissionBalance"
+                value={formData.gameWinCommissionBalance}
+                onChange={handleChange}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Read-only Information */}
+        <div className={`${cardClass} p-4 md:p-6`}>
+          <h2 className="text-lg md:text-xl font-bold text-green-300 mb-5 flex items-center gap-2">
+            <FaIdCard />
+            Read Only Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <Field label="Role">
+              <input
+                type="text"
+                readOnly
+                value={formData.role || "user"}
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Referral Code">
+              <input
+                type="text"
+                readOnly
+                value={formData.referralCode || "—"}
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Referral Count">
+              <input
+                type="text"
+                readOnly
+                value={formData.referralCount}
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Referred By User ID">
+              <input
+                type="text"
+                readOnly
+                value={formData.referredByUserId || "—"}
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Referred By Phone">
+              <input
+                type="text"
+                readOnly
+                value={formData.referredByPhone || "—"}
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Created At">
+              <input
+                type="text"
+                readOnly
+                value={
+                  formData.createdAt
+                    ? new Date(formData.createdAt).toLocaleString()
+                    : "—"
+                }
+                className={readOnlyClass}
+              />
+            </Field>
+
+            <Field label="Updated At">
+              <input
+                type="text"
+                readOnly
+                value={
+                  formData.updatedAt
+                    ? new Date(formData.updatedAt).toLocaleString()
+                    : "—"
+                }
+                className={readOnlyClass}
+              />
+            </Field>
+          </div>
+
+          {formData.password.trim().length > 0 && (
+            <div className="mt-5 rounded-xl border border-green-700/40 bg-green-950/20 p-4 text-sm text-green-200">
+              <div className="flex items-start gap-2">
+                <FaLock className="mt-0.5" />
+                <p>
+                  A new password has been entered. Click{" "}
+                  <strong>Save Changes</strong> to update it.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      <SingleUserGameHistory />
+      <SingleUserMenualDepositHisotry />
+      <SingleUserAutoDepositHisotry />
+      <SingleUserWithdrawHisotry />
+    </>
   );
 };
 
@@ -593,3 +603,5 @@ const Field = ({ label, children }) => {
 };
 
 export default UserDetails;
+
+

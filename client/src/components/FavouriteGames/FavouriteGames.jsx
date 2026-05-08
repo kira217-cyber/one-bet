@@ -134,88 +134,133 @@ const FavouriteGames = () => {
   };
 
   return (
-    <div className="px-3 py-4 bg-[#005C40]">
-      {/* Title */}
-      <div className="flex items-center mb-3">
-        <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-        <h2 className="text-yellow-400 font-semibold text-lg">
-          {isBangla ? "ফেভারিট গেমস" : "Favourite Games"}
-        </h2>
-      </div>
+    <>
+      <style>
+        {`
+        @keyframes providerGlassShine {
+          0% { transform: translateX(-260%) skewX(-22deg); opacity: 0; }
+          12% { opacity: 1; }
+          50% { opacity: 1; }
+          82% { transform: translateX(360%) skewX(-22deg); opacity: 1; }
+          100% { transform: translateX(360%) skewX(-22deg); opacity: 0; }
+        }
 
-      {/* Loading */}
-      {loading ? (
-        <Swiper
-          spaceBetween={12}
-          slidesPerView={2.3}
-          breakpoints={{
-            640: {
-              slidesPerView: 2.6,
-            },
-          }}
-        >
-          {Array.from({ length: 3 }).map((_, index) => (
-            <SwiperSlide key={index}>
-              <div className="bg-[#0B3B2E] rounded-sm overflow-hidden shadow-md animate-pulse">
-                <div className="w-full h-[150px] bg-[#145843]" />
-                <div className="px-4 py-1 bg-[#111111]">
-                  <div className="h-4 w-3/4 bg-[#2a2a2a] rounded" />
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : mergedGames.length === 0 ? (
-        <div className="bg-[#0B3B2E] rounded-sm overflow-hidden shadow-md">
-          <div className="px-4 py-8 bg-[#111111] text-center text-white text-sm">
-            {isBangla
-              ? "কোনো ফেভারিট গেম পাওয়া যায়নি।"
-              : "No favourite games found."}
-          </div>
+        .provider-glass-shine::after {
+          content: "";
+          position: absolute;
+          top: -35%;
+          left: -85%;
+          width: 55%;
+          height: 170%;
+          pointer-events: none;
+          z-index: 2;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255,255,255,0.08) 18%,
+            rgba(255,255,255,0.55) 38%,
+            rgba(255,255,255,0.95) 50%,
+            rgba(255,255,255,0.55) 62%,
+            rgba(255,255,255,0.08) 82%,
+            transparent 100%
+          );
+          filter: blur(0.4px);
+          mix-blend-mode: screen;
+          animation: providerGlassShine 3s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+        }
+
+        .provider-glass-shine img {
+          position: relative;
+          z-index: 1;
+        }
+      `}
+      </style>
+
+      <div className="px-3 py-4 bg-[#005C40]">
+        {/* Title */}
+        <div className="flex items-center mb-3">
+          <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
+          <h2 className="text-yellow-400 font-semibold text-lg">
+            {isBangla ? "ফেভারিট গেমস" : "Favourite Games"}
+          </h2>
         </div>
-      ) : (
-        <Swiper
-          spaceBetween={12}
-          slidesPerView={2.3}
-          breakpoints={{
-            640: {
-              slidesPerView: 2.6,
-            },
-          }}
-        >
-          {mergedGames.map((game, index) => (
-            <SwiperSlide key={game?._id || game?.gameId || index}>
-              <button
-                type="button"
-                onClick={() => handleGameClick(game)}
-                className="w-full cursor-pointer text-left"
-              >
-                <div className="bg-[#0B3B2E] rounded-sm overflow-hidden shadow-md">
-                  {game.displayImage ? (
-                    <img
-                      src={game.displayImage}
-                      alt={game.displayName}
-                      className="w-full h-[150px]"
-                    />
-                  ) : (
-                    <div className="w-full h-[150px] flex items-center justify-center bg-[#145843] text-white/70 text-xs text-center px-2">
-                      {isBangla ? "ইমেজ নেই" : "No Image"}
-                    </div>
-                  )}
 
-                  {/* Game Name */}
+        {/* Loading */}
+        {loading ? (
+          <Swiper
+            spaceBetween={12}
+            slidesPerView={2.3}
+            breakpoints={{
+              640: {
+                slidesPerView: 2.6,
+              },
+            }}
+          >
+            {Array.from({ length: 3 }).map((_, index) => (
+              <SwiperSlide key={index}>
+                <div className="bg-[#0B3B2E] rounded-[8px] overflow-hidden shadow-md animate-pulse">
+                  <div className="w-full h-[150px] bg-[#145843]" />
                   <div className="px-4 py-1 bg-[#111111]">
-                    <p className="text-white text-sm font-medium truncate">
-                      {game.displayName}
-                    </p>
+                    <div className="h-4 w-3/4 bg-[#2a2a2a] rounded" />
                   </div>
                 </div>
-              </button>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      )}
-    </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ) : mergedGames.length === 0 ? (
+          <div className="bg-[#0B3B2E] rounded-sm overflow-hidden shadow-md">
+            <div className="px-4 py-8 bg-[#111111] text-center text-white text-sm">
+              {isBangla
+                ? "কোনো ফেভারিট গেম পাওয়া যায়নি।"
+                : "No favourite games found."}
+            </div>
+          </div>
+        ) : (
+          <Swiper
+            spaceBetween={12}
+            slidesPerView={2.3}
+            breakpoints={{
+              640: {
+                slidesPerView: 2.6,
+              },
+            }}
+          >
+            {mergedGames.map((game, index) => (
+              <SwiperSlide key={game?._id || game?.gameId || index}>
+                <button
+                  type="button"
+                  onClick={() => handleGameClick(game)}
+                  className="w-full cursor-pointer text-left"
+                >
+                  <div className="overflow-hidden rounded-[8px] bg-[#0B3B2E] shadow-md transition hover:-translate-y-[1px] hover:shadow-lg">
+                    <div className="provider-glass-shine relative overflow-hidden bg-[#145843]">
+                      {game.displayImage ? (
+                        <img
+                          src={game.displayImage}
+                          alt={game.displayName}
+                          className="w-full h-[150px] object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-[150px] flex items-center justify-center bg-[#145843] text-white/70 text-xs text-center px-2">
+                          {isBangla ? "ইমেজ নেই" : "No Image"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Game Name */}
+                    <div className="px-4 py-1 bg-[#111111]">
+                      <p className="text-white text-sm font-medium truncate">
+                        {game.displayName}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        )}
+      </div>
+    </>
   );
 };
 

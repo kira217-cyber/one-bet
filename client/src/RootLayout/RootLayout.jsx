@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar/Sidebar";
 import BottomNavbar from "../components/BottomNavbar/BottomNavbar";
 import SiteIdentity from "../components/SiteIdentity/SiteIdentity";
 import SocialLink from "../components/SocialLink/SocialLink";
+import bg from "../assets/bg.webp";
 
 const RootLayout = () => {
   const [open, setOpen] = useState(false);
@@ -41,7 +42,7 @@ const RootLayout = () => {
         className="hidden lg:block fixed inset-0 bg-cover z-0"
         style={{
           backgroundImage:
-            "url('https://beit365.bet/assets/images/baaji365-desktop-bg.webp')",
+            `url('${bg}')`,
         }}
       />
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-
 import {
   FaSave,
   FaTimes,
@@ -10,6 +9,7 @@ import {
   FaPlus,
   FaImage,
   FaServer,
+  FaHome,
 } from "react-icons/fa";
 import { api } from "../../api/axios";
 
@@ -20,6 +20,8 @@ const initialForm = {
   categoryId: "",
   providerId: "",
   providerIcon: null,
+  providerImage: null,
+  isHome: false,
   status: "active",
 };
 
@@ -36,6 +38,10 @@ const AddProvider = () => {
   const [iconPreview, setIconPreview] = useState("");
   const [oldIconUrl, setOldIconUrl] = useState("");
   const [removeOldIcon, setRemoveOldIcon] = useState(false);
+
+  const [imagePreview, setImagePreview] = useState("");
+  const [oldImageUrl, setOldImageUrl] = useState("");
+  const [removeOldImage, setRemoveOldImage] = useState(false);
 
   const [deleteModal, setDeleteModal] = useState({
     open: false,
@@ -109,12 +115,29 @@ const AddProvider = () => {
       setIconPreview(url);
 
       return () => URL.revokeObjectURL(url);
-    } else if (oldIconUrl) {
+    }
+
+    if (oldIconUrl && !removeOldIcon) {
       setIconPreview(oldIconUrl);
     } else {
       setIconPreview("");
     }
-  }, [form.providerIcon, oldIconUrl]);
+  }, [form.providerIcon, oldIconUrl, removeOldIcon]);
+
+  useEffect(() => {
+    if (form.providerImage instanceof File) {
+      const url = URL.createObjectURL(form.providerImage);
+      setImagePreview(url);
+
+      return () => URL.revokeObjectURL(url);
+    }
+
+    if (oldImageUrl && !removeOldImage) {
+      setImagePreview(oldImageUrl);
+    } else {
+      setImagePreview("");
+    }
+  }, [form.providerImage, oldImageUrl, removeOldImage]);
 
   const getProviderName = (providerCode) => {
     const found = oracleProviders.find(
@@ -135,9 +158,14 @@ const AddProvider = () => {
   const resetForm = () => {
     setForm(initialForm);
     setEditId(null);
+
     setIconPreview("");
     setOldIconUrl("");
     setRemoveOldIcon(false);
+
+    setImagePreview("");
+    setOldImageUrl("");
+    setRemoveOldImage(false);
   };
 
   const handleProviderSelect = (providerCode) => {
@@ -157,6 +185,20 @@ const AddProvider = () => {
     }));
 
     setRemoveOldIcon(false);
+    e.target.value = "";
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setForm((prev) => ({
+      ...prev,
+      providerImage: file,
+    }));
+
+    setRemoveOldImage(false);
+    e.target.value = "";
   };
 
   const handleRemoveIcon = () => {
@@ -164,10 +206,24 @@ const AddProvider = () => {
       ...prev,
       providerIcon: null,
     }));
+
     setIconPreview("");
 
     if (oldIconUrl) {
       setRemoveOldIcon(true);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm((prev) => ({
+      ...prev,
+      providerImage: null,
+    }));
+
+    setImagePreview("");
+
+    if (oldImageUrl) {
+      setRemoveOldImage(true);
     }
   };
 
@@ -177,10 +233,16 @@ const AddProvider = () => {
       categoryId: provider?.categoryId?._id || provider?.categoryId || "",
       providerId: provider?.providerId || "",
       providerIcon: null,
+      providerImage: null,
+      isHome: provider?.isHome === true,
       status: provider?.status || "active",
     });
+
     setOldIconUrl(provider?.providerIconUrl || "");
     setRemoveOldIcon(false);
+
+    setOldImageUrl(provider?.providerImageUrl || "");
+    setRemoveOldImage(false);
 
     window.scrollTo({
       top: 0,
@@ -206,13 +268,19 @@ const AddProvider = () => {
       fd.append("categoryId", form.categoryId);
       fd.append("providerId", form.providerId);
       fd.append("status", form.status);
+      fd.append("isHome", form.isHome ? "true" : "false");
 
       if (form.providerIcon instanceof File) {
         fd.append("providerIcon", form.providerIcon);
       }
 
+      if (form.providerImage instanceof File) {
+        fd.append("providerImage", form.providerImage);
+      }
+
       if (isEdit) {
         fd.append("removeOldIcon", removeOldIcon ? "true" : "false");
+        fd.append("removeOldImage", removeOldImage ? "true" : "false");
 
         const res = await api.put(`/api/game-providers/${editId}`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -373,26 +441,69 @@ const AddProvider = () => {
                   )}
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-green-200">
+                      Provider Icon
+                    </label>
+
+                    <label className="cursor-pointer flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-green-700/50 bg-black/40 p-6 text-center hover:border-green-400 hover:bg-green-950/20 transition-all">
+                      <FaImage className="text-4xl text-green-300 mb-3" />
+                      <span className="text-base font-semibold text-white">
+                        Click to upload provider icon
+                      </span>
+                      <span className="text-sm text-green-200/70 mt-1">
+                        PNG, JPG, JPEG, WEBP, SVG, AVIF, GIF
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleIconChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-green-200">
+                      Provider Image
+                    </label>
+
+                    <label className="cursor-pointer flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-emerald-700/50 bg-black/40 p-6 text-center hover:border-emerald-400 hover:bg-emerald-950/20 transition-all">
+                      <FaImage className="text-4xl text-emerald-300 mb-3" />
+                      <span className="text-base font-semibold text-white">
+                        Click to upload provider image
+                      </span>
+                      <span className="text-sm text-green-200/70 mt-1">
+                        PNG, JPG, JPEG, WEBP, SVG, AVIF, GIF
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block mb-2 text-sm font-semibold text-green-200">
-                    Provider Icon
+                    Show On Home
                   </label>
-
-                  <label className="cursor-pointer flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-green-700/50 bg-black/40 p-6 text-center hover:border-green-400 hover:bg-green-950/20 transition-all">
-                    <FaImage className="text-4xl text-green-300 mb-3" />
-                    <span className="text-base font-semibold text-white">
-                      Click to upload provider icon
-                    </span>
-                    <span className="text-sm text-green-200/70 mt-1">
-                      PNG, JPG, JPEG, WEBP, SVG, AVIF, GIF
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleIconChange}
-                      className="hidden"
-                    />
-                  </label>
+                  <select
+                    value={form.isHome ? "true" : "false"}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        isHome: e.target.value === "true",
+                      }))
+                    }
+                    className="w-full rounded-2xl border border-green-700/40 bg-black/60 px-4 py-3 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/30 cursor-pointer"
+                  >
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
                 </div>
 
                 <div>
@@ -430,7 +541,7 @@ const AddProvider = () => {
                         : "Add Provider"}
                   </button>
 
-                  {(isEdit || iconPreview) && (
+                  {(isEdit || iconPreview || imagePreview) && (
                     <button
                       type="button"
                       onClick={resetForm}
@@ -450,6 +561,16 @@ const AddProvider = () => {
                       Remove Icon
                     </button>
                   )}
+
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="cursor-pointer inline-flex items-center gap-2 rounded-2xl border border-orange-500/40 bg-orange-500/10 px-6 py-3 font-semibold text-orange-300 hover:bg-orange-500/20 transition-all"
+                    >
+                      Remove Image
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -462,12 +583,24 @@ const AddProvider = () => {
 
                   <div className="rounded-3xl bg-gradient-to-br from-green-950/20 to-black border border-green-700/30 p-5">
                     <div className="flex flex-col items-center text-center">
+                      <div className="w-full h-36 rounded-3xl bg-[#003F2C] flex items-center justify-center overflow-hidden border border-green-700/40 mb-4">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Provider Preview"
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <FaImage className="text-4xl text-green-300/70" />
+                        )}
+                      </div>
+
                       <div className="w-28 h-28 rounded-full bg-[#003F2C] flex items-center justify-center overflow-hidden border border-green-700/40">
                         {iconPreview ? (
                           <img
                             src={iconPreview}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
+                            alt="Icon Preview"
+                            className="w-full h-full object-contain"
                           />
                         ) : (
                           <FaImage className="text-4xl text-green-300/70" />
@@ -497,6 +630,17 @@ const AddProvider = () => {
                           }`}
                         >
                           {form.status}
+                        </span>
+
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm border ${
+                            form.isHome
+                              ? "bg-yellow-500/15 border-yellow-500/30 text-yellow-300"
+                              : "bg-slate-500/15 border-slate-500/30 text-slate-300"
+                          }`}
+                        >
+                          <FaHome />
+                          {form.isHome ? "Home" : "Not Home"}
                         </span>
                       </div>
                     </div>
@@ -548,13 +692,25 @@ const AddProvider = () => {
                     key={provider._id}
                     className="rounded-3xl border border-green-700/30 bg-gradient-to-br from-black via-green-950/10 to-black p-5 shadow-xl"
                   >
+                    <div className="mb-4 h-32 rounded-2xl bg-[#003F2C] overflow-hidden flex items-center justify-center border border-green-700/40">
+                      {provider.providerImageUrl ? (
+                        <img
+                          src={provider.providerImageUrl}
+                          alt={provider.providerId}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <FaImage className="text-3xl text-green-300/70" />
+                      )}
+                    </div>
+
                     <div className="flex items-start gap-4">
                       <div className="w-20 h-20 rounded-2xl bg-[#003F2C] overflow-hidden flex items-center justify-center border border-green-700/40 shrink-0">
                         {provider.providerIconUrl ? (
                           <img
                             src={provider.providerIconUrl}
                             alt={provider.providerId}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                           />
                         ) : (
                           <FaImage className="text-3xl text-green-300/70" />
@@ -583,6 +739,17 @@ const AddProvider = () => {
                             }`}
                           >
                             {provider.status}
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs border ${
+                              provider.isHome
+                                ? "bg-yellow-500/15 border-yellow-500/30 text-yellow-300"
+                                : "bg-slate-500/15 border-slate-500/30 text-slate-300"
+                            }`}
+                          >
+                            <FaHome />
+                            {provider.isHome ? "Home" : "Not Home"}
                           </span>
                         </div>
                       </div>

@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FaQuestionCircle } from "react-icons/fa";
+import {
+  FaCheckCircle,
+  FaClock,
+  FaQuestionCircle,
+  FaRedoAlt,
+  FaTimesCircle,
+  FaUserCheck,
+  FaUsers,
+  FaWallet,
+} from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
@@ -14,8 +23,18 @@ const card =
   "bg-gradient-to-b from-black via-green-950/25 to-black border border-green-800/50 rounded-2xl shadow-2xl shadow-green-900/30";
 
 const labelCls = "text-[13px] font-semibold text-green-100";
+
 const inputCls =
   "mt-2 w-full h-[44px] rounded-xl border border-green-700/50 bg-black/70 px-4 text-[14px] text-white outline-none placeholder-green-300/40 focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all";
+
+const money = (value) => {
+  const num = Number(value || 0);
+
+  return `৳ ${num.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -33,6 +52,10 @@ const Withdraw = () => {
 
   const notices = useMemo(
     () => [
+      {
+        title: "Referral Requirement:",
+        body: "Withdraw করতে হলে কমপক্ষে ৫ জন active referred user থাকতে হবে এবং প্রত্যেকে অন্তত একবার deposit করতে হবে.",
+      },
       {
         title: "Bulk Adjustment First:",
         body: "Bulk Adjustment না হলে affiliate withdraw submit করতে পারবে না.",
@@ -52,30 +75,39 @@ const Withdraw = () => {
   const [loadingMethods, setLoadingMethods] = useState(false);
   const [methods, setMethods] = useState([]);
 
+  const [eligLoading, setEligLoading] = useState(false);
+  const [elig, setElig] = useState({
+    eligible: false,
+    remaining: 0,
+    message: "",
+    required: 5,
+    activeReferralCount: 0,
+    depositedReferralCount: 0,
+    remainingReferralCount: 5,
+  });
+
+  const [selectedId, setSelectedId] = useState("");
+  const [formValues, setFormValues] = useState({});
+  const [amount, setAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const accountOk = !!token && !!me?._id && !!isAuthed;
+
   const loadMethods = async () => {
     try {
       setLoadingMethods(true);
+
       const res = await api.get("/api/aff-withdraw-methods");
       const rows = res?.data?.data || res?.data || [];
+
       setMethods(Array.isArray(rows) ? rows : []);
     } catch (e) {
       setMethods([]);
-      console.error(e);
+      toast.error("Failed to load withdraw methods");
     } finally {
       setLoadingMethods(false);
     }
   };
-
-  useEffect(() => {
-    loadMethods();
-  }, []);
-
-  const [eligLoading, setEligLoading] = useState(false);
-  const [elig, setElig] = useState({
-    eligible: true,
-    remaining: 0,
-    message: "",
-  });
 
   const loadEligibility = async () => {
     if (!token) {
@@ -83,26 +115,41 @@ const Withdraw = () => {
         eligible: false,
         remaining: 0,
         message: "Please login to withdraw.",
+        required: 5,
+        activeReferralCount: 0,
+        depositedReferralCount: 0,
+        remainingReferralCount: 5,
       });
       return;
     }
 
     try {
       setEligLoading(true);
+
       const { data } = await api.get("/api/aff-withdraw-requests/eligibility", {
         headers,
       });
+
       const payload = data?.data || data || {};
+
       setElig({
         eligible: !!payload.eligible,
         remaining: Number(payload.remaining || 0),
         message: payload.message || "",
+        required: Number(payload.required || 5),
+        activeReferralCount: Number(payload.activeReferralCount || 0),
+        depositedReferralCount: Number(payload.depositedReferralCount || 0),
+        remainingReferralCount: Number(payload.remainingReferralCount || 0),
       });
     } catch (e) {
       setElig({
         eligible: false,
         remaining: 0,
         message: e?.response?.data?.message || "Unable to check eligibility.",
+        required: 5,
+        activeReferralCount: 0,
+        depositedReferralCount: 0,
+        remainingReferralCount: 5,
       });
     } finally {
       setEligLoading(false);
@@ -110,14 +157,22 @@ const Withdraw = () => {
   };
 
   useEffect(() => {
-    if (token) loadEligibility();
+    loadMethods();
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      loadEligibility();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const [selectedId, setSelectedId] = useState("");
   const selectedMethod = useMemo(() => {
     if (!methods.length) return null;
-    return methods.find((m) => String(m.methodId) === String(selectedId)) || null;
+
+    return (
+      methods.find((m) => String(m.methodId) === String(selectedId)) || null
+    );
   }, [methods, selectedId]);
 
   useEffect(() => {
@@ -126,19 +181,25 @@ const Withdraw = () => {
     }
   }, [methods, selectedId]);
 
-  const [formValues, setFormValues] = useState({});
   useEffect(() => {
     if (!selectedMethod) return;
+
     const next = {};
+
     (selectedMethod.fields || []).forEach((f) => {
       next[f.key] = "";
     });
+
     setFormValues(next);
   }, [selectedMethod?._id]);
 
-  const setVal = (key, value) => setFormValues((p) => ({ ...p, [key]: value }));
+  const setVal = (key, value) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
-  const [amount, setAmount] = useState("");
   const amountNum = Number(amount || 0);
 
   const min = useMemo(() => {
@@ -158,21 +219,29 @@ const Withdraw = () => {
     if (amountNum < Number(min)) return false;
     if (hasMax && amountNum > Number(max)) return false;
     if (amountNum > Number(elig.remaining || 0)) return false;
+
     return true;
   }, [amountNum, min, max, hasMax, elig.remaining]);
 
   const amountErrorText = useMemo(() => {
     if (!amount) return "";
-    if (!Number.isFinite(amountNum) || amountNum <= 0) return "Enter a valid amount.";
+
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      return "Enter a valid amount.";
+    }
+
     if (amountNum < Number(min)) {
-      return `Minimum withdraw amount is ৳ ${Number(min).toLocaleString()}.`;
+      return `Minimum withdraw amount is ${money(min)}.`;
     }
+
     if (hasMax && amountNum > Number(max)) {
-      return `Maximum withdraw amount is ৳ ${Number(max).toLocaleString()}.`;
+      return `Maximum withdraw amount is ${money(max)}.`;
     }
+
     if (amountNum > Number(elig.remaining || 0)) {
-      return `You cannot withdraw more than ৳ ${Number(elig.remaining || 0).toLocaleString()}.`;
+      return `You cannot withdraw more than ${money(elig.remaining)}.`;
     }
+
     return "";
   }, [amount, amountNum, min, max, hasMax, elig.remaining]);
 
@@ -188,22 +257,22 @@ const Withdraw = () => {
         return;
       }
 
-      if (v) {
-        if (f.type === "email") {
-          const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-          if (!ok) errs[f.key] = "Enter a valid email";
-        }
+      if (!v) return;
 
-        if (f.type === "number") {
-          const num = Number(v);
-          if (!Number.isFinite(num)) errs[f.key] = "Numbers only";
-        }
+      if (f.type === "email") {
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        if (!ok) errs[f.key] = "Enter a valid email";
+      }
 
-        if (f.type === "tel") {
-          const bdOk = /^01[3-9]\d{8}$/.test(v);
-          if (v.startsWith("01") && v.length >= 11 && !bdOk) {
-            errs[f.key] = "Enter a valid Bangladeshi phone number";
-          }
+      if (f.type === "number") {
+        const num = Number(v);
+        if (!Number.isFinite(num)) errs[f.key] = "Numbers only";
+      }
+
+      if (f.type === "tel") {
+        const bdOk = /^01[3-9]\d{8}$/.test(v);
+        if (v.startsWith("01") && v.length >= 11 && !bdOk) {
+          errs[f.key] = "Enter a valid Bangladeshi phone number";
         }
       }
     });
@@ -213,17 +282,18 @@ const Withdraw = () => {
 
   const allRequiredOk = useMemo(() => {
     const fields = selectedMethod?.fields || [];
+
     for (const f of fields) {
       if (f.required !== false) {
         const v = String(formValues?.[f.key] ?? "").trim();
         if (!v) return false;
       }
     }
+
     return true;
   }, [selectedMethod, formValues]);
 
   const noTypeErrors = Object.keys(fieldErrors).length === 0;
-  const accountOk = !!token && !!me?._id && !!isAuthed;
 
   const canSubmit =
     accountOk &&
@@ -231,9 +301,13 @@ const Withdraw = () => {
     validAmount &&
     allRequiredOk &&
     noTypeErrors &&
-    elig.eligible;
+    elig.eligible &&
+    !eligLoading;
 
-  const [submitting, setSubmitting] = useState(false);
+  const refreshAll = () => {
+    loadMethods();
+    loadEligibility();
+  };
 
   const onSubmit = async () => {
     if (!canSubmit || submitting) return;
@@ -246,16 +320,20 @@ const Withdraw = () => {
 
     try {
       setSubmitting(true);
+
       await api.post("/api/aff-withdraw-requests", payload, { headers });
 
       toast.success("Withdraw request submitted!");
       navigate("/dashboard/withdraw-history");
 
       setAmount("");
-      const next = {};
-      (selectedMethod?.fields || []).forEach((f) => (next[f.key] = ""));
-      setFormValues(next);
 
+      const next = {};
+      (selectedMethod?.fields || []).forEach((f) => {
+        next[f.key] = "";
+      });
+
+      setFormValues(next);
       loadEligibility();
     } catch (e) {
       toast.error(e?.response?.data?.message || "Withdraw request failed");
@@ -274,6 +352,7 @@ const Withdraw = () => {
               <div className="text-[22px] font-extrabold text-white tracking-tight">
                 Withdraw
               </div>
+
               <div className="mt-1 text-[12px] text-green-200/70">
                 Submit your affiliate withdraw request
               </div>
@@ -281,33 +360,23 @@ const Withdraw = () => {
 
             <button
               type="button"
-              onClick={loadMethods}
-              className="cursor-pointer h-10 px-4 rounded-xl border border-green-700/60 bg-green-900/20 hover:bg-green-900/35 text-green-100 text-[13px] font-semibold transition"
+              onClick={refreshAll}
+              disabled={loadingMethods || eligLoading}
+              className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 h-10 px-4 rounded-xl border border-green-700/60 bg-green-900/20 hover:bg-green-900/35 text-green-100 text-[13px] font-semibold transition flex items-center gap-2"
             >
+              <FaRedoAlt
+                className={loadingMethods || eligLoading ? "animate-spin" : ""}
+              />
               Refresh
             </button>
           </div>
 
           {!accountOk && (
-            <div className="mt-5 rounded-2xl border border-yellow-400/30 bg-yellow-500/10 p-4">
-              <div className="text-[14px] font-extrabold text-yellow-200">
-                Login Required
-              </div>
-              <div className="mt-1 text-[13px] text-yellow-200/85">
-                Please login to submit a withdraw request.
-              </div>
-            </div>
-          )}
-
-          {accountOk && !eligLoading && !elig.eligible && (
-            <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
-              <div className="text-[14px] font-extrabold text-red-200">
-                Withdrawal Not Allowed
-              </div>
-              <div className="mt-1 text-[13px] text-red-200/85">
-                {elig.message || "You are not eligible right now."}
-              </div>
-            </div>
+            <NoticeBox
+              type="warning"
+              title="Login Required"
+              message="Please login to submit a withdraw request."
+            />
           )}
 
           {accountOk && eligLoading && (
@@ -316,18 +385,34 @@ const Withdraw = () => {
             </div>
           )}
 
-          {accountOk && !eligLoading && elig.eligible && (
-            <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
-              <div className="text-[14px] font-extrabold text-green-200">
-                Withdrawable Balance
+          {accountOk && !eligLoading && (
+            <>
+              <EligibilityCards elig={elig} />
+
+              {!elig.eligible ? (
+                <NoticeBox
+                  type="danger"
+                  title="Withdrawal Not Allowed"
+                  message={elig.message || "You are not eligible right now."}
+                />
+              ) : (
+                <NoticeBox
+                  type="success"
+                  title="Withdrawal Allowed"
+                  message="Your referral requirement is complete. You can submit withdraw request."
+                />
+              )}
+
+              <div className="mt-5 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
+                <div className="text-[14px] font-extrabold text-green-200">
+                  Withdrawable Balance
+                </div>
+
+                <div className="mt-1 text-[16px] font-extrabold text-white">
+                  {money(elig.remaining || 0)}
+                </div>
               </div>
-              <div className="mt-1 text-[16px] font-extrabold text-white">
-                ৳ {Number(elig.remaining || 0).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-            </div>
+            </>
           )}
 
           <div className="mt-6">
@@ -341,7 +426,10 @@ const Withdraw = () => {
               ) : methods.length ? (
                 methods.map((m) => {
                   const active = String(selectedId) === String(m.methodId);
-                  const logo = m.logoUrl ? `${import.meta.env.VITE_APP_URL}${m.logoUrl}` : "";
+
+                  const logo = m.logoUrl
+                    ? `${import.meta.env.VITE_APP_URL}${m.logoUrl}`
+                    : "";
 
                   return (
                     <button
@@ -359,7 +447,11 @@ const Withdraw = () => {
                             ? "border-green-300 shadow-[0_10px_30px_rgba(34,197,94,0.18)]"
                             : "border-green-800/50 hover:border-green-600/70"
                         }
-                        ${!accountOk ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+                        ${
+                          !accountOk
+                            ? "opacity-60 cursor-not-allowed"
+                            : "cursor-pointer"
+                        }
                       `}
                       title={m?.name?.en || m?.methodId}
                     >
@@ -427,7 +519,11 @@ const Withdraw = () => {
                         inputMode={f.type === "number" ? "numeric" : undefined}
                       />
 
-                      {!!err && <div className="mt-2 text-[12px] text-red-300">{err}</div>}
+                      {!!err && (
+                        <div className="mt-2 text-[12px] text-red-300">
+                          {err}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -440,6 +536,7 @@ const Withdraw = () => {
               <label className={labelCls}>
                 Withdraw Amount <span className="text-red-400">*</span>
               </label>
+
               <FaQuestionCircle className="text-green-200/70" />
             </div>
 
@@ -449,15 +546,19 @@ const Withdraw = () => {
               onChange={(e) => setAmount(e.target.value)}
               placeholder={
                 hasMax
-                  ? `Min ৳ ${Number(min).toLocaleString()} - Max ৳ ${Number(max).toLocaleString()}`
-                  : `Min ৳ ${Number(min).toLocaleString()}`
+                  ? `Min ${money(min)} - Max ${money(max)}`
+                  : `Min ${money(min)}`
               }
-              className={`${inputCls} ${!accountOk ? "opacity-60 cursor-not-allowed" : ""}`}
+              className={`${inputCls} ${
+                !accountOk ? "opacity-60 cursor-not-allowed" : ""
+              }`}
               inputMode="numeric"
             />
 
             {!!amountErrorText && (
-              <div className="mt-2 text-[12px] text-red-300">{amountErrorText}</div>
+              <div className="mt-2 text-[12px] text-red-300">
+                {amountErrorText}
+              </div>
             )}
           </div>
 
@@ -482,17 +583,19 @@ const Withdraw = () => {
               <div className="mt-2 text-[12px] text-green-200/60">
                 {!accountOk
                   ? "Please login."
-                  : !elig.eligible
-                    ? elig.message || "Not eligible right now."
-                    : !selectedMethod
-                      ? "Select a method."
-                      : !allRequiredOk
-                        ? "Fill all required fields."
-                        : !noTypeErrors
-                          ? "Some inputs are invalid."
-                          : !validAmount
-                            ? "Amount is invalid."
-                            : null}
+                  : eligLoading
+                    ? "Checking eligibility."
+                    : !elig.eligible
+                      ? elig.message || "Not eligible right now."
+                      : !selectedMethod
+                        ? "Select a method."
+                        : !allRequiredOk
+                          ? "Fill all required fields."
+                          : !noTypeErrors
+                            ? "Some inputs are invalid."
+                            : !validAmount
+                              ? "Amount is invalid."
+                              : null}
               </div>
             )}
           </div>
@@ -502,18 +605,107 @@ const Withdraw = () => {
           <div className="text-[14px] font-extrabold text-white">
             Important Notice
           </div>
+
           <div className="mt-4 space-y-4 text-[12px] leading-relaxed text-green-100/80">
-            {notices.map((n, idx) => (
+            {notices.map((notice, idx) => (
               <div key={idx}>
                 <div className="font-extrabold text-green-100">
-                  {idx + 1}. {n.title}
+                  {idx + 1}. {notice.title}
                 </div>
-                <p className="mt-1">{n.body}</p>
+
+                <p className="mt-1">{notice.body}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const EligibilityCards = ({ elig }) => {
+  const required = Number(elig?.required || 5);
+  const active = Number(elig?.activeReferralCount || 0);
+  const deposited = Number(elig?.depositedReferralCount || 0);
+  const remaining = Math.max(Number(elig?.remainingReferralCount || 0), 0);
+
+  return (
+    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <MiniCard
+        label="Required"
+        value={required}
+        icon={<FaUsers />}
+        valueClass="text-blue-300"
+        iconClass="bg-blue-500/15 text-blue-300"
+      />
+
+      <MiniCard
+        label="Active Referrals"
+        value={active}
+        icon={<FaUserCheck />}
+        valueClass="text-green-300"
+        iconClass="bg-green-500/15 text-green-300"
+      />
+
+      <MiniCard
+        label="Deposited Referrals"
+        value={deposited}
+        icon={<FaCheckCircle />}
+        valueClass="text-emerald-300"
+        iconClass="bg-emerald-500/15 text-emerald-300"
+      />
+
+      <MiniCard
+        label="Remaining"
+        value={remaining}
+        icon={remaining > 0 ? <FaTimesCircle /> : <FaCheckCircle />}
+        valueClass={remaining > 0 ? "text-red-300" : "text-emerald-300"}
+        iconClass={
+          remaining > 0
+            ? "bg-red-500/15 text-red-300"
+            : "bg-emerald-500/15 text-emerald-300"
+        }
+      />
+    </div>
+  );
+};
+
+const MiniCard = ({ label, value, icon, valueClass, iconClass }) => {
+  return (
+    <div className="rounded-2xl border border-green-800/45 bg-black/45 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold text-green-200/70">
+            {label}
+          </div>
+
+          <div className={`mt-1 text-[20px] font-extrabold ${valueClass}`}>
+            {value}
+          </div>
+        </div>
+
+        <div
+          className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}
+        >
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NoticeBox = ({ type = "success", title, message }) => {
+  const styles = {
+    success: "border-green-500/30 bg-green-500/10 text-green-200",
+    warning: "border-yellow-400/30 bg-yellow-500/10 text-yellow-200",
+    danger: "border-red-500/30 bg-red-500/10 text-red-200",
+  };
+
+  return (
+    <div className={`mt-5 rounded-2xl border p-4 ${styles[type]}`}>
+      <div className="text-[14px] font-extrabold">{title}</div>
+
+      <div className="mt-1 text-[13px] opacity-90">{message}</div>
     </div>
   );
 };

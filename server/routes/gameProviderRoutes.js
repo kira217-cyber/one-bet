@@ -1,4 +1,3 @@
-// routes/gameProviderRoutes.js
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -8,6 +7,11 @@ import GameCategory from "../models/GameCategory.js";
 import upload from "../config/multer.js";
 
 const router = express.Router();
+
+const providerUpload = upload.fields([
+  { name: "providerIcon", maxCount: 1 },
+  { name: "providerImage", maxCount: 1 },
+]);
 
 const buildFileUrl = (req, filePath = "") => {
   if (!filePath) return "";
@@ -20,27 +24,49 @@ const formatProvider = (req, doc) => {
 
   return {
     ...obj,
-    providerIconUrl: obj.providerIcon ? buildFileUrl(req, obj.providerIcon) : "",
+    providerIconUrl: obj.providerIcon
+      ? buildFileUrl(req, obj.providerIcon)
+      : "",
+    providerImageUrl: obj.providerImage
+      ? buildFileUrl(req, obj.providerImage)
+      : "",
   };
 };
 
 const deleteLocalFile = (filePath) => {
   if (!filePath) return;
+
   const fullPath = path.resolve(filePath);
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }
 };
 
+const deleteUploadedFiles = (files = {}) => {
+  const iconFile = files?.providerIcon?.[0];
+  const imageFile = files?.providerImage?.[0];
+
+  if (iconFile?.path) deleteLocalFile(iconFile.path);
+  if (imageFile?.path) deleteLocalFile(imageFile.path);
+};
+
+const toBoolean = (value) => {
+  return value === true || value === "true" || value === "1" || value === 1;
+};
+
 // =========================
 // CREATE PROVIDER
 // =========================
-router.post("/", upload.single("providerIcon"), async (req, res) => {
+router.post("/", providerUpload, async (req, res) => {
   try {
-    const { categoryId, providerId, status } = req.body;
+    const { categoryId, providerId, status, isHome } = req.body;
+
+    const iconFile = req.files?.providerIcon?.[0];
+    const imageFile = req.files?.providerImage?.[0];
 
     if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(400).json({
         success: false,
         message: "Valid categoryId is required",
@@ -48,7 +74,7 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
     }
 
     if (!providerId?.trim()) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(400).json({
         success: false,
         message: "providerId is required",
@@ -57,7 +83,7 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
 
     const categoryExists = await GameCategory.findById(categoryId);
     if (!categoryExists) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(404).json({
         success: false,
         message: "Category not found",
@@ -70,7 +96,7 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
     });
 
     if (existing) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(409).json({
         success: false,
         message: "This provider already exists in the selected category",
@@ -80,7 +106,9 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
     const newProvider = new GameProvider({
       categoryId,
       providerId: providerId.trim(),
-      providerIcon: req.file ? req.file.path : "",
+      providerIcon: iconFile ? iconFile.path : "",
+      providerImage: imageFile ? imageFile.path : "",
+      isHome: toBoolean(isHome),
       status: status === "inactive" ? "inactive" : "active",
     });
 
@@ -88,7 +116,7 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
 
     const populated = await GameProvider.findById(newProvider._id).populate(
       "categoryId",
-      "categoryName categoryTitle status"
+      "categoryName categoryTitle status",
     );
 
     return res.status(201).json({
@@ -97,7 +125,8 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
       data: formatProvider(req, populated),
     });
   } catch (error) {
-    if (req.file) deleteLocalFile(req.file.path);
+    deleteUploadedFiles(req.files);
+
     return res.status(500).json({
       success: false,
       message: "Failed to add provider",
@@ -108,11 +137,11 @@ router.post("/", upload.single("providerIcon"), async (req, res) => {
 
 // =========================
 // GET PROVIDERS
-// query: ?categoryId=xxx
+// query: ?categoryId=xxx&status=active&isHome=true
 // =========================
 router.get("/", async (req, res) => {
   try {
-    const { categoryId, status } = req.query;
+    const { categoryId, status, isHome } = req.query;
 
     const filter = {};
 
@@ -123,11 +152,16 @@ router.get("/", async (req, res) => {
           message: "Invalid categoryId",
         });
       }
+
       filter.categoryId = categoryId;
     }
 
     if (status && ["active", "inactive"].includes(status)) {
       filter.status = status;
+    }
+
+    if (isHome === "true" || isHome === "false") {
+      filter.isHome = isHome === "true";
     }
 
     const providers = await GameProvider.find(filter)
@@ -155,7 +189,7 @@ router.get("/:id", async (req, res) => {
   try {
     const provider = await GameProvider.findById(req.params.id).populate(
       "categoryId",
-      "categoryName categoryTitle status"
+      "categoryName categoryTitle status",
     );
 
     if (!provider) {
@@ -181,22 +215,32 @@ router.get("/:id", async (req, res) => {
 // =========================
 // UPDATE PROVIDER
 // =========================
-router.put("/:id", upload.single("providerIcon"), async (req, res) => {
+router.put("/:id", providerUpload, async (req, res) => {
   try {
     const provider = await GameProvider.findById(req.params.id);
 
+    const iconFile = req.files?.providerIcon?.[0];
+    const imageFile = req.files?.providerImage?.[0];
+
     if (!provider) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(404).json({
         success: false,
         message: "Provider not found",
       });
     }
 
-    const { categoryId, providerId, status, removeOldIcon } = req.body;
+    const {
+      categoryId,
+      providerId,
+      status,
+      isHome,
+      removeOldIcon,
+      removeOldImage,
+    } = req.body;
 
     if (!categoryId || !mongoose.Types.ObjectId.isValid(categoryId)) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(400).json({
         success: false,
         message: "Valid categoryId is required",
@@ -204,7 +248,7 @@ router.put("/:id", upload.single("providerIcon"), async (req, res) => {
     }
 
     if (!providerId?.trim()) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(400).json({
         success: false,
         message: "providerId is required",
@@ -213,7 +257,7 @@ router.put("/:id", upload.single("providerIcon"), async (req, res) => {
 
     const categoryExists = await GameCategory.findById(categoryId);
     if (!categoryExists) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(404).json({
         success: false,
         message: "Category not found",
@@ -227,7 +271,7 @@ router.put("/:id", upload.single("providerIcon"), async (req, res) => {
     });
 
     if (duplicate) {
-      if (req.file) deleteLocalFile(req.file.path);
+      deleteUploadedFiles(req.files);
       return res.status(409).json({
         success: false,
         message: "This provider already exists in the selected category",
@@ -235,30 +279,46 @@ router.put("/:id", upload.single("providerIcon"), async (req, res) => {
     }
 
     const oldIconPath = provider.providerIcon;
+    const oldImagePath = provider.providerImage;
 
     provider.categoryId = categoryId;
     provider.providerId = providerId.trim();
     provider.status = status === "inactive" ? "inactive" : "active";
+    provider.isHome = toBoolean(isHome);
 
-    if (req.file) {
-      provider.providerIcon = req.file.path;
+    if (iconFile) {
+      provider.providerIcon = iconFile.path;
     } else if (removeOldIcon === "true") {
       provider.providerIcon = "";
     }
 
+    if (imageFile) {
+      provider.providerImage = imageFile.path;
+    } else if (removeOldImage === "true") {
+      provider.providerImage = "";
+    }
+
     await provider.save();
 
-    if (req.file && oldIconPath) {
+    if (iconFile && oldIconPath) {
       deleteLocalFile(oldIconPath);
     }
 
-    if (removeOldIcon === "true" && !req.file && oldIconPath) {
+    if (imageFile && oldImagePath) {
+      deleteLocalFile(oldImagePath);
+    }
+
+    if (removeOldIcon === "true" && !iconFile && oldIconPath) {
       deleteLocalFile(oldIconPath);
+    }
+
+    if (removeOldImage === "true" && !imageFile && oldImagePath) {
+      deleteLocalFile(oldImagePath);
     }
 
     const populated = await GameProvider.findById(provider._id).populate(
       "categoryId",
-      "categoryName categoryTitle status"
+      "categoryName categoryTitle status",
     );
 
     return res.status(200).json({
@@ -267,7 +327,8 @@ router.put("/:id", upload.single("providerIcon"), async (req, res) => {
       data: formatProvider(req, populated),
     });
   } catch (error) {
-    if (req.file) deleteLocalFile(req.file.path);
+    deleteUploadedFiles(req.files);
+
     return res.status(500).json({
       success: false,
       message: "Failed to update provider",
@@ -291,12 +352,12 @@ router.delete("/:id", async (req, res) => {
     }
 
     const oldIconPath = provider.providerIcon;
+    const oldImagePath = provider.providerImage;
 
     await GameProvider.findByIdAndDelete(req.params.id);
 
-    if (oldIconPath) {
-      deleteLocalFile(oldIconPath);
-    }
+    if (oldIconPath) deleteLocalFile(oldIconPath);
+    if (oldImagePath) deleteLocalFile(oldImagePath);
 
     return res.status(200).json({
       success: true,

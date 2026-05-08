@@ -18,7 +18,15 @@ const ALLOWED_MIME = new Set([
 ]);
 
 // ✅ allowed extensions (fallback)
-const ALLOWED_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif", ".svg", ".gif"]);
+const ALLOWED_EXT = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".avif",
+  ".svg",
+  ".gif",
+]);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -40,9 +48,9 @@ const fileFilter = (req, file, cb) => {
 
   cb(
     new Error(
-      "Only image files are allowed (png, jpg, jpeg, webp, svg, avif, gif)."
+      "Only image files are allowed (png, jpg, jpeg, webp, svg, avif, gif).",
     ),
-    false
+    false,
   );
 };
 
@@ -55,4 +63,3 @@ const upload = multer({
 });
 
 export default upload;
-

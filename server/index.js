@@ -34,6 +34,7 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import featuredGamesRoutes from "./routes/featuredGamesRoutes.js";
 import featuredPlayGameRoutes from "./routes/featuredPlayGameRoutes.js";
 import footerContentRoutes from "./routes/footerContentRoutes.js";
+import singleUserHistoryRoutes from "./routes/singleUserHistoryRoutes.js";
 
 // ...
 
@@ -90,7 +91,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", featuredGamesRoutes);
 app.use("/api/featured-play-game", featuredPlayGameRoutes);
 app.use("/api", footerContentRoutes);
-
+app.use("/api/single-user-history", singleUserHistoryRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

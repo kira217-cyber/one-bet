@@ -129,10 +129,10 @@ router.post("/playgame", requireAuth, async (req, res) => {
     const ORACLE_API_KEY = process.env.DSTGAME_TOKEN;
 
     // test
-    const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
+    // const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
 
     // live
-    // const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
+    const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
 
     if (!ORACLE_API_KEY) {
       return res.status(500).json({
@@ -220,16 +220,35 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
     console.log("Launching featured game payload:", payload);
 
-    const response = await fetch(LAUNCH_URL, {
-      method: "POST",
+    // live er jonno 
+    const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
       headers: {
-        "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-dstgame-key": "412afc3901061cd4389224fd1643a709",
+
+        // eikhane dstgame key hobe onnota hard coded live korar somoi,
+        // "x-dstgame-key": "",
       },
-      body: JSON.stringify(payload),
+      timeout: 30000,
     });
 
-    const responseData = await response.json();
+
+    // test er jonno 
+
+    // const response = await fetch(LAUNCH_URL, {
+    //   method: "POST",
+    //   headers: {
+    //     "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify(payload),
+    // });
+    // const responseData = await response.json();
+
+
+    
+    // live er jonno
+    const responseData = response.data;
 
     let gameUrl = "";
 

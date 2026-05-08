@@ -2,6 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import AffWithdrawMethod from "../models/AffWithdrawMethod.js";
 import AffWithdrawRequest from "../models/AffWithdrawRequest.js";
+import DepositRequest from "../models/DepositRequests.js";
+import AutoDeposit from "../models/AutoDeposit.js";
 import User from "../models/User.js";
 import { authMiddleware } from "./userRoutes.js";
 
@@ -65,6 +67,90 @@ const validateSubmittedFields = (method, fields = {}) => {
   return errors;
 };
 
+const REQUIRED_ACTIVE_DEPOSITED_REFERRALS = 5;
+
+const getAffWithdrawReferralEligibility = async (affUser) => {
+  const referredUsers = await User.find({
+    referredBy: affUser._id,
+    role: "user",
+    isActive: true,
+  })
+    .select("_id userId phone isActive")
+    .lean();
+
+  const activeReferralCount = referredUsers.length;
+
+  if (activeReferralCount < REQUIRED_ACTIVE_DEPOSITED_REFERRALS) {
+    return {
+      eligible: false,
+      required: REQUIRED_ACTIVE_DEPOSITED_REFERRALS,
+      activeReferralCount,
+      depositedReferralCount: 0,
+      remainingReferralCount:
+        REQUIRED_ACTIVE_DEPOSITED_REFERRALS - activeReferralCount,
+      message: `You need at least ${REQUIRED_ACTIVE_DEPOSITED_REFERRALS} active referred users.`,
+    };
+  }
+
+  const referredObjectIds = referredUsers.map((u) => u._id);
+
+  const referredIdentityValues = referredUsers.flatMap((u) =>
+    [String(u._id), String(u.userId || ""), String(u.phone || "")].filter(
+      Boolean,
+    ),
+  );
+
+  const [manualDepositors, autoDepositors] = await Promise.all([
+    DepositRequest.distinct("user", {
+      user: { $in: referredObjectIds },
+      status: "approved",
+    }),
+
+    AutoDeposit.distinct("userIdentity", {
+      userIdentity: { $in: referredIdentityValues },
+      status: "PAID",
+    }),
+  ]);
+
+  const depositedUserIdSet = new Set();
+
+  manualDepositors.forEach((id) => depositedUserIdSet.add(String(id)));
+
+  referredUsers.forEach((u) => {
+    const identities = [
+      String(u._id),
+      String(u.userId || ""),
+      String(u.phone || ""),
+    ];
+
+    const hasAutoDeposit = identities.some((identity) =>
+      autoDepositors.map(String).includes(identity),
+    );
+
+    if (hasAutoDeposit) {
+      depositedUserIdSet.add(String(u._id));
+    }
+  });
+
+  const depositedReferralCount = depositedUserIdSet.size;
+  const remainingReferralCount = Math.max(
+    REQUIRED_ACTIVE_DEPOSITED_REFERRALS - depositedReferralCount,
+    0,
+  );
+
+  return {
+    eligible: depositedReferralCount >= REQUIRED_ACTIVE_DEPOSITED_REFERRALS,
+    required: REQUIRED_ACTIVE_DEPOSITED_REFERRALS,
+    activeReferralCount,
+    depositedReferralCount,
+    remainingReferralCount,
+    message:
+      depositedReferralCount >= REQUIRED_ACTIVE_DEPOSITED_REFERRALS
+        ? "Referral requirement completed."
+        : `You need ${remainingReferralCount} more active referred user(s) with at least one deposit.`,
+  };
+};
+
 /**
  * AFFILIATE: eligibility
  * GET /api/aff-withdraw-requests/eligibility
@@ -75,6 +161,7 @@ router.get(
   async (req, res) => {
     try {
       const userId = getAuthUserId(req);
+
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -83,10 +170,24 @@ router.get(
       }
 
       const user = await User.findById(userId).lean();
+
       if (!user || user.role !== "aff-user") {
         return res.status(403).json({
           success: false,
           message: "Only affiliate users can withdraw",
+        });
+      }
+
+      const referralEligibility = await getAffWithdrawReferralEligibility(user);
+
+      if (!referralEligibility.eligible) {
+        return res.json({
+          success: true,
+          data: {
+            eligible: false,
+            remaining: 0,
+            ...referralEligibility,
+          },
         });
       }
 
@@ -96,6 +197,7 @@ router.get(
           data: {
             eligible: false,
             remaining: 0,
+            ...referralEligibility,
             message:
               "Bulk Adjustment first required. Please complete bulk adjustment before withdrawal.",
           },
@@ -113,6 +215,7 @@ router.get(
           data: {
             eligible: false,
             remaining: n(user.balance),
+            ...referralEligibility,
             message: "You already have a pending withdraw request.",
           },
         });
@@ -124,6 +227,7 @@ router.get(
           data: {
             eligible: false,
             remaining: 0,
+            ...referralEligibility,
             message: "Insufficient withdrawable balance.",
           },
         });
@@ -134,12 +238,16 @@ router.get(
         data: {
           eligible: true,
           remaining: n(user.balance),
+          ...referralEligibility,
           message: "Eligible",
         },
       });
     } catch (err) {
       console.error("aff withdraw eligibility error:", err);
-      return res.status(500).json({ success: false, message: "Server error" });
+      return res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
     }
   },
 );
@@ -151,6 +259,7 @@ router.get(
 router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
   try {
     const userId = getAuthUserId(req);
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -159,10 +268,21 @@ router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
     }
 
     const user = await User.findById(userId);
+
     if (!user || user.role !== "aff-user") {
       return res.status(403).json({
         success: false,
         message: "Only affiliate users can withdraw",
+      });
+    }
+
+    const referralEligibility = await getAffWithdrawReferralEligibility(user);
+
+    if (!referralEligibility.eligible) {
+      return res.status(400).json({
+        success: false,
+        message: referralEligibility.message,
+        data: referralEligibility,
       });
     }
 
@@ -188,6 +308,7 @@ router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
     const methodId = String(req.body?.methodId || "")
       .trim()
       .toUpperCase();
+
     const amount = Number(req.body?.amount || 0);
     const fields = req.body?.fields || {};
 
@@ -242,6 +363,7 @@ router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
     }
 
     const fieldErrors = validateSubmittedFields(method, fields);
+
     if (fieldErrors.length) {
       return res.status(400).json({
         success: false,
@@ -264,6 +386,11 @@ router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
       status: "pending",
       balanceBefore,
       balanceAfter,
+      eligibilitySnapshot: {
+        required: referralEligibility.required,
+        activeReferralCount: referralEligibility.activeReferralCount,
+        depositedReferralCount: referralEligibility.depositedReferralCount,
+      },
     });
 
     return res.status(201).json({
@@ -273,7 +400,10 @@ router.post("/aff-withdraw-requests", authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error("aff withdraw create error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 });
 
@@ -332,39 +462,43 @@ router.get("/aff-withdraw-requests/my", authMiddleware, async (req, res) => {
  * AFFILIATE: my details
  * GET /api/aff-withdraw-requests/my/:id
  */
-router.get("/aff-withdraw-requests/my/:id",authMiddleware, async (req, res) => {
-  try {
-    const userId = getAuthUserId(req);
-    const { id } = req.params;
+router.get(
+  "/aff-withdraw-requests/my/:id",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const userId = getAuthUserId(req);
+      const { id } = req.params;
 
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid request id",
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request id",
+        });
+      }
+
+      const row = await AffWithdrawRequest.findOne({
+        _id: id,
+        user: userId,
+      }).lean();
+
+      if (!row) {
+        return res.status(404).json({
+          success: false,
+          message: "Withdraw request not found",
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: row,
       });
+    } catch (err) {
+      console.error("aff withdraw my details error:", err);
+      return res.status(500).json({ success: false, message: "Server error" });
     }
-
-    const row = await AffWithdrawRequest.findOne({
-      _id: id,
-      user: userId,
-    }).lean();
-
-    if (!row) {
-      return res.status(404).json({
-        success: false,
-        message: "Withdraw request not found",
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: row,
-    });
-  } catch (err) {
-    console.error("aff withdraw my details error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+  },
+);
 
 /**
  * ADMIN: list

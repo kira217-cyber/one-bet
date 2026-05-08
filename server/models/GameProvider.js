@@ -1,4 +1,3 @@
-// models/GameProvider.js
 import mongoose from "mongoose";
 
 const GameProviderSchema = new mongoose.Schema(
@@ -9,22 +8,36 @@ const GameProviderSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+
     providerId: {
       type: String,
       required: true,
       trim: true,
     },
+
     providerIcon: {
       type: String,
       default: "",
     },
+
+    providerImage: {
+      type: String,
+      default: "",
+    },
+
+    isHome: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     status: {
       type: String,
       enum: ["active", "inactive"],
       default: "active",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // একই category এর মধ্যে একই providerId duplicate হবে না

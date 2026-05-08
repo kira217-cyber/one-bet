@@ -6,9 +6,10 @@ import { toast } from "react-toastify";
 import { api } from "../../api/axios";
 import { selectIsAuthenticated } from "../../features/auth/authSelectors";
 import { useLanguage } from "../../context/LanguageProvider";
+
 const ORACLE_BY_IDS_API = "https://api.oraclegames.live/api/games/by-ids";
 const ORACLE_KEY = import.meta.env.VITE_ORACLE_TOKEN;
-const GAMES_PER_PAGE = 21;
+const GAMES_PER_PAGE = 24;
 const ORACLE_CHUNK_SIZE = 100;
 
 const HotGames = () => {
@@ -56,9 +57,7 @@ const HotGames = () => {
           chunks.map((chunk) =>
             axios.post(
               ORACLE_BY_IDS_API,
-              {
-                ids: chunk,
-              },
+              { ids: chunk },
               {
                 headers: {
                   "x-api-key": ORACLE_KEY,
@@ -160,10 +159,9 @@ const HotGames = () => {
           {Array.from({ length: 9 }).map((_, idx) => (
             <div
               key={idx}
-              className="rounded-[2px] overflow-hidden animate-pulse"
+              className="rounded-[8px] overflow-hidden animate-pulse"
             >
-              <div className="w-full aspect-[0.82] bg-[#0f6b52]" />
-              <div className="h-5 bg-[#0f6b52] mt-1 rounded-sm" />
+              <div className="w-full h-[132px] bg-[#0f6b52]" />
             </div>
           ))}
         </div>
@@ -189,70 +187,113 @@ const HotGames = () => {
   }
 
   return (
-    <div className="px-2 pb-4">
-      {/* Title */}
-      <div className="flex items-center mb-3 mt-3">
-        <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-        <h2 className="text-yellow-400 font-bold text-[20px]">
-          {isBangla ? "হট গেমস" : "Hot Games"}
-        </h2>
-      </div>
+    <>
+      <style>
+        {`
+          @keyframes providerGlassShine {
+            0% { transform: translateX(-260%) skewX(-22deg); opacity: 0; }
+            12% { opacity: 1; }
+            50% { opacity: 1; }
+            82% { transform: translateX(360%) skewX(-22deg); opacity: 1; }
+            100% { transform: translateX(360%) skewX(-22deg); opacity: 0; }
+          }
 
-      {/* Games Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {paginatedGames.map((game) => (
-          <button
-            key={game._id}
-            type="button"
-            onClick={() => handleGameClick(game)}
-            className="cursor-pointer text-left group"
-          >
-            <div className="w-full bg-[#003c29] overflow-hidden rounded-sm">
-              {game.displayImage ? (
-                <img
-                  src={game.displayImage}
-                  alt={game.displayName}
-                  className="w-full h-[120px] sm:h-[145px] object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#0b6e4d] text-white/70 text-xs text-center px-2">
-                  {isBangla ? "ইমেজ নেই" : "No Image"}
-                </div>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
+          .provider-glass-shine::after {
+            content: "";
+            position: absolute;
+            top: -35%;
+            left: -85%;
+            width: 55%;
+            height: 170%;
+            pointer-events: none;
+            z-index: 2;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              rgba(255,255,255,0.08) 18%,
+              rgba(255,255,255,0.55) 38%,
+              rgba(255,255,255,0.95) 50%,
+              rgba(255,255,255,0.55) 62%,
+              rgba(255,255,255,0.08) 82%,
+              transparent 100%
+            );
+            filter: blur(0.4px);
+            mix-blend-mode: screen;
+            animation: providerGlassShine 3s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+          }
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-5">
-          <button
-            type="button"
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="cursor-pointer px-4 py-2 bg-[#003c29] text-white text-sm font-medium disabled:opacity-40 rounded-[2px]"
-          >
-            {isBangla ? "আগে" : "Previous"}
-          </button>
+          .provider-glass-shine img {
+            position: relative;
+            z-index: 1;
+          }
+        `}
+      </style>
 
-          <span className="text-white text-sm font-semibold">
-            {isBangla
-              ? `পৃষ্ঠা ${currentPage} / ${totalPages}`
-              : `Page ${currentPage} / ${totalPages}`}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="cursor-pointer px-4 py-2 bg-[#003c29] text-white text-sm font-medium disabled:opacity-40 rounded-[2px]"
-          >
-            {isBangla ? "পরে" : "Next"}
-          </button>
+      <div className="px-2 pb-4">
+        {/* Title - unchanged */}
+        <div className="flex items-center mb-3 mt-3">
+          <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
+          <h2 className="text-yellow-400 font-bold text-[20px]">
+            {isBangla ? "হট গেমস" : "Hot Games"}
+          </h2>
         </div>
-      )}
-    </div>
+
+        {/* Games Grid */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">
+          {paginatedGames.map((game) => (
+            <button
+              key={game._id}
+              type="button"
+              onClick={() => handleGameClick(game)}
+              className="cursor-pointer overflow-hidden bg-[#003c29] transition hover:-translate-y-[1px] hover:shadow-lg"
+            >
+              <div className="provider-glass-shine relative overflow-hidden rounded-[8px] bg-[#0f6b52]">
+                {game.displayImage ? (
+                  <img
+                    src={game.displayImage}
+                    alt={game.displayName}
+                    className="h-[132px] w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-[132px] sm:h-[155px] w-full items-center justify-center bg-[#0b6e4d] text-white/70 text-xs text-center px-2">
+                    {isBangla ? "ইমেজ নেই" : "No Image"}
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="cursor-pointer px-4 py-2 bg-[#003c29] text-white text-sm font-medium disabled:opacity-40 rounded-[2px]"
+            >
+              {isBangla ? "আগে" : "Previous"}
+            </button>
+
+            <span className="text-white text-sm font-semibold">
+              {isBangla
+                ? `পৃষ্ঠা ${currentPage} / ${totalPages}`
+                : `Page ${currentPage} / ${totalPages}`}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="cursor-pointer px-4 py-2 bg-[#003c29] text-white text-sm font-medium disabled:opacity-40 rounded-[2px]"
+            >
+              {isBangla ? "পরে" : "Next"}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

@@ -305,172 +305,210 @@ const Games = () => {
   }
 
   return (
-    <div className="px-3 pb-4">
-      {/* Top Provider Tabs */}
-      {/* Top Provider Tabs */}
-      <div className="mt-2">
-        <div className="flex items-stretch gap-[4px] bg-[#00563c] p-[4px] rounded-[4px]">
-          {/* Left Scrollable Tabs */}
-          <div className="relative flex-1 min-w-0">
-            <div
-              className="flex items-center gap-[4px] overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing"
-              onMouseDown={(e) => {
-                const slider = e.currentTarget;
-                slider.dataset.mouseDown = "true";
-                slider.dataset.startX = e.pageX;
-                slider.dataset.scrollLeft = slider.scrollLeft;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.dataset.mouseDown = "false";
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.dataset.mouseDown = "false";
-              }}
-              onMouseMove={(e) => {
-                const slider = e.currentTarget;
-                if (slider.dataset.mouseDown !== "true") return;
-                e.preventDefault();
-                const startX = Number(slider.dataset.startX || 0);
-                const scrollLeft = Number(slider.dataset.scrollLeft || 0);
-                const walk = (e.pageX - startX) * 1.2;
-                slider.scrollLeft = scrollLeft - walk;
-              }}
+    <>
+      <style>
+        {`
+          @keyframes providerGlassShine {
+            0% { transform: translateX(-260%) skewX(-22deg); opacity: 0; }
+            12% { opacity: 1; }
+            50% { opacity: 1; }
+            82% { transform: translateX(360%) skewX(-22deg); opacity: 1; }
+            100% { transform: translateX(360%) skewX(-22deg); opacity: 0; }
+          }
+
+          .provider-glass-shine::after {
+            content: "";
+            position: absolute;
+            top: -35%;
+            left: -85%;
+            width: 55%;
+            height: 170%;
+            pointer-events: none;
+            z-index: 2;
+            background: linear-gradient(
+              90deg,
+              transparent 0%,
+              rgba(255,255,255,0.08) 18%,
+              rgba(255,255,255,0.55) 38%,
+              rgba(255,255,255,0.95) 50%,
+              rgba(255,255,255,0.55) 62%,
+              rgba(255,255,255,0.08) 82%,
+              transparent 100%
+            );
+            filter: blur(0.4px);
+            mix-blend-mode: screen;
+            animation: providerGlassShine 3s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+          }
+
+          .provider-glass-shine img {
+            position: relative;
+            z-index: 1;
+          }
+        `}
+      </style>
+
+      <div className="px-3 pb-4">
+        {/* Top Provider Tabs */}
+        <div className="mt-2">
+          <div className="flex items-stretch gap-[4px] bg-[#00563c] p-[4px] rounded-[4px]">
+            <div className="relative flex-1 min-w-0">
+              <div
+                className="flex items-center gap-[4px] overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing"
+                onMouseDown={(e) => {
+                  const slider = e.currentTarget;
+                  slider.dataset.mouseDown = "true";
+                  slider.dataset.startX = e.pageX;
+                  slider.dataset.scrollLeft = slider.scrollLeft;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.dataset.mouseDown = "false";
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.dataset.mouseDown = "false";
+                }}
+                onMouseMove={(e) => {
+                  const slider = e.currentTarget;
+                  if (slider.dataset.mouseDown !== "true") return;
+                  e.preventDefault();
+                  const startX = Number(slider.dataset.startX || 0);
+                  const scrollLeft = Number(slider.dataset.scrollLeft || 0);
+                  const walk = (e.pageX - startX) * 1.2;
+                  slider.scrollLeft = scrollLeft - walk;
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleProviderTabClick("")}
+                  className={`cursor-pointer h-[40px] px-4 min-w-[74px] rounded-[4px] text-[12px] sm:text-[14px] font-bold uppercase whitespace-nowrap transition-all duration-200 shrink-0 ${
+                    !selectedProviderDbId
+                      ? "bg-[#d8e900] text-[#003c29]"
+                      : "bg-[#003c29] text-white hover:bg-[#014b34]"
+                  }`}
+                >
+                  {isBangla ? "সব" : "ALL"}
+                </button>
+
+                {tabProviders.map((provider) => {
+                  const active =
+                    String(selectedProviderDbId) === String(provider._id);
+
+                  return (
+                    <button
+                      key={provider._id}
+                      type="button"
+                      onClick={() => handleProviderTabClick(provider._id)}
+                      className={`cursor-pointer h-[40px] px-4 min-w-[88px] rounded-[4px] text-[12px] sm:text-[14px] font-bold uppercase whitespace-nowrap transition-all duration-200 shrink-0 ${
+                        active
+                          ? "bg-[#d8e900] text-[#003c29]"
+                          : "bg-[#003c29] text-white hover:bg-[#014b34]"
+                      }`}
+                    >
+                      {provider.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSearchOpen((prev) => !prev)}
+              className={`cursor-pointer h-[40px] w-[44px] shrink-0 rounded-[4px] flex items-center justify-center transition-all duration-200 ${
+                searchOpen
+                  ? "bg-[#d8e900] text-[#003c29]"
+                  : "bg-[#003c29] text-white hover:bg-[#014b34]"
+              }`}
             >
-              <button
-                type="button"
-                onClick={() => handleProviderTabClick("")}
-                className={`cursor-pointer h-[40px] px-4 min-w-[74px] rounded-[4px] text-[12px] sm:text-[14px] font-bold uppercase whitespace-nowrap transition-all duration-200 shrink-0 ${
-                  !selectedProviderDbId
-                    ? "bg-[#d8e900] text-[#003c29]"
-                    : "bg-[#003c29] text-white hover:bg-[#014b34]"
-                }`}
-              >
-                {isBangla ? "সব" : "ALL"}
-              </button>
+              <FaSearch className="text-[18px]" />
+            </button>
+          </div>
+        </div>
 
-              {tabProviders.map((provider) => {
-                const active =
-                  String(selectedProviderDbId) === String(provider._id);
-
-                return (
-                  <button
-                    key={provider._id}
-                    type="button"
-                    onClick={() => handleProviderTabClick(provider._id)}
-                    className={`cursor-pointer h-[40px] px-4 min-w-[88px] rounded-[4px] text-[12px] sm:text-[14px] font-bold uppercase whitespace-nowrap transition-all duration-200 shrink-0 ${
-                      active
-                        ? "bg-[#d8e900] text-[#003c29]"
-                        : "bg-[#003c29] text-white hover:bg-[#014b34]"
-                    }`}
-                  >
-                    {provider.label}
-                  </button>
-                );
-              })}
+        {searchOpen && (
+          <div className="bg-[#00563c] px-[4px] pb-[4px] pt-[4px] rounded-b-[4px]">
+            <div className="relative">
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-[14px]" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder={isBangla ? "গেম খুঁজুন..." : "Search games..."}
+                className="w-full h-[42px] rounded-[4px] border border-[#1d8a61] bg-[#003c29] pl-11 pr-4 text-white outline-none placeholder:text-white/60 focus:border-[#39b67f]"
+              />
             </div>
           </div>
+        )}
 
-          {/* Right Fixed Search Button */}
-          <button
-            type="button"
-            onClick={() => setSearchOpen((prev) => !prev)}
-            className={`cursor-pointer h-[40px] w-[44px] shrink-0 rounded-[4px] flex items-center justify-center transition-all duration-200 ${
-              searchOpen
-                ? "bg-[#d8e900] text-[#003c29]"
-                : "bg-[#003c29] text-white hover:bg-[#014b34]"
-            }`}
-          >
-            <FaSearch className="text-[18px]" />
-          </button>
-        </div>
+        {finalFilteredGames.length === 0 ? (
+          <div className="bg-[#006c4a] text-white text-center py-8 mt-[6px]">
+            {isBangla ? "কোনো গেম পাওয়া যায়নি।" : "No games found."}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-[6px] mt-[6px]">
+              {paginatedGames.map((game) => (
+                <button
+                  key={game._id}
+                  type="button"
+                  onClick={() => handleGameClick(game)}
+                  className="cursor-pointer text-left bg-[#00563c] p-[3px] hover:brightness-110 transition-all"
+                >
+                  <div className="provider-glass-shine relative bg-[#003c29] overflow-hidden">
+                    {game.displayImage ? (
+                      <img
+                        src={game.displayImage}
+                        alt={game.displayName}
+                        className="w-full h-[100px] sm:h-[145px] object-container"
+                      />
+                    ) : (
+                      <div className="w-full h-[100px] sm:h-[145px] bg-[#0b6e4d] flex items-center justify-center text-white/70 text-sm">
+                        {isBangla ? "ইমেজ নেই" : "No Image"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-[#003c29] px-[6px] py-[5px] flex items-center justify-between gap-2">
+                    <p className="text-white font-bold text-[12px] sm:text-[14px] leading-tight truncate">
+                      {game.displayName}
+                    </p>
+
+                    <FaRegStar className="text-[#c9982f] text-[20px] shrink-0" />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
+                >
+                  {isBangla ? "আগে" : "Previous"}
+                </button>
+
+                <span className="text-white text-sm font-semibold">
+                  {isBangla
+                    ? `পৃষ্ঠা ${currentPage} / ${totalPages}`
+                    : `Page ${currentPage} / ${totalPages}`}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
+                >
+                  {isBangla ? "পরে" : "Next"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {/* Search Box */}
-      {searchOpen && (
-        <div className="bg-[#00563c] px-[4px] pb-[4px] pt-[4px] rounded-b-[4px]">
-          <div className="relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-[14px]" />
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder={isBangla ? "গেম খুঁজুন..." : "Search games..."}
-              className="w-full h-[42px] rounded-[4px] border border-[#1d8a61] bg-[#003c29] pl-11 pr-4 text-white outline-none placeholder:text-white/60 focus:border-[#39b67f]"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Games */}
-      {finalFilteredGames.length === 0 ? (
-        <div className="bg-[#006c4a] text-white text-center py-8 mt-[6px]">
-          {isBangla ? "কোনো গেম পাওয়া যায়নি।" : "No games found."}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-3 gap-[6px] mt-[6px]">
-            {paginatedGames.map((game) => (
-              <button
-                key={game._id}
-                type="button"
-                onClick={() => handleGameClick(game)}
-                className="cursor-pointer text-left bg-[#00563c] p-[3px] hover:brightness-110 transition-all"
-              >
-                <div className="relative bg-[#003c29] overflow-hidden">
-                  {game.displayImage ? (
-                    <img
-                      src={game.displayImage}
-                      alt={game.displayName}
-                      className="w-full h-[100px] sm:h-[145px] object-container"
-                    />
-                  ) : (
-                    <div className="w-full h-[100px] sm:h-[145px] bg-[#0b6e4d] flex items-center justify-center text-white/70 text-sm">
-                      {isBangla ? "ইমেজ নেই" : "No Image"}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-[#003c29] px-[6px] py-[5px] flex items-center justify-between gap-2">
-                  <p className="text-white font-bold text-[12px] sm:text-[14px] leading-tight truncate">
-                    {game.displayName}
-                  </p>
-
-                  <FaRegStar className="text-[#c9982f] text-[20px] shrink-0" />
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <button
-                type="button"
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
-              >
-                {isBangla ? "আগে" : "Previous"}
-              </button>
-
-              <span className="text-white text-sm font-semibold">
-                {isBangla
-                  ? `পৃষ্ঠা ${currentPage} / ${totalPages}`
-                  : `Page ${currentPage} / ${totalPages}`}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
-              >
-                {isBangla ? "পরে" : "Next"}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+    </>
   );
 };
 

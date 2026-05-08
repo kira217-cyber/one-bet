@@ -4,6 +4,8 @@ import HotGames from "../HotGames/HotGames";
 import Providers from "../Providers/Providers";
 import { api } from "../../api/axios";
 import { useLanguage } from "../../context/LanguageProvider";
+import hot from "../../assets/hot.gif";
+import sports from "../../assets/sports.png";
 
 const Categories = () => {
   const [dynamicCategories, setDynamicCategories] = useState([]);
@@ -35,14 +37,14 @@ const Categories = () => {
         type: "fixed",
         name: { bn: "স্পোর্টস", en: "Sports" },
         title: { bn: "স্পোর্টস", en: "Sports" },
-        icon: "https://beit365.bet/assets/images/home-page-menu/Sports.svg",
+        icon: sports,
         key: "sports",
       },
       {
         type: "fixed",
         name: { bn: "হট গেমস", en: "Hot Games" },
         title: { bn: "হট গেমস", en: "Hot Games" },
-        icon: "https://beit365.bet/assets/images/home-type/exclusive.svg",
+        icon: hot,
         key: "hot-games",
       },
     ],
