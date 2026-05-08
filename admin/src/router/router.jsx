@@ -36,6 +36,17 @@ import AddSocialLink from "../pages/AddSocialLink/AddSocialLink";
 import AddAffSocialLink from "../pages/AddAffSocialLink/AddAffSocialLink";
 import AddFeaturedGames from "../pages/AddFeaturedGames/AddFeaturedGames";
 import FooterController from "../pages/FooterController/FooterController";
+import HeroController from "../pages/HeroController/HeroController";
+import CampaignsController from "../pages/CampaignsController/CampaignsController";
+import FAQController from "../pages/FAQController/FAQController";
+import CommissionController from "../pages/CommissionController/CommissionController";
+import CommissionStructureController from "../pages/CommissionStructureController/CommissionStructureController";
+import JackpotController from "../pages/JackpotController/JackpotController";
+import JackpotStructureController from "../pages/JackpotStructureController/JackpotStructureController";
+import EliteClubController from "../pages/EliteClubController/EliteClubController";
+import HowToJoinController from "../pages/HowToJoinController/HowToJoinController";
+import AboutUsController from "../pages/AboutUsController/AboutUsController";
+import WhyUsController from "../pages/WhyUsController/WhyUsController";
 
 export const routes = createBrowserRouter([
   {
@@ -315,6 +326,94 @@ export const routes = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+      {
+        path: "aff-hero-controller",
+        element: (
+          <PrivateRoute permKey="aff-hero-controller">
+            <HeroController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-campaigns-controller",
+        element: (
+          <PrivateRoute permKey="aff-campaigns-controller">
+            <CampaignsController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-faq-controller",
+        element: (
+          <PrivateRoute permKey="aff-faq-controller">
+            <FAQController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-commission-controller",
+        element: (
+          <PrivateRoute permKey="aff-commission-controller">
+            <CommissionController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-commission-structure-controller",
+        element: (
+          <PrivateRoute permKey="aff-commission-structure-controller">
+            <CommissionStructureController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-jackpot-controller",
+        element: (
+          <PrivateRoute permKey="aff-jackpot-controller">
+            <JackpotController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-jackpot-structure-controller",
+        element: (
+          <PrivateRoute permKey="aff-jackpot-structure-controller">
+            <JackpotStructureController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-elite-club-controller",
+        element: (
+          <PrivateRoute permKey="aff-elite-club-controller">
+            <EliteClubController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-how-to-join-controller",
+        element: (
+          <PrivateRoute permKey="aff-how-to-join-controller">
+            <HowToJoinController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-about-us-controller",
+        element: (
+          <PrivateRoute permKey="aff-about-us-controller">
+            <AboutUsController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "aff-why-us-controller",
+        element: (
+          <PrivateRoute permKey="aff-why-us-controller">
+            <WhyUsController />
+          </PrivateRoute>
+        ),
+      }
     ],
   },
   {

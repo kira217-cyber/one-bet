@@ -129,6 +129,11 @@ const Sidebar = () => {
         text: "Withdraw",
       },
       {
+        to: "/dashboard/transaction-balance",
+        icon: <RiMoneyDollarCircleFill />,
+        text: "Transaction Balance",
+      },
+      {
         to: "/dashboard/withdraw-history",
         icon: <FaBullhorn />,
         text: "Withdraw History",

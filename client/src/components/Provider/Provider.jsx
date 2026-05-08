@@ -150,7 +150,7 @@ const Provider = () => {
               : "No hot providers found."}
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
             {providers.map((provider) => {
               const providerName = getProviderName(provider?.providerId);
               const providerImage = provider?.providerImageUrl;

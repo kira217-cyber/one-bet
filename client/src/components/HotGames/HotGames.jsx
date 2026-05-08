@@ -239,7 +239,7 @@ const HotGames = () => {
         </div>
 
         {/* Games Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
           {paginatedGames.map((game) => (
             <button
               key={game._id}

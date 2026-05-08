@@ -35,7 +35,18 @@ import featuredGamesRoutes from "./routes/featuredGamesRoutes.js";
 import featuredPlayGameRoutes from "./routes/featuredPlayGameRoutes.js";
 import footerContentRoutes from "./routes/footerContentRoutes.js";
 import singleUserHistoryRoutes from "./routes/singleUserHistoryRoutes.js";
-
+import affOwnUserTransferRoutes from "./routes/affOwnUserTransferRoutes.js";
+import affHeroContentRoutes from "./routes/affHeroContentRoutes.js";
+import affCampaignContentRoutes from "./routes/affCampaignContentRoutes.js";
+import affFaqContentRoutes from "./routes/affFaqContentRoutes.js";
+import affCommissionContentRoutes from "./routes/affCommissionContentRoutes.js";
+import affCommissionStructureContentRoutes from "./routes/affCommissionStructureContentRoutes.js";
+import affJackpotContentRoutes from "./routes/affJackpotContentRoutes.js";
+import affJackpotStructureContentRoutes from "./routes/affJackpotStructureContentRoutes.js";
+import affEliteClubContentRoutes from "./routes/affEliteClubContentRoutes.js";
+import affHowToJoinContentRoutes from "./routes/affHowToJoinContentRoutes.js";
+import affAboutUsContentRoutes from "./routes/affAboutUsContentRoutes.js";
+import affWhyUsContentRoutes from "./routes/affWhyUsContentRoutes.js";
 // ...
 
 dotenv.config();
@@ -84,14 +95,31 @@ app.use("/api", sliderRoutes);
 app.use("/api", noticeRoutes);
 app.use("/api", siteIdentityRoutes);
 app.use("/api", affSiteIdentityRoutes);
-app.use("/api", socialLinkRoutes);    
-app.use("/api", affSocialLinkRoutes);  
-app.use("/api", promotionRoutes);   
+app.use("/api", socialLinkRoutes);
+app.use("/api", affSocialLinkRoutes);
+app.use("/api", promotionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", featuredGamesRoutes);
 app.use("/api/featured-play-game", featuredPlayGameRoutes);
 app.use("/api", footerContentRoutes);
 app.use("/api/single-user-history", singleUserHistoryRoutes);
+app.use("/api/aff-own-user-transfer", affOwnUserTransferRoutes);
+app.use("/api/aff-hero-content", affHeroContentRoutes);
+app.use("/api/aff-campaign-content", affCampaignContentRoutes);
+app.use("/api/aff-faq-content", affFaqContentRoutes);
+app.use("/api/aff-commission-content", affCommissionContentRoutes);
+app.use(
+  "/api/aff-commission-structure-content",
+  affCommissionStructureContentRoutes,
+);
+app.use("/api/aff-jackpot-content", affJackpotContentRoutes);
+app.use("/api/aff-jackpot-structure-content", affJackpotStructureContentRoutes);
+app.use("/api/aff-elite-club-content", affEliteClubContentRoutes);
+app.use("/api/aff-how-to-join-content", affHowToJoinContentRoutes);
+app.use("/api/aff-about-us-content", affAboutUsContentRoutes);
+app.use("/api/aff-why-us-content", affWhyUsContentRoutes);
+
+
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

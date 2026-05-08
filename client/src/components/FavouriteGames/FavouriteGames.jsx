@@ -232,7 +232,7 @@ const FavouriteGames = () => {
                   onClick={() => handleGameClick(game)}
                   className="w-full cursor-pointer text-left"
                 >
-                  <div className="overflow-hidden rounded-[8px] bg-[#0B3B2E] shadow-md transition hover:-translate-y-[1px] hover:shadow-lg">
+                  <div className="overflow-hidden rounded-[4px] bg-[#0B3B2E] shadow-md transition hover:-translate-y-[1px] hover:shadow-lg">
                     <div className="provider-glass-shine relative overflow-hidden bg-[#145843]">
                       {game.displayImage ? (
                         <img

@@ -14,6 +14,7 @@ import Profile from "../pages/Profile/Profile";
 import WithdrawHistory from "../pages/WithdrawHistory/WithdrawHistory";
 import WithdrawHistoryDetails from "../pages/WithdrawHistoryDetails/WithdrawHistoryDetails";
 import CommissionStatus from "../pages/CommissionStatus/CommissionStatus";
+import TransferBalance from "../pages/TransferBalance/TransferBalance";
 
 export const routes = createBrowserRouter([
   {
@@ -61,10 +62,14 @@ export const routes = createBrowserRouter([
         element: <WithdrawHistory />,
       },
       {
+        path: "transaction-balance",
+        element: <TransferBalance />,
+      },
+      {
         path: "withdraw-history/:id",
         element: <WithdrawHistoryDetails />,
       },
-       {
+      {
         path: "commission-status",
         element: <CommissionStatus />,
       },
