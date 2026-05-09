@@ -1,6 +1,7 @@
 import express from "express";
 import axios from "axios";
 import jwt from "jsonwebtoken";
+import qs from "qs";
 import User from "../models/User.js";
 import FeaturedGame from "../models/FeaturedGame.js";
 

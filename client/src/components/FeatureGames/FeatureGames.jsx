@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay } from "swiper/modules";
+
 import "swiper/css";
+import "swiper/css/autoplay";
+
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
+
 import {
   selectIsAuthenticated,
   selectUser,
 } from "../../features/auth/authSelectors";
-import { useLanguage } from "../../Context/LanguageProvider";
 
+import { useLanguage } from "../../Context/LanguageProvider";
 
 const FeatureGames = () => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [checkingId, setCheckingId] = useState("");
+
   const { isBangla } = useLanguage();
 
   const navigate = useNavigate();
@@ -43,6 +49,7 @@ const FeatureGames = () => {
           error?.message ||
           "Failed to load featured games",
       );
+
       setGames([]);
     } finally {
       setLoading(false);
@@ -109,20 +116,31 @@ const FeatureGames = () => {
   };
 
   return (
-    <div className="px-3 py-4 bg-[#005C40]">
-      <div className="flex items-center mb-3">
-        <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-        <h2 className="text-yellow-400 font-semibold text-lg">
+    <div className="bg-[#005C40] px-3 py-4">
+      {/* Header */}
+      <div className="mb-3 flex items-center">
+        <div className="mr-2 h-5 w-1 bg-yellow-400"></div>
+
+        <h2 className="text-lg font-semibold text-yellow-400">
           {isBangla ? "ফিচারড গেমস" : "Featured Games"}
         </h2>
       </div>
 
+      {/* Loading */}
       {loading ? (
-        <div className="rounded-sm overflow-hidden bg-[#0b6b4b] animate-pulse h-[180px]" />
+        <div className="h-[180px] animate-pulse overflow-hidden rounded-sm bg-[#0b6b4b]" />
       ) : games.length ? (
         <Swiper
+          modules={[Autoplay]}
           spaceBetween={12}
           slidesPerView={1.1}
+          loop={true}
+          speed={900}
+          autoplay={{
+            delay: 2500,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: false,
+          }}
           breakpoints={{
             640: {
               slidesPerView: 1.2,
@@ -142,22 +160,23 @@ const FeatureGames = () => {
                   type="button"
                   onClick={() => handleClick(item)}
                   disabled={!!checkingId}
-                  className="w-full rounded-sm overflow-hidden shadow-lg cursor-pointer disabled:opacity-70"
+                  className="w-full cursor-pointer overflow-hidden rounded-sm shadow-lg transition-all duration-300 disabled:opacity-70"
                 >
                   {imageUrl ? (
                     <img
                       src={imageUrl}
                       alt="featured-game"
-                      className="w-full h-[180px] object-cover"
+                      className="h-[180px] w-full object-cover"
+                      loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-[180px] bg-[#0b6b4b] flex items-center justify-center text-white/70">
+                    <div className="flex h-[180px] w-full items-center justify-center bg-[#0b6b4b] text-white/70">
                       No Image
                     </div>
                   )}
 
                   {isChecking && (
-                    <div className="py-2 text-center text-xs bg-black/80 text-white">
+                    <div className="bg-black/80 py-2 text-center text-xs text-white">
                       Checking...
                     </div>
                   )}
@@ -167,7 +186,7 @@ const FeatureGames = () => {
           })}
         </Swiper>
       ) : (
-        <div className="rounded-sm overflow-hidden bg-[#0b6b4b] h-[180px] flex items-center justify-center text-white/70">
+        <div className="flex h-[180px] items-center justify-center overflow-hidden rounded-sm bg-[#0b6b4b] text-white/70">
           No featured games found
         </div>
       )}

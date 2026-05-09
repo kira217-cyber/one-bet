@@ -47,6 +47,8 @@ import EliteClubController from "../pages/EliteClubController/EliteClubControlle
 import HowToJoinController from "../pages/HowToJoinController/HowToJoinController";
 import AboutUsController from "../pages/AboutUsController/AboutUsController";
 import WhyUsController from "../pages/WhyUsController/WhyUsController";
+import SupportsController from "../pages/SupportsController/SupportsController";
+import AffFooterController from "../pages/AffFooterController/AffFooterController";
 
 export const routes = createBrowserRouter([
   {
@@ -413,7 +415,23 @@ export const routes = createBrowserRouter([
             <WhyUsController />
           </PrivateRoute>
         ),
-      }
+      },
+      {
+        path: "/aff-supports-controller",
+        element: (
+          <PrivateRoute permKey="aff-supports-controller">
+            <SupportsController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/aff-footer-controller",
+        element: (
+          <PrivateRoute permKey="aff-footer-controller">
+            <AffFooterController />
+          </PrivateRoute>
+        ),
+      },
     ],
   },
   {

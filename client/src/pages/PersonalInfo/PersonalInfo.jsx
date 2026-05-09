@@ -240,7 +240,7 @@ const PersonalInfo = () => {
             </div>
 
             <div className="space-y-4">
-              <InputField
+              {/* <InputField
                 label="User ID"
                 icon={<User size={18} />}
                 placeholder="Enter your user ID"
@@ -261,7 +261,7 @@ const PersonalInfo = () => {
                   },
                 })}
                 error={errors.userId}
-              />
+              /> */}
 
               <InputField
                 label="Email"
@@ -276,7 +276,7 @@ const PersonalInfo = () => {
                 error={errors.email}
               />
 
-              <InputField
+              {/* <InputField
                 label="Phone"
                 icon={<Phone size={18} />}
                 placeholder="Enter your phone number"
@@ -288,7 +288,7 @@ const PersonalInfo = () => {
                   },
                 })}
                 error={errors.phone}
-              />
+              /> */}
 
               <InputField
                 label="First Name"

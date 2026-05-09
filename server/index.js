@@ -47,6 +47,9 @@ import affEliteClubContentRoutes from "./routes/affEliteClubContentRoutes.js";
 import affHowToJoinContentRoutes from "./routes/affHowToJoinContentRoutes.js";
 import affAboutUsContentRoutes from "./routes/affAboutUsContentRoutes.js";
 import affWhyUsContentRoutes from "./routes/affWhyUsContentRoutes.js";
+import affSupportContentRoutes from "./routes/affSupportContentRoutes.js";
+import affFooterContentRoutes from "./routes/affFooterContentRoutes.js";
+import sendRegisterOtpRoutes from "./routes/sendRegisterOtpRoutes.js";
 // ...
 
 dotenv.config();
@@ -118,8 +121,9 @@ app.use("/api/aff-elite-club-content", affEliteClubContentRoutes);
 app.use("/api/aff-how-to-join-content", affHowToJoinContentRoutes);
 app.use("/api/aff-about-us-content", affAboutUsContentRoutes);
 app.use("/api/aff-why-us-content", affWhyUsContentRoutes);
-
-
+app.use("/api/aff-support-content", affSupportContentRoutes);
+app.use("/api/aff-footer-content", affFooterContentRoutes);
+app.use("/api/users", sendRegisterOtpRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

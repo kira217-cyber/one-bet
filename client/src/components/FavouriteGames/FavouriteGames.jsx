@@ -4,7 +4,11 @@ import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay } from "swiper/modules";
+
 import "swiper/css";
+import "swiper/css/autoplay";
+
 import { api } from "../../api/axios";
 import { selectIsAuthenticated } from "../../features/auth/authSelectors";
 import { useLanguage } from "../../context/LanguageProvider";
@@ -70,8 +74,10 @@ const FavouriteGames = () => {
         );
 
         const fullMap = {};
+
         for (const response of results) {
           const list = response?.data?.data || [];
+
           for (const game of list) {
             fullMap[String(game._id)] = game;
           }
@@ -176,11 +182,12 @@ const FavouriteGames = () => {
       `}
       </style>
 
-      <div className="px-3 py-4 bg-[#005C40]">
+      <div className="bg-[#005C40] px-3 py-4">
         {/* Title */}
-        <div className="flex items-center mb-3">
-          <div className="w-1 h-5 bg-yellow-400 mr-2"></div>
-          <h2 className="text-yellow-400 font-semibold text-lg">
+        <div className="mb-3 flex items-center">
+          <div className="mr-2 h-5 w-1 bg-yellow-400"></div>
+
+          <h2 className="text-lg font-semibold text-yellow-400">
             {isBangla ? "ফেভারিট গেমস" : "Favourite Games"}
           </h2>
         </div>
@@ -188,8 +195,16 @@ const FavouriteGames = () => {
         {/* Loading */}
         {loading ? (
           <Swiper
+            modules={[Autoplay]}
             spaceBetween={12}
             slidesPerView={2.3}
+            loop={true}
+            speed={900}
+            autoplay={{
+              delay: 2500,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: false,
+            }}
             breakpoints={{
               640: {
                 slidesPerView: 2.6,
@@ -198,18 +213,19 @@ const FavouriteGames = () => {
           >
             {Array.from({ length: 3 }).map((_, index) => (
               <SwiperSlide key={index}>
-                <div className="bg-[#0B3B2E] rounded-[8px] overflow-hidden shadow-md animate-pulse">
-                  <div className="w-full h-[150px] bg-[#145843]" />
-                  <div className="px-4 py-1 bg-[#111111]">
-                    <div className="h-4 w-3/4 bg-[#2a2a2a] rounded" />
+                <div className="overflow-hidden rounded-[8px] bg-[#0B3B2E] shadow-md animate-pulse">
+                  <div className="h-[150px] w-full bg-[#145843]" />
+
+                  <div className="bg-[#111111] px-4 py-1">
+                    <div className="h-4 w-3/4 rounded bg-[#2a2a2a]" />
                   </div>
                 </div>
               </SwiperSlide>
             ))}
           </Swiper>
         ) : mergedGames.length === 0 ? (
-          <div className="bg-[#0B3B2E] rounded-sm overflow-hidden shadow-md">
-            <div className="px-4 py-8 bg-[#111111] text-center text-white text-sm">
+          <div className="overflow-hidden rounded-sm bg-[#0B3B2E] shadow-md">
+            <div className="bg-[#111111] px-4 py-8 text-center text-sm text-white">
               {isBangla
                 ? "কোনো ফেভারিট গেম পাওয়া যায়নি।"
                 : "No favourite games found."}
@@ -217,8 +233,16 @@ const FavouriteGames = () => {
           </div>
         ) : (
           <Swiper
+            modules={[Autoplay]}
             spaceBetween={12}
             slidesPerView={2.3}
+            loop={true}
+            speed={900}
+            autoplay={{
+              delay: 2500,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: false,
+            }}
             breakpoints={{
               640: {
                 slidesPerView: 2.6,
@@ -238,18 +262,19 @@ const FavouriteGames = () => {
                         <img
                           src={game.displayImage}
                           alt={game.displayName}
-                          className="w-full h-[150px] object-cover"
+                          className="h-[150px] w-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-[150px] flex items-center justify-center bg-[#145843] text-white/70 text-xs text-center px-2">
+                        <div className="flex h-[150px] w-full items-center justify-center bg-[#145843] px-2 text-center text-xs text-white/70">
                           {isBangla ? "ইমেজ নেই" : "No Image"}
                         </div>
                       )}
                     </div>
 
                     {/* Game Name */}
-                    <div className="px-4 py-1 bg-[#111111]">
-                      <p className="text-white text-sm font-medium truncate">
+                    <div className="bg-[#111111] px-4 py-1">
+                      <p className="truncate text-sm font-medium text-white">
                         {game.displayName}
                       </p>
                     </div>

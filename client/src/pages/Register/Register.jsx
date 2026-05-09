@@ -30,11 +30,10 @@ const Register = () => {
     verificationCode: "",
   });
 
-  const [captcha, setCaptcha] = useState(
-    Math.floor(1000 + Math.random() * 9000).toString(),
-  );
-
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
 
   const text = useMemo(
     () => ({
@@ -47,7 +46,11 @@ const Register = () => {
       fullName: isBangla ? "পূর্ণ নাম" : "Full Name",
       email: isBangla ? "ইমেইল" : "Email",
       referCode: isBangla ? "রেফার কোড" : "Refer Code",
-      verificationCode: isBangla ? "ভেরিফিকেশন কোড" : "Verification Code",
+      verificationCode: isBangla ? "ওটিপি কোড" : "OTP Code",
+      sendOtp: isBangla ? "ওটিপি পাঠান" : "Send OTP",
+      resendOtp: isBangla ? "আবার পাঠান" : "Resend OTP",
+      sendingOtp: isBangla ? "পাঠানো হচ্ছে..." : "Sending...",
+      otpSent: isBangla ? "ওটিপি পাঠানো হয়েছে" : "OTP sent successfully",
       confirm: isBangla ? "কনফার্ম" : "Confirm",
       loading: isBangla ? "লোড হচ্ছে..." : "Loading...",
       terms: isBangla
@@ -65,11 +68,18 @@ const Register = () => {
       fullNamePlaceholder: isBangla ? "পূর্ণ নাম" : "Full Name",
       emailPlaceholder: isBangla ? "ইমেইল" : "Email",
       referCodePlaceholder: isBangla ? "থাকলে লিখুন" : "Enter if you have one",
-      verificationPlaceholder: isBangla ? "৪ সংখ্যার কোড" : "4 digit code",
+      verificationPlaceholder: isBangla
+        ? "এসএমএস ওটিপি লিখুন"
+        : "Enter SMS OTP",
 
       requiredError: isBangla
         ? "সব প্রয়োজনীয় ঘর পূরণ করুন"
         : "Please fill all required fields",
+      phoneRequiredError: isBangla
+        ? "আগে ফোন নাম্বার দিন"
+        : "Please enter phone number first",
+      otpRequiredError: isBangla ? "ওটিপি কোড দিন" : "Please enter OTP code",
+      otpSendFailed: isBangla ? "ওটিপি পাঠানো যায়নি" : "Failed to send OTP",
       userIdLengthError: isBangla
         ? "ইউজার আইডি ৪ থেকে ১৫ অক্ষরের হতে হবে"
         : "User Id must be 4 to 15 characters",
@@ -82,9 +92,6 @@ const Register = () => {
       passwordMatchError: isBangla
         ? "পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না"
         : "Password and Confirm Password do not match",
-      verificationError: isBangla
-        ? "ভেরিফিকেশন কোড সঠিক নয়"
-        : "Verification code does not match",
       registerSuccess: isBangla
         ? "রেজিস্ট্রেশন সফল হয়েছে"
         : "Registration successful",
@@ -106,6 +113,23 @@ const Register = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setOtpCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [otpCountdown]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -115,8 +139,42 @@ const Register = () => {
     }));
   };
 
-  const refreshCaptcha = () => {
-    setCaptcha(Math.floor(1000 + Math.random() * 9000).toString());
+  const handleSendOtp = async () => {
+    try {
+      const phone = formData.phone.trim();
+
+      if (!phone) {
+        return toast.error(text.phoneRequiredError);
+      }
+
+      setSendingOtp(true);
+
+      const { data } = await api.post("/api/users/send-register-otp", {
+        phone,
+      });
+
+      if (!data?.success) {
+        throw new Error(data?.message || text.otpSendFailed);
+      }
+
+      setOtpSent(true);
+      setOtpCountdown(Number(data?.resendAfter || 60));
+      toast.success(data?.message || text.otpSent);
+    } catch (error) {
+      console.error(error);
+
+      const waitSeconds = error?.response?.data?.waitSeconds;
+
+      if (waitSeconds) {
+        setOtpCountdown(Number(waitSeconds));
+      }
+
+      toast.error(
+        error?.response?.data?.message || error?.message || text.otpSendFailed,
+      );
+    } finally {
+      setSendingOtp(false);
+    }
   };
 
   const handleRegister = async () => {
@@ -154,8 +212,8 @@ const Register = () => {
         return toast.error(text.passwordMatchError);
       }
 
-      if (verificationCode !== captcha) {
-        return toast.error(text.verificationError);
+      if (!verificationCode.trim()) {
+        return toast.error(text.otpRequiredError);
       }
 
       setLoading(true);
@@ -168,6 +226,7 @@ const Register = () => {
         email: email.trim(),
         phone: phone.trim(),
         referralCode: referralCode.trim().toUpperCase(),
+        verificationCode: verificationCode.trim(),
       });
 
       if (data?.success) {
@@ -281,7 +340,7 @@ const Register = () => {
           </div>
 
           {/* Phone */}
-          <div className="flex items-center px-4 py-4">
+          <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.phone}</label>
             <input
               name="phone"
@@ -291,6 +350,37 @@ const Register = () => {
               placeholder={text.phonePlaceholder}
               className="bg-transparent outline-none text-md flex-1 placeholder-gray-400"
             />
+          </div>
+
+          {/* OTP */}
+          <div className="flex items-center px-4 py-4">
+            <label className="w-28 text-md text-white">
+              {text.verificationCode}
+            </label>
+
+            <input
+              name="verificationCode"
+              value={formData.verificationCode}
+              onChange={handleChange}
+              type="text"
+              placeholder={text.verificationPlaceholder}
+              className="bg-transparent outline-none text-md flex-1 placeholder-gray-400"
+            />
+
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={sendingOtp || otpCountdown > 0}
+              className="ml-2 min-w-[105px] bg-[#F0DC05] px-3 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+            >
+              {sendingOtp
+                ? text.sendingOtp
+                : otpCountdown > 0
+                  ? `${otpCountdown}s`
+                  : otpSent
+                    ? text.resendOtp
+                    : text.sendOtp}
+            </button>
           </div>
         </div>
 
@@ -336,41 +426,13 @@ const Register = () => {
           </div>
         </div>
 
-        {/* VERIFICATION */}
-        <div className="bg-[#0b5c45] overflow-hidden mb-6 px-4 py-4 flex items-center">
-          <label className="w-28 text-md text-white">
-            {text.verificationCode}
-          </label>
-
-          <input
-            name="verificationCode"
-            value={formData.verificationCode}
-            onChange={handleChange}
-            type="text"
-            placeholder={text.verificationPlaceholder}
-            className="bg-transparent outline-none text-md w-28 md:flex-1 placeholder-gray-400"
-          />
-
-          <div className="bg-white text-black px-3 py-1 text-md font-bold mx-2">
-            {captcha}
-          </div>
-
-          <button
-            type="button"
-            onClick={refreshCaptcha}
-            className="text-white text-xl cursor-pointer"
-          >
-            ↻
-          </button>
-        </div>
-
         {/* BUTTON */}
         <div className="flex justify-center">
           <button
             type="button"
             onClick={handleRegister}
             disabled={loading}
-            className="bg-[#F0DC05] text-black text-lg px-10 py-3 rounded-sm cursor-pointer"
+            className="bg-[#F0DC05] text-black text-lg px-10 py-3 rounded-sm cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? text.loading : text.confirm}
           </button>

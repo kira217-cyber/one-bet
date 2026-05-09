@@ -73,25 +73,18 @@ const CreateAdmin = () => {
       },
       { key: "add-provider", label: "Add Provider ( /add-provider )" },
       { key: "add-games", label: "Add Games ( /add-games )" },
-      { key: "add-sports", label: "Add Sports ( /add-sports )" },
       {
         key: "add-feature-games",
         label: "Add Feature Games ( /add-feature-games )",
       },
+      { key: "add-sports", label: "Add Sports ( /add-sports )" },
       { key: "bet-history", label: "Bet History ( /bet-history )" },
 
       { key: "bulk-adjustment", label: "Bulk Adjustment ( /bulk-adjustment )" },
-
       { key: "add-promotion", label: "Add Promotion ( /add-promotion )" },
 
-      {
-        key: "add-slider",
-        label: "Add Slider ( /add-slider )",
-      },
-      {
-        key: "add-notice",
-        label: "Add Notice ( /add-notice )",
-      },
+      { key: "add-slider", label: "Add Slider ( /add-slider )" },
+      { key: "add-notice", label: "Add Notice ( /add-notice )" },
       {
         key: "footer-controller",
         label: "Footer Controller ( /footer-controller )",
@@ -113,6 +106,61 @@ const CreateAdmin = () => {
       {
         key: "add-aff-social-link",
         label: "Add Affiliate Social Link ( /add-aff-social-link )",
+      },
+      {
+        key: "aff-hero-controller",
+        label: "Affiliate Hero Controller ( /aff-hero-controller )",
+      },
+      {
+        key: "aff-campaigns-controller",
+        label: "Affiliate Campaigns Controller ( /aff-campaigns-controller )",
+      },
+      {
+        key: "aff-faq-controller",
+        label: "Affiliate FAQ Controller ( /aff-faq-controller )",
+      },
+      {
+        key: "aff-commission-controller",
+        label: "Affiliate Commission Controller ( /aff-commission-controller )",
+      },
+      {
+        key: "aff-commission-structure-controller",
+        label:
+          "Affiliate Commission Structure Controller ( /aff-commission-structure-controller )",
+      },
+      {
+        key: "aff-jackpot-controller",
+        label: "Affiliate Jackpot Controller ( /aff-jackpot-controller )",
+      },
+      {
+        key: "aff-jackpot-structure-controller",
+        label:
+          "Affiliate Jackpot Structure Controller ( /aff-jackpot-structure-controller )",
+      },
+      {
+        key: "aff-elite-club-controller",
+        label: "Affiliate Elite Club Controller ( /aff-elite-club-controller )",
+      },
+      {
+        key: "aff-how-to-join-controller",
+        label:
+          "Affiliate How To Join Controller ( /aff-how-to-join-controller )",
+      },
+      {
+        key: "aff-about-us-controller",
+        label: "Affiliate About Us Controller ( /aff-about-us-controller )",
+      },
+      {
+        key: "aff-why-us-controller",
+        label: "Affiliate Why Us Controller ( /aff-why-us-controller )",
+      },
+      {
+        key: "aff-supports-controller",
+        label: "Affiliate Supports Controller ( /aff-supports-controller )",
+      },
+      {
+        key: "aff-footer-controller",
+        label: "Affiliate Footer Controller ( /aff-footer-controller )",
       },
     ],
     [],
@@ -153,8 +201,25 @@ const CreateAdmin = () => {
     );
   };
 
+  const selectAllCreatePerms = () => {
+    setPermissions(allPerms.map((p) => p.key));
+  };
+
+  const clearCreatePerms = () => {
+    setPermissions([]);
+  };
+
+  const selectAllEditPerms = () => {
+    setEditPermissions(allPerms.map((p) => p.key));
+  };
+
+  const clearEditPerms = () => {
+    setEditPermissions([]);
+  };
+
   const loadAdmins = async () => {
     if (!token) return;
+
     try {
       setLoadingList(true);
       const { data } = await api.get("/api/admin/admins", authHeaders);
@@ -261,7 +326,9 @@ const CreateAdmin = () => {
     try {
       await api.delete(`/api/admin/admins/${deleteConfirmId}`, authHeaders);
       toast.success("Admin deleted");
+
       if (editingId === deleteConfirmId) cancelEdit();
+
       loadAdmins();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Server error");
@@ -271,25 +338,26 @@ const CreateAdmin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-green-950/20 to-black text-white p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-8 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gradient-to-br from-black via-green-950/20 to-black p-4 text-white sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl">
+        <h2 className="mb-8 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
           Manage Admin Accounts
         </h2>
 
-        <div className="bg-black/65 backdrop-blur-md border border-green-700/40 rounded-2xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-green-900/30 mb-10">
-          <h3 className="text-xl sm:text-2xl font-bold text-green-300/90 mb-6">
+        <div className="mb-10 rounded-2xl border border-green-700/40 bg-black/65 p-5 shadow-2xl shadow-green-900/30 backdrop-blur-md sm:p-7 lg:p-9">
+          <h3 className="mb-6 text-xl font-bold text-green-300/90 sm:text-2xl">
             Create New Admin
           </h3>
 
           <form onSubmit={submitCreate} className="space-y-5 sm:space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+            <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-green-300/90 mb-2">
+                <label className="mb-2 block text-sm font-medium text-green-300/90">
                   Email
                 </label>
                 <input
-                  className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white placeholder-green-400/50 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all"
+                  type="email"
+                  className="w-full rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 text-white placeholder-green-400/50 transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@example.com"
@@ -298,12 +366,12 @@ const CreateAdmin = () => {
               </div>
 
               <div className="relative">
-                <label className="block text-sm font-medium text-green-300/90 mb-2">
+                <label className="mb-2 block text-sm font-medium text-green-300/90">
                   Password
                 </label>
                 <input
                   type={showPassword ? "text" : "password"}
-                  className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white placeholder-green-400/50 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all pr-11"
+                  className="w-full rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 pr-11 text-white placeholder-green-400/50 transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Strong password"
@@ -312,7 +380,7 @@ const CreateAdmin = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-[42px] text-green-400 hover:text-green-300 transition-colors cursor-pointer"
+                  className="absolute right-4 top-[42px] cursor-pointer text-green-400 transition-colors hover:text-green-300"
                 >
                   {showPassword ? (
                     <FaEyeSlash size={20} />
@@ -324,11 +392,11 @@ const CreateAdmin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-green-300/90 mb-2">
+              <label className="mb-2 block text-sm font-medium text-green-300/90">
                 Role
               </label>
               <select
-                className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all cursor-pointer"
+                className="w-full cursor-pointer rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 text-white transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
@@ -339,20 +407,40 @@ const CreateAdmin = () => {
 
             {role !== "mother" && (
               <div>
-                <label className="block text-sm font-medium text-green-300/90 mb-3">
-                  Permissions
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto [scrollbar-width:none] pr-1">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-green-300/90">
+                    Permissions
+                  </label>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllCreatePerms}
+                      className="cursor-pointer rounded-lg border border-green-600/50 bg-green-900/30 px-3 py-1.5 text-xs text-green-100 hover:bg-green-800/40"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearCreatePerms}
+                      className="cursor-pointer rounded-lg border border-red-600/50 bg-red-900/30 px-3 py-1.5 text-xs text-red-100 hover:bg-red-800/40"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid max-h-[320px] grid-cols-1 gap-3 overflow-y-auto pr-1 [scrollbar-width:none] sm:grid-cols-2 lg:grid-cols-3">
                   {allPerms.map((p) => (
                     <label
                       key={p.key}
-                      className="flex items-center gap-3 bg-black/50 border border-green-700/40 rounded-xl px-4 py-3 hover:bg-green-900/30 transition-colors cursor-pointer"
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border border-green-700/40 bg-black/50 px-4 py-3 transition-colors hover:bg-green-900/30"
                     >
                       <input
                         type="checkbox"
                         checked={permissions.includes(p.key)}
                         onChange={() => togglePerm(p.key)}
-                        className="h-5 w-5 accent-green-500 cursor-pointer"
+                        className="h-5 w-5 cursor-pointer accent-green-500"
                       />
                       <span className="text-sm text-green-100">{p.label}</span>
                     </label>
@@ -363,32 +451,33 @@ const CreateAdmin = () => {
 
             <button
               type="submit"
-              className="cursor-pointer w-full md:w-auto px-8 py-3.5 rounded-xl font-semibold text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black shadow-lg shadow-green-600/40 border border-green-400/40 transition-all duration-300"
+              className="w-full cursor-pointer rounded-xl border border-green-400/40 bg-gradient-to-r from-green-500 to-emerald-500 px-8 py-3.5 text-lg font-semibold text-black shadow-lg shadow-green-600/40 transition-all duration-300 hover:from-green-400 hover:to-emerald-400 md:w-auto"
             >
               Create Admin
             </button>
           </form>
         </div>
 
-        <div className="bg-black/65 backdrop-blur-md border border-green-700/40 rounded-2xl p-5 sm:p-7 lg:p-9 shadow-2xl shadow-green-900/30">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h3 className="text-xl sm:text-2xl font-bold text-green-300/90">
+        <div className="rounded-2xl border border-green-700/40 bg-black/65 p-5 shadow-2xl shadow-green-900/30 backdrop-blur-md sm:p-7 lg:p-9">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <h3 className="text-xl font-bold text-green-300/90 sm:text-2xl">
               All Admin Accounts
             </h3>
+
             <button
               onClick={loadAdmins}
-              className="cursor-pointer px-6 py-2.5 rounded-xl bg-black/70 border border-green-700/50 hover:bg-green-900/40 hover:border-green-500/60 text-green-200 hover:text-white transition-all duration-300"
+              className="cursor-pointer rounded-xl border border-green-700/50 bg-black/70 px-6 py-2.5 text-green-200 transition-all duration-300 hover:border-green-500/60 hover:bg-green-900/40 hover:text-white"
             >
               Refresh List
             </button>
           </div>
 
           {loadingList ? (
-            <div className="text-center py-10 text-green-300/70">
+            <div className="py-10 text-center text-green-300/70">
               Loading admins...
             </div>
           ) : admins.length === 0 ? (
-            <div className="text-center py-10 text-green-300/70">
+            <div className="py-10 text-center text-green-300/70">
               No admin accounts found
             </div>
           ) : (
@@ -399,21 +488,23 @@ const CreateAdmin = () => {
                 return (
                   <div
                     key={a._id}
-                    className="bg-black/50 border border-green-700/40 rounded-xl p-5 hover:border-green-500/50 transition-colors"
+                    className="rounded-xl border border-green-700/40 bg-black/50 p-5 transition-colors hover:border-green-500/50"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                       <div>
-                        <p className="font-bold text-lg text-green-100">
+                        <p className="text-lg font-bold text-green-100">
                           {a.email}
                         </p>
-                        <p className="text-sm mt-1">
+
+                        <p className="mt-1 text-sm">
                           Role:{" "}
                           <span className="font-semibold text-green-300">
                             {a.role === "mother" ? "Mother Admin" : "Sub Admin"}
                           </span>
                         </p>
+
                         {a.role !== "mother" && (
-                          <p className="text-sm text-green-200/80 mt-1 break-words">
+                          <p className="mt-1 break-words text-sm text-green-200/80">
                             Permissions:{" "}
                             {Array.isArray(a.permissions) &&
                             a.permissions.length > 0
@@ -428,13 +519,14 @@ const CreateAdmin = () => {
                           <>
                             <button
                               onClick={() => startEdit(a)}
-                              className="cursor-pointer px-5 py-2.5 rounded-lg bg-blue-700/80 hover:bg-blue-600 text-white font-medium transition-colors"
+                              className="cursor-pointer rounded-lg bg-blue-700/80 px-5 py-2.5 font-medium text-white transition-colors hover:bg-blue-600"
                             >
                               Edit
                             </button>
+
                             <button
                               onClick={() => confirmDelete(a._id)}
-                              className="cursor-pointer px-5 py-2.5 rounded-lg bg-red-700/80 hover:bg-red-600 text-white font-medium transition-colors"
+                              className="cursor-pointer rounded-lg bg-red-700/80 px-5 py-2.5 font-medium text-white transition-colors hover:bg-red-600"
                             >
                               Delete
                             </button>
@@ -443,13 +535,14 @@ const CreateAdmin = () => {
                           <>
                             <button
                               onClick={() => submitEdit(a._id)}
-                              className="cursor-pointer px-5 py-2.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black font-medium transition-colors"
+                              className="cursor-pointer rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-5 py-2.5 font-medium text-black transition-colors hover:from-green-400 hover:to-emerald-400"
                             >
                               Save Changes
                             </button>
+
                             <button
                               onClick={cancelEdit}
-                              className="cursor-pointer px-5 py-2.5 rounded-lg bg-black/70 border border-green-700/50 hover:bg-green-900/40 text-green-200 hover:text-white transition-colors"
+                              className="cursor-pointer rounded-lg border border-green-700/50 bg-black/70 px-5 py-2.5 text-green-200 transition-colors hover:bg-green-900/40 hover:text-white"
                             >
                               Cancel
                             </button>
@@ -459,14 +552,14 @@ const CreateAdmin = () => {
                     </div>
 
                     {isEditing && (
-                      <div className="mt-6 pt-6 border-t border-green-700/30 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="mt-6 grid grid-cols-1 gap-6 border-t border-green-700/30 pt-6 md:grid-cols-2">
                         <div>
-                          <label className="block text-sm font-medium text-green-300/90 mb-2">
+                          <label className="mb-2 block text-sm font-medium text-green-300/90">
                             Email
                           </label>
                           <input
                             type="email"
-                            className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white placeholder-green-400/50 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all"
+                            className="w-full rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 text-white placeholder-green-400/50 transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                             value={editEmail}
                             onChange={(e) => setEditEmail(e.target.value)}
                             placeholder="Update email"
@@ -474,11 +567,11 @@ const CreateAdmin = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-green-300/90 mb-2">
+                          <label className="mb-2 block text-sm font-medium text-green-300/90">
                             Role
                           </label>
                           <select
-                            className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all cursor-pointer"
+                            className="w-full cursor-pointer rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 text-white transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                             value={editRole}
                             onChange={(e) => setEditRole(e.target.value)}
                           >
@@ -488,12 +581,12 @@ const CreateAdmin = () => {
                         </div>
 
                         <div className="relative">
-                          <label className="block text-sm font-medium text-green-300/90 mb-2">
+                          <label className="mb-2 block text-sm font-medium text-green-300/90">
                             New Password
                           </label>
                           <input
                             type={showEditPassword ? "text" : "password"}
-                            className="w-full bg-black/70 border border-green-700/50 rounded-xl px-4 py-3 text-white placeholder-green-400/50 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/30 transition-all pr-11"
+                            className="w-full rounded-xl border border-green-700/50 bg-black/70 px-4 py-3 pr-11 text-white placeholder-green-400/50 transition-all focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30"
                             value={editNewPassword}
                             onChange={(e) => setEditNewPassword(e.target.value)}
                             placeholder="Leave empty to keep current"
@@ -503,7 +596,7 @@ const CreateAdmin = () => {
                             onClick={() =>
                               setShowEditPassword(!showEditPassword)
                             }
-                            className="absolute right-4 top-[42px] text-green-400 hover:text-green-300 transition-colors cursor-pointer"
+                            className="absolute right-4 top-[42px] cursor-pointer text-green-400 transition-colors hover:text-green-300"
                           >
                             {showEditPassword ? (
                               <FaEyeSlash size={20} />
@@ -515,20 +608,40 @@ const CreateAdmin = () => {
 
                         {editRole !== "mother" && (
                           <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-green-300/90 mb-3">
-                              Permissions
-                            </label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto [scrollbar-width:none] pr-1">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                              <label className="block text-sm font-medium text-green-300/90">
+                                Permissions
+                              </label>
+
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={selectAllEditPerms}
+                                  className="cursor-pointer rounded-lg border border-green-600/50 bg-green-900/30 px-3 py-1.5 text-xs text-green-100 hover:bg-green-800/40"
+                                >
+                                  Select All
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={clearEditPerms}
+                                  className="cursor-pointer rounded-lg border border-red-600/50 bg-red-900/30 px-3 py-1.5 text-xs text-red-100 hover:bg-red-800/40"
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid max-h-[320px] grid-cols-1 gap-3 overflow-y-auto pr-1 [scrollbar-width:none] sm:grid-cols-2 lg:grid-cols-3">
                               {allPerms.map((p) => (
                                 <label
                                   key={p.key}
-                                  className="flex items-center gap-3 bg-black/50 border border-green-700/40 rounded-xl px-4 py-3 hover:bg-green-900/30 transition-colors cursor-pointer"
+                                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-green-700/40 bg-black/50 px-4 py-3 transition-colors hover:bg-green-900/30"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={editPermissions.includes(p.key)}
                                     onChange={() => toggleEditPerm(p.key)}
-                                    className="h-5 w-5 accent-green-500 cursor-pointer"
+                                    className="h-5 w-5 cursor-pointer accent-green-500"
                                   />
                                   <span className="text-sm text-green-100">
                                     {p.label}
@@ -548,24 +661,27 @@ const CreateAdmin = () => {
         </div>
 
         {deleteConfirmId && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-black/90 border border-green-700/60 rounded-2xl p-6 max-w-md w-full shadow-2xl shadow-green-900/50">
-              <h3 className="text-xl font-bold text-green-300 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl border border-green-700/60 bg-black/90 p-6 shadow-2xl shadow-green-900/50">
+              <h3 className="mb-4 text-xl font-bold text-green-300">
                 Confirm Delete
               </h3>
-              <p className="text-green-100/90 mb-6">
+
+              <p className="mb-6 text-green-100/90">
                 Are you sure you want to delete this admin account?
               </p>
+
               <div className="flex gap-4">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="cursor-pointer flex-1 py-3 rounded-xl bg-black/70 border border-green-700/50 hover:bg-green-900/40 text-green-200 hover:text-white transition-all"
+                  className="flex-1 cursor-pointer rounded-xl border border-green-700/50 bg-black/70 py-3 text-green-200 transition-all hover:bg-green-900/40 hover:text-white"
                 >
                   Cancel
                 </button>
+
                 <button
                   onClick={handleDelete}
-                  className="cursor-pointer flex-1 py-3 rounded-xl bg-red-700 hover:bg-red-600 text-white font-semibold transition-all"
+                  className="flex-1 cursor-pointer rounded-xl bg-red-700 py-3 font-semibold text-white transition-all hover:bg-red-600"
                 >
                   Yes, Delete
                 </button>

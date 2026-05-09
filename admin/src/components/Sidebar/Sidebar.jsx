@@ -377,6 +377,18 @@ const Sidebar = () => {
         icon: <FaRegQuestionCircle />,
         text: "Affiliate Why Us",
       },
+      {
+        key: "aff-supports-controller",
+        to: "/aff-supports-controller",
+        icon: <FaQuestionCircle />,
+        text: "Affiliate Supports",
+      },
+      {
+        key: "aff-footer-controller",
+        to: "/aff-footer-controller",
+        icon: <FaInfoCircle />,
+        text: "Affiliate Footer",
+      },
     ],
     [],
   );
