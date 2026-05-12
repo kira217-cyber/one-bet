@@ -224,10 +224,10 @@ const FavouriteGames = () => {
             ))}
           </Swiper>
         ) : mergedGames.length === 0 ? (
-          <div className="overflow-hidden rounded-sm bg-[#0B3B2E] shadow-md">
+          <div className="overflow-hidden rounded-[12px] bg-[#0B3B2E] shadow-md">
             <div className="bg-[#111111] px-4 py-8 text-center text-sm text-white">
               {isBangla
-                ? "কোনো ফেভারিট গেম পাওয়া যায়নি।"
+                ? "কোনো ফেভারিট গেম পাওয়া যায়নি।"
                 : "No favourite games found."}
             </div>
           </div>
@@ -235,7 +235,7 @@ const FavouriteGames = () => {
           <Swiper
             modules={[Autoplay]}
             spaceBetween={12}
-            slidesPerView={2.3}
+            slidesPerView={3.3}
             loop={true}
             speed={900}
             autoplay={{

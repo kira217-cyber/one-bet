@@ -13,7 +13,6 @@ import {
 } from "react-icons/fa";
 import { api } from "../../api/axios";
 
-
 const money = (n) => {
   const num = Number(n || 0);
   if (Number.isNaN(num)) return "৳ 0.00";
@@ -52,11 +51,16 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative w-full max-w-[520px] overflow-hidden rounded-2xl border border-green-700/40 shadow-2xl">
         <div className="bg-gradient-to-br from-black via-green-950/20 to-black p-5">
           <div className="text-xl font-black text-white">{title}</div>
-          <div className="mt-1 text-[13px] text-green-200/80">{description}</div>
+          <div className="mt-1 text-[13px] text-green-200/80">
+            {description}
+          </div>
 
           <div className="mt-4">
             <label className="text-[12px] font-bold text-green-200/80">
@@ -118,7 +122,11 @@ const WithdrawRequest = () => {
     return Math.max(1, Math.ceil(total / limit));
   }, [meta.total, meta.limit]);
 
-  const fetchData = async (page = meta.page, searchQ = q, nextStatus = status) => {
+  const fetchData = async (
+    page = meta.page,
+    searchQ = q,
+    nextStatus = status,
+  ) => {
     try {
       setLoading(true);
 
@@ -130,7 +138,9 @@ const WithdrawRequest = () => {
       if (searchQ) params.q = searchQ;
       if (nextStatus !== "all") params.status = nextStatus;
 
-      const { data } = await api.get("/api/admin/withdraw-requests", { params });
+      const { data } = await api.get("/api/admin/withdraw-requests", {
+        params,
+      });
 
       const items = data?.data || [];
       const total = data?.meta?.total ?? items.length;
@@ -144,7 +154,7 @@ const WithdrawRequest = () => {
       }));
     } catch (err) {
       toast.error(
-        err?.response?.data?.message || "Failed to load withdraw requests"
+        err?.response?.data?.message || "Failed to load withdraw requests",
       );
     } finally {
       setLoading(false);
@@ -230,7 +240,9 @@ const WithdrawRequest = () => {
               <FaWallet className="text-2xl" />
             </div>
             <div>
-              <div className="text-2xl font-black text-white">Withdraw Requests</div>
+              <div className="text-2xl font-black text-white">
+                Withdraw Requests
+              </div>
               <div className="mt-1 text-[13px] text-green-200/80">
                 Approve or reject withdrawal requests
               </div>
@@ -311,7 +323,10 @@ const WithdrawRequest = () => {
                 <tbody className="bg-black/40">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-[13px] text-green-200/70">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-[13px] text-green-200/70"
+                      >
                         Loading...
                       </td>
                     </tr>
@@ -332,14 +347,25 @@ const WithdrawRequest = () => {
                           className="border-t border-green-700/20 transition hover:bg-green-900/10"
                         >
                           <td className="px-4 py-4">
-                            <div className="text-[13px] font-extrabold text-white">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (r?.user?._id) {
+                                  navigate(`/all-user-details/${r.user._id}`);
+                                }
+                              }}
+                              disabled={!r?.user?._id}
+                              className="cursor-pointer text-left text-[13px] font-extrabold text-white hover:text-green-300 hover:underline disabled:cursor-not-allowed disabled:hover:no-underline"
+                            >
                               {userId}
-                            </div>
+                            </button>
                             <div className="text-[12px] text-green-200/60">
                               {phone || "—"}
                             </div>
                             {email ? (
-                              <div className="text-[12px] text-green-200/50">{email}</div>
+                              <div className="text-[12px] text-green-200/50">
+                                {email}
+                              </div>
                             ) : null}
                           </td>
 
@@ -358,7 +384,7 @@ const WithdrawRequest = () => {
                           <td className="px-4 py-4">
                             <span
                               className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-extrabold ${chipClass(
-                                statusText
+                                statusText,
                               )}`}
                             >
                               {statusText.toUpperCase()}
@@ -372,7 +398,9 @@ const WithdrawRequest = () => {
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => navigate(`/withdraw-request/${r._id}`)}
+                                onClick={() =>
+                                  navigate(`/withdraw-request/${r._id}`)
+                                }
                                 className="inline-flex items-center gap-2 rounded-xl border border-green-700/40 bg-black/40 px-3 py-2 text-[12px] font-extrabold text-green-100 transition hover:bg-green-900/30"
                               >
                                 <FaEye />
@@ -411,7 +439,10 @@ const WithdrawRequest = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-[13px] text-green-200/70">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-[13px] text-green-200/70"
+                      >
                         No withdraw requests found.
                       </td>
                     </tr>
@@ -423,7 +454,8 @@ const WithdrawRequest = () => {
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-[12px] text-green-200/70">
-              Page <span className="font-extrabold text-white">{meta.page}</span> of{" "}
+              Page{" "}
+              <span className="font-extrabold text-white">{meta.page}</span> of{" "}
               <span className="font-extrabold text-white">{pageCount}</span>
             </div>
 
@@ -442,7 +474,9 @@ const WithdrawRequest = () => {
               </button>
 
               <button
-                onClick={() => fetchData(Math.min(pageCount, meta.page + 1), q, status)}
+                onClick={() =>
+                  fetchData(Math.min(pageCount, meta.page + 1), q, status)
+                }
                 disabled={meta.page >= pageCount || loading}
                 className={`inline-flex items-center gap-2 rounded-xl border border-green-700/40 px-4 py-2 text-[13px] font-extrabold transition ${
                   meta.page >= pageCount || loading
@@ -462,7 +496,7 @@ const WithdrawRequest = () => {
         open={approveOpen}
         title="Approve Withdraw Request"
         description={`You are going to approve this request. Amount: ${money(
-          selected?.amount || 0
+          selected?.amount || 0,
         )}`}
         confirmText="Approve"
         confirmVariant="approve"

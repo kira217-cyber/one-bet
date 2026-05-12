@@ -111,10 +111,7 @@ const Navber = ({ setOpen }) => {
       {/* Balance - middle */}
       {isAuthenticated && (
         <div className="flex rounded-xl border border-yellow-400/40 bg-gradient-to-r from-[#003c29] to-[#006c4a] px-1 sm:px-2 shadow-md shadow-black/30 py-1">
-
           <div className="flex min-w-0 flex-1 leading-none">
-
-
             <span className="mt-1 mr-1 max-w-auto truncate text-[14px] sm:text-[18px] font-extrabold text-yellow-400">
               {loadingBalance ? "..." : balanceText}
             </span>
@@ -147,42 +144,47 @@ const Navber = ({ setOpen }) => {
         </div>
       )}
 
-      {/* Right */}
-      <div className="hidden shrink-0 items-center gap-3 text-xs sm:flex">
-        <Link
-          to="/auto-deposit"
-          className="flex flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
-        >
-          <Download className="h-7 w-7" />
-          <span>{isBangla ? "ডিপোজিট" : "Deposit"}</span>
-        </Link>
+      {isAuthenticated && (
+        <>
+          {/* Right Desktop */}
+          <div className="hidden shrink-0 items-center gap-3 text-xs sm:flex">
+            <Link
+              to="/auto-deposit"
+              className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
+            >
+              <Download className="h-7 w-7" />
+              <span>{isBangla ? "ডিপোজিট" : "Deposit"}</span>
+            </Link>
 
-        <Link
-          to="/withdraw"
-          className="flex flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
-        >
-          <Wallet className="h-7 w-7" />
-          <span>{isBangla ? "উইথড্র" : "Withdraw"}</span>
-        </Link>
-      </div>
-      {/* Right Only Mobile */}
-      <div className="flex shrink-0 items-center gap-2 text-[14px] sm:hidden">
-        <Link
-          to="/auto-deposit"
-          className="flex flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
-        >
-          <Download className="h-5 w-5" />
-          <span>{isBangla ? "ডিপো" : "Depo"}</span>
-        </Link>
+            <Link
+              to="/withdraw"
+              className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
+            >
+              <Wallet className="h-7 w-7" />
+              <span>{isBangla ? "উইথড্র" : "Withdraw"}</span>
+            </Link>
+          </div>
 
-        <Link
-          to="/withdraw"
-          className="flex flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
-        >
-          <Wallet className="h-5 w-5" />
-          <span>{isBangla ? "উইথ" : "With"}</span>
-        </Link>
-      </div>
+          {/* Right Mobile */}
+          <div className="flex shrink-0 items-center gap-2 text-[11px] sm:hidden">
+            <Link
+              to="/auto-deposit"
+              className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
+            >
+              <Download className="h-4 w-4" />
+              <span>{isBangla ? "ডিপো" : "Depo"}</span>
+            </Link>
+
+            <Link
+              to="/withdraw"
+              className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
+            >
+              <Wallet className="h-4 w-4" />
+              <span>{isBangla ? "উইথ" : "With"}</span>
+            </Link>
+          </div>
+        </>
+      )}
     </div>
   );
 };

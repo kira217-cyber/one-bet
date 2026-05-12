@@ -10,6 +10,8 @@ import {
 } from "../../features/auth/authSelectors";
 import { api } from "../../api/axios";
 import { useLanguage } from "../../context/LanguageProvider";
+import Loading from "../../components/Loading/Loading";
+
 
 const fetchMyProfile = async () => {
   const { data } = await api.get("/api/users/me");
@@ -50,7 +52,7 @@ const SportsPlayGame = () => {
     retry: 1,
   });
 
-  const { data: siteIdentity } = useQuery({
+  useQuery({
     queryKey: ["site-identity-sports-play-game"],
     queryFn: fetchSiteIdentity,
     staleTime: 1000 * 60 * 10,
@@ -64,12 +66,6 @@ const SportsPlayGame = () => {
 
   const API_BASE =
     import.meta.env.VITE_API_URL || import.meta.env.VITE_APP_URL || "";
-
-  const logoSrc = siteIdentity?.logo
-    ? siteIdentity.logo.startsWith("http")
-      ? siteIdentity.logo
-      : `${import.meta.env.VITE_APP_URL}${siteIdentity.logo}`
-    : null;
 
   const playMutation = useMutation({
     mutationFn: async () => {
@@ -153,56 +149,31 @@ const SportsPlayGame = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black">
-      {isLoading ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-6 text-center">
-          <div className="relative mb-6 flex-col items-center justify-center">
-            {logoSrc ? (
-              <img
-                src={logoSrc}
-                alt="site-logo"
-                className="w-40 h-20 object-contain opacity-95"
-              />
-            ) : (
-              <div className="w-40 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70 text-sm">
-                {t("লোড হচ্ছে...", "Loading...")}
-              </div>
-            )}
+      {/* ✅ Custom Loading */}
+      <Loading
+        open={isLoading}
+        text={t("স্পোর্টস গেম প্রস্তুত হচ্ছে...", "Preparing sports game...")}
+      />
 
-            <div className="inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 border-[3px] border-yellow-400/25 border-t-yellow-400 rounded-full animate-spin" />
-            </div>
-          </div>
-
-          {/* <p className="text-lg font-semibold">
-            {profileLoading
-              ? t("প্রোফাইল যাচাই হচ্ছে...", "Checking profile...")
-              : t("স্পোর্টস গেম লোড হচ্ছে...", "Loading sports game...")}
-          </p> */}
-
-          <p className="mt-2 text-sm text-white/65">
-            {t(
-              "অনুগ্রহ করে অপেক্ষা করুন",
-              "Please wait while your sports game is being prepared",
-            )}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => refetchProfile()}
-            disabled={profileLoading}
-            className="mt-6 px-4 py-2 rounded-lg bg-white/10 text-white text-sm border border-white/15 hover:bg-white/15 disabled:opacity-60 cursor-pointer"
-          >
-            {t("রিফ্রেশ", "Refresh")}
-          </button>
-        </div>
-      ) : (
+      {!isLoading && (
         <iframe
           src={gameUrl}
           title="Sports Game"
-          className="w-full h-full border-0"
+          className="h-full w-full border-0"
           allow="fullscreen"
           allowFullScreen
         />
+      )}
+
+      {isLoading && (
+        <button
+          type="button"
+          onClick={() => refetchProfile()}
+          disabled={profileLoading}
+          className="fixed bottom-8 left-1/2 z-[1000000] -translate-x-1/2 cursor-pointer rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/15 disabled:opacity-60"
+        >
+          {t("রিফ্রেশ", "Refresh")}
+        </button>
       )}
     </div>
   );

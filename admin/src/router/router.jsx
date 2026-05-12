@@ -49,6 +49,8 @@ import AboutUsController from "../pages/AboutUsController/AboutUsController";
 import WhyUsController from "../pages/WhyUsController/WhyUsController";
 import SupportsController from "../pages/SupportsController/SupportsController";
 import AffFooterController from "../pages/AffFooterController/AffFooterController";
+import GameLossRewardAdmin from "../pages/GameLossRewardAdmin/GameLossRewardAdmin";
+import WeeklyBonusAdmin from "../pages/WeeklyBonusAdmin/WeeklyBonusAdmin";
 
 export const routes = createBrowserRouter([
   {
@@ -429,6 +431,22 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="aff-footer-controller">
             <AffFooterController />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/game-loss-reward",
+        element: (
+          <PrivateRoute permKey="game-loss-reward">
+            <GameLossRewardAdmin />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/weekly-bonus",
+        element: (
+          <PrivateRoute permKey="weekly-bonus">
+            <WeeklyBonusAdmin />
           </PrivateRoute>
         ),
       },

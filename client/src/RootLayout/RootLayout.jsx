@@ -27,9 +27,10 @@ const RootLayout = () => {
     "/dispute",
     "/rewards",
     "/wallet",
+    "/forgot-password"
   ];
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);
-  const hideBottomNavbarRoutes = ["/login", "/register", "/account"];
+  const hideBottomNavbarRoutes = ["/login", "/register", "/account", "/forgot-password"];
   const hideBottomNavbar = hideBottomNavbarRoutes.includes(location.pathname);
   const showSocialLink = ["/account"].includes(location.pathname);
 

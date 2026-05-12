@@ -19,6 +19,7 @@ import SingleUserGameHistory from "../../components/SingleUserGameHistory/Single
 import SingleUserMenualDepositHisotry from "../../components/SingleUserMenualDepositHisotry/SingleUserMenualDepositHisotry";
 import SingleUserAutoDepositHisotry from "../../components/SingleUserAutoDepositHisotry/SingleUserAutoDepositHisotry";
 import SingleUserWithdrawHisotry from "../../components/SingleUserWithdrawHisotry/SingleUserWithdrawHisotry";
+import SingleUserGameLossBonusClaimHistory from "../../components/SingleUserGameLossBonusClaimHistory/SingleUserGameLossBonusClaimHistory";
 
 const UserDetails = () => {
   const { id } = useParams();
@@ -587,6 +588,7 @@ const UserDetails = () => {
       <SingleUserMenualDepositHisotry />
       <SingleUserAutoDepositHisotry />
       <SingleUserWithdrawHisotry />
+      <SingleUserGameLossBonusClaimHistory userId={formData.userId} />
     </>
   );
 };
@@ -603,5 +605,3 @@ const Field = ({ label, children }) => {
 };
 
 export default UserDetails;
-
-

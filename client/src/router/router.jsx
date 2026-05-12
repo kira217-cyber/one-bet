@@ -27,6 +27,7 @@ import Reward from "../pages/Reward/Reward";
 import Dispute from "../pages/Dispute/Dispute";
 import Wallet from "../pages/Wallet/Wallet";
 import FeaturedPlayGame from "../pages/FeaturedPlayGame/FeaturedPlayGame";
+import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 
 export const routes = createBrowserRouter([
   {
@@ -205,7 +206,10 @@ export const routes = createBrowserRouter([
           },
         ],
       },
-
+      {
+        path: "forgot-password",  
+        element: <ForgetPassword />,
+      },
       {
         path: "login",
         element: <Login />,

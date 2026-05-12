@@ -33,6 +33,7 @@ import {
   FaListOl,
   FaInfoCircle,
   FaRegQuestionCircle,
+  FaGift,
 } from "react-icons/fa";
 import { FaDiagramProject, FaCodePullRequest } from "react-icons/fa6";
 import {
@@ -172,6 +173,18 @@ const Sidebar = () => {
         to: "/bulk-adjustment",
         icon: <PiBridgeBold className="text-lime-400" />,
         text: "Bulk Adjustment",
+      },
+      {
+        key: "game-loss-reward",
+        to: "/game-loss-reward",
+        icon: <FaGift className="text-lime-300" />,
+        text: "Game Loss Reward",
+      },
+      {
+        key: "weekly-bonus",
+        to: "/weekly-bonus",
+        icon: <FaGift className="text-lime-300" />,
+        text: "Weekly Bonus",
       },
     ],
     [],

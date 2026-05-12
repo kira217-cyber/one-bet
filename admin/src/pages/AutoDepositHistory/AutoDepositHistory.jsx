@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
+import { useNavigate } from "react-router";
 import {
   FaSearch,
   FaSyncAlt,
@@ -63,6 +64,7 @@ const AutoDepositHistory = () => {
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ALL");
+  const navigate = useNavigate();
 
   const page = pagination.page;
   const limit = pagination.limit;
@@ -266,9 +268,20 @@ const AutoDepositHistory = () => {
                             <div className="flex flex-col gap-1">
                               <div className="inline-flex items-center gap-2">
                                 <FaUser className="text-green-400/70" />
-                                <span className="font-extrabold text-white/90">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (item.userIdentity) {
+                                      navigate(
+                                        `/all-user-details/${item.userIdentity}`,
+                                      );
+                                    }
+                                  }}
+                                  disabled={!item.userIdentity}
+                                  className="cursor-pointer font-extrabold text-white/90 hover:text-green-300 hover:underline disabled:cursor-not-allowed disabled:hover:no-underline"
+                                >
                                   {item.userDbUserId || "Unknown"}
-                                </span>
+                                </button>
                               </div>
 
                               <div className="inline-flex items-center gap-2 text-[12px] text-green-100/70">

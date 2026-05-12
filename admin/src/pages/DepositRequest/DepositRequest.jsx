@@ -13,7 +13,6 @@ import {
 } from "react-icons/fa";
 import { api } from "../../api/axios";
 
-
 /* ---------------- helpers ---------------- */
 const money = (n) => {
   const num = Number(n || 0);
@@ -316,12 +315,23 @@ const DepositRequest = () => {
                           className="border-t border-green-700/20 transition hover:bg-green-900/10"
                         >
                           <td className="px-5 py-4">
-                            <div className="text-[14px] font-black text-white">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (r?.user?._id) {
+                                  navigate(`/all-user-details/${r.user._id}`);
+                                }
+                              }}
+                              disabled={!r?.user?._id}
+                              className="cursor-pointer text-left text-[14px] font-black text-white hover:text-green-300 hover:underline disabled:cursor-not-allowed disabled:hover:no-underline"
+                            >
                               {userId}
-                            </div>
+                            </button>
+
                             <div className="text-[12px] text-green-200/60">
                               {phone}
                             </div>
+
                             {email ? (
                               <div className="text-[12px] text-green-200/50">
                                 {email}

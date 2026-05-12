@@ -479,17 +479,54 @@ const Games = () => {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <style>
+                  {`
+      @keyframes rgbPagination {
+        0% {
+          background-position: 0% 50%;
+        }
+
+        50% {
+          background-position: 100% 50%;
+        }
+
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
+      .rgb-pagination-btn {
+        background: linear-gradient(
+          90deg,
+          rgb(255, 0, 80),
+          rgb(255, 140, 0),
+          rgb(255, 230, 0),
+          rgb(0, 255, 180),
+          rgb(0, 120, 255),
+          rgb(180, 0, 255),
+          rgb(255, 0, 80)
+        );
+
+        background-size: 250% 250%;
+
+        animation: rgbPagination 10s ease-in-out infinite;
+
+        transition: all 0.3s ease;
+      }
+    `}
+                </style>
+
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
+                  className="rgb-pagination-btn cursor-pointer rounded-[6px] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-black/30 transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
                 >
                   {isBangla ? "আগে" : "Previous"}
                 </button>
 
-                <span className="text-white text-sm font-semibold">
+                <span className="text-sm font-semibold text-white">
                   {isBangla
                     ? `পৃষ্ঠা ${currentPage} / ${totalPages}`
                     : `Page ${currentPage} / ${totalPages}`}
@@ -499,7 +536,7 @@ const Games = () => {
                   type="button"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="cursor-pointer px-4 py-2 bg-[#003c29] text-white disabled:opacity-40"
+                  className="rgb-pagination-btn cursor-pointer rounded-[6px] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-black/30 transition hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
                 >
                   {isBangla ? "পরে" : "Next"}
                 </button>

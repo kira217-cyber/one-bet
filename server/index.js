@@ -50,6 +50,16 @@ import affWhyUsContentRoutes from "./routes/affWhyUsContentRoutes.js";
 import affSupportContentRoutes from "./routes/affSupportContentRoutes.js";
 import affFooterContentRoutes from "./routes/affFooterContentRoutes.js";
 import sendRegisterOtpRoutes from "./routes/sendRegisterOtpRoutes.js";
+import forgetPasswordOtpRoutes from "./routes/forgetPasswordOtpRoutes.js";
+import gameLossRewardAdminRoutes from "./routes/gameLossRewardAdminRoutes.js";
+import gameLossRewardUserRoutes from "./routes/gameLossRewardUserRoutes.js";
+import weeklyBonusAdminRoutes from "./routes/weeklyBonusAdminRoutes.js";
+import weeklyBonusUserRoutes from "./routes/weeklyBonusUserRoutes.js";
+
+
+
+
+
 // ...
 
 dotenv.config();
@@ -124,6 +134,13 @@ app.use("/api/aff-why-us-content", affWhyUsContentRoutes);
 app.use("/api/aff-support-content", affSupportContentRoutes);
 app.use("/api/aff-footer-content", affFooterContentRoutes);
 app.use("/api/users", sendRegisterOtpRoutes);
+app.use("/api/users", forgetPasswordOtpRoutes);
+app.use("/api/game-loss-rewards/admin", gameLossRewardAdminRoutes);
+app.use("/api/game-loss-rewards/user", gameLossRewardUserRoutes);
+app.use("/api/weekly-bonus/admin", weeklyBonusAdminRoutes);
+app.use("/api/weekly-bonus/user", weeklyBonusUserRoutes);
+
+
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

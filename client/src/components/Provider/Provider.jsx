@@ -160,7 +160,7 @@ const Provider = () => {
                   key={provider._id}
                   type="button"
                   onClick={() => handleProviderClick(provider)}
-                  className="cursor-pointer overflow-hidden rounded-[8px] bg-[#006c4a] transition hover:-translate-y-[1px] hover:bg-[#007a53] hover:shadow-lg active:scale-[0.98]"
+                  className="cursor-pointer overflow-hidden border-2 border-[#00563c] rounded-[8px] bg-[#006c4a] transition hover:-translate-y-[1px] hover:bg-[#007a53] hover:shadow-lg active:scale-[0.98]"
                 >
                   <div className="provider-glass-shine relative h-[132px] overflow-hidden bg-[#0b8d63]">
                     {providerImage ? (

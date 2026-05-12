@@ -8,6 +8,7 @@ import {
   Phone,
   BadgeCheck,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
@@ -29,6 +30,7 @@ const InputField = ({
   registration,
   disabled = false,
   readOnly = false,
+  rightContent = null,
 }) => {
   return (
     <div className="space-y-2">
@@ -50,8 +52,10 @@ const InputField = ({
           disabled={disabled}
           readOnly={readOnly}
           placeholder={placeholder}
-          className="w-full bg-transparent text-[15px] text-white placeholder:text-white/45 outline-none disabled:cursor-not-allowed disabled:text-white/70"
+          className="w-full bg-transparent text-[15px] text-white placeholder:text-white/45 outline-none disabled:cursor-not-allowed disabled:text-white/70 read-only:cursor-not-allowed"
         />
+
+        {rightContent}
       </div>
 
       {error ? (
@@ -122,9 +126,9 @@ const PersonalInfo = () => {
           lastName: user.lastName || "",
         });
       } catch (error) {
-        const message =
-          error?.response?.data?.message || "Failed to load user info.";
-        toast.error(message);
+        toast.error(
+          error?.response?.data?.message || "Failed to load user info.",
+        );
       } finally {
         setLoadingProfile(false);
       }
@@ -159,17 +163,13 @@ const PersonalInfo = () => {
     }
 
     const payload = {
+      // userId and phone unchanged, only sending them for backend compatibility
       userId: data.userId.trim(),
-      email: data.email.trim(),
       phone: data.phone.trim(),
+      email: data.email.trim(),
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
     };
-
-    if (!payload.userId || !payload.phone) {
-      toast.error("User ID and phone are required.");
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -188,8 +188,7 @@ const PersonalInfo = () => {
         toast.error(res?.data?.message || "Failed to update personal info.");
       }
     } catch (error) {
-      const message = error?.response?.data?.message || "Something went wrong.";
-      toast.error(message);
+      toast.error(error?.response?.data?.message || "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
@@ -210,7 +209,6 @@ const PersonalInfo = () => {
 
   return (
     <div className="min-h-screen bg-[#004d3b] text-white">
-      {/* Header */}
       <div className="sticky top-0 z-20 flex h-[68px] items-center justify-center bg-[#f2ef00] px-4 shadow-sm">
         <button
           type="button"
@@ -227,41 +225,40 @@ const PersonalInfo = () => {
 
       <div className="mx-auto w-full max-w-[560px] px-3 pb-8 pt-4 sm:px-4">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Profile Form Card */}
           <div className="rounded-2xl bg-[#006c4b] p-4 shadow-[0_6px_18px_rgba(0,0,0,0.20)] sm:p-5">
             <div className="mb-4">
               <h2 className="text-[18px] font-bold text-white">
                 Update Personal Information
               </h2>
               <p className="mt-1 text-sm text-white/70">
-                After updating your info, you will be logged out and need to log
-                in again.
+                User ID and phone number are verified and cannot be changed.
               </p>
             </div>
 
             <div className="space-y-4">
-              {/* <InputField
+              <InputField
                 label="User ID"
                 icon={<User size={18} />}
-                placeholder="Enter your user ID"
-                registration={register("userId", {
-                  required: "User ID is required",
-                  minLength: {
-                    value: 4,
-                    message: "User ID must be at least 4 characters",
-                  },
-                  maxLength: {
-                    value: 15,
-                    message: "User ID must be at most 15 characters",
-                  },
-                  pattern: {
-                    value: /^[a-zA-Z0-9@._-]+$/,
-                    message:
-                      "User ID can contain only letters, numbers, @, dot, underscore and hyphen",
-                  },
-                })}
+                placeholder="User ID"
+                readOnly
+                registration={register("userId")}
                 error={errors.userId}
-              /> */}
+              />
+
+              <InputField
+                label="Phone"
+                icon={<Phone size={18} />}
+                placeholder="Phone number"
+                readOnly
+                registration={register("phone")}
+                error={errors.phone}
+                rightContent={
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/15 px-2.5 py-1 text-[11px] font-bold text-emerald-100">
+                    <ShieldCheck size={13} />
+                    Verified
+                  </span>
+                }
+              />
 
               <InputField
                 label="Email"
@@ -275,20 +272,6 @@ const PersonalInfo = () => {
                 })}
                 error={errors.email}
               />
-
-              {/* <InputField
-                label="Phone"
-                icon={<Phone size={18} />}
-                placeholder="Enter your phone number"
-                registration={register("phone", {
-                  required: "Phone number is required",
-                  minLength: {
-                    value: 6,
-                    message: "Phone number is too short",
-                  },
-                })}
-                error={errors.phone}
-              /> */}
 
               <InputField
                 label="First Name"
@@ -308,7 +291,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* Referral Code Card */}
           <div className="rounded-2xl bg-[#006c4b] p-4 shadow-[0_6px_18px_rgba(0,0,0,0.20)] sm:p-5">
             <div className="mb-3">
               <h3 className="text-[17px] font-bold text-white">
@@ -337,7 +319,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={submitting || !isDirty}

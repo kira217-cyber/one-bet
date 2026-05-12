@@ -177,6 +177,7 @@ const Login = () => {
         <div className="text-right mt-3">
           <button
             type="button"
+            onClick={() => navigate("/forgot-password")}
             className="text-[#F0DC05] text-md border border-[#F0DC05] px-2 cursor-pointer py-2 rounded"
           >
             {text.forgotPassword}
