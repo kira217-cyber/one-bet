@@ -234,6 +234,10 @@ router.post("/playgame", requireAuth, async (req, res) => {
     });
 
 
+    // live er jonno
+    const responseData = response.data;
+
+    
     // test er jonno 
 
     // const response = await fetch(LAUNCH_URL, {
@@ -248,8 +252,6 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
 
     
-    // live er jonno
-    const responseData = response.data;
 
     let gameUrl = "";
 

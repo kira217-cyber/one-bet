@@ -130,10 +130,10 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
     const ORACLE_API_KEY = process.env.DSTGAME_TOKEN;
     // test er jonno hardcode kore dilam
-    const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
+    // const LAUNCH_URL = "https://api.oraclegames.live/api/admin/games/launch";
 
     // live
-    // const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
+    const LAUNCH_URL = "https://crazybet99.com/getgameurl/v2";
 
     if (!ORACLE_API_KEY) {
       return res.status(500).json({
@@ -219,34 +219,35 @@ router.post("/playgame", requireAuth, async (req, res) => {
 
     console.log("Launching sports game payload:", payload);
 
-    // const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
-    //   headers: {
-    //     "Content-Type": "application/x-www-form-urlencoded",
-    //     "x-dstgame-key": ORACLE_API_KEY,
+    
+    // live er jonno
+    const response = await axios.post(LAUNCH_URL, qs.stringify(payload), {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-dstgame-key": "412afc3901061cd4389224fd1643a709",
+      },
+      timeout: 30000,
+    });
 
-    //     // eikhane dstgame key hobe onnota hard coded live korar somoi,
-    //     // "x-dstgame-key": "",
-    //   },
-    //   timeout: 30000,
-    // });
+    // live er jonno
+    const responseData = response.data;
 
     // test er jonno json format e pathalam
 
-    const response = await fetch(
-      "https://api.oraclegames.live/api/admin/games/launch",
-      {
-        method: "POST",
-        headers: {
-          "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      },
-    );
+    // const response = await fetch(
+    //   "https://api.oraclegames.live/api/admin/games/launch",
+    //   {
+    //     method: "POST",
+    //     headers: {
+    //       "x-dstgame-key": "ceeeba1c-892b-4571-b05f-2bcec5c4a44e",
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify(payload),
+    //   },
+    // );
     // test er jonno
-    const responseData = await response.json();
-    // live er jonno
-    // const responseData = response.data;
+    // const responseData = await response.json();
+    
 
     let gameUrl = "";
 

@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
+import userRoutes, { authMiddleware } from "./routes/userRoutes.js";
 import affiliateRoutes from "./routes/affiliateRoutes.js";
 import depositMethodRoutes from "./routes/depositMethodRoutes.js";
 import withdrawMethodRoutes from "./routes/withdrawMethodRoutes.js";
@@ -55,6 +55,8 @@ import gameLossRewardAdminRoutes from "./routes/gameLossRewardAdminRoutes.js";
 import gameLossRewardUserRoutes from "./routes/gameLossRewardUserRoutes.js";
 import weeklyBonusAdminRoutes from "./routes/weeklyBonusAdminRoutes.js";
 import weeklyBonusUserRoutes from "./routes/weeklyBonusUserRoutes.js";
+import userReferRedeemRoutes from "./routes/userReferRedeemRoutes.js";
+import adminReferRedeemRoutes from "./routes/adminReferRedeemRoutes.js";
 
 
 
@@ -139,7 +141,8 @@ app.use("/api/game-loss-rewards/admin", gameLossRewardAdminRoutes);
 app.use("/api/game-loss-rewards/user", gameLossRewardUserRoutes);
 app.use("/api/weekly-bonus/admin", weeklyBonusAdminRoutes);
 app.use("/api/weekly-bonus/user", weeklyBonusUserRoutes);
-
+app.use("/api/user/refer-redeem",authMiddleware, userReferRedeemRoutes);
+app.use("/api/admin/refer-redeem",  adminReferRedeemRoutes);
 
 
 // ✅ port

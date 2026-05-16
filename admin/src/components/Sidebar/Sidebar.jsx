@@ -186,6 +186,12 @@ const Sidebar = () => {
         icon: <FaGift className="text-lime-300" />,
         text: "Weekly Bonus",
       },
+      {
+        key: "user-refer-redeem",
+        to: "/user-refer-redeem",
+        icon: <FaGift className="text-yellow-300" />,
+        text: "Refer & Redeem",
+      },
     ],
     [],
   );

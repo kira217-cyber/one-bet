@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import ReferRedeemSetting from "../models/ReferRedeemSetting.js";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -150,11 +151,13 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const trimmedUserId = userId.trim();
-    const trimmedPhone = phone.trim();
-    const trimmedEmail = email ? email.trim().toLowerCase() : "";
-    const trimmedFullName = fullName.trim();
-    const trimmedReferralCode = referralCode ? referralCode.trim() : "";
+    const trimmedUserId = String(userId).trim();
+    const trimmedPhone = String(phone).trim();
+    const trimmedEmail = email ? String(email).trim().toLowerCase() : "";
+    const trimmedFullName = String(fullName).trim();
+    const trimmedReferralCode = referralCode
+      ? String(referralCode).trim().toUpperCase()
+      : "";
 
     if (trimmedUserId.length < 4 || trimmedUserId.length > 15) {
       return res.status(400).json({
@@ -164,6 +167,7 @@ router.post("/register", async (req, res) => {
     }
 
     const userIdRegex = /^[a-zA-Z0-9@._-]+$/;
+
     if (!userIdRegex.test(trimmedUserId)) {
       return res.status(400).json({
         success: false,
@@ -172,14 +176,18 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (password.length < 8 || password.length > 20) {
+    if (String(password).length < 8 || String(password).length > 20) {
       return res.status(400).json({
         success: false,
         message: "Password must be between 8 and 20 characters",
       });
     }
 
-    const existingUserId = await User.findOne({ userId: trimmedUserId });
+    const [existingUserId, existingPhone] = await Promise.all([
+      User.findOne({ userId: trimmedUserId }).select("_id"),
+      User.findOne({ phone: trimmedPhone }).select("_id"),
+    ]);
+
     if (existingUserId) {
       return res.status(400).json({
         success: false,
@@ -187,7 +195,6 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const existingPhone = await User.findOne({ phone: trimmedPhone });
     if (existingPhone) {
       return res.status(400).json({
         success: false,
@@ -199,8 +206,9 @@ router.post("/register", async (req, res) => {
 
     if (trimmedReferralCode) {
       referrerUser = await User.findOne({
-        referralCode: trimmedReferralCode.toUpperCase(),
-      });
+        referralCode: trimmedReferralCode,
+        isActive: true,
+      }).select("_id userId referralCode referCommission");
 
       if (!referrerUser) {
         return res.status(400).json({
@@ -210,13 +218,21 @@ router.post("/register", async (req, res) => {
       }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(String(password), 10);
 
     const nameParts = trimmedFullName.split(" ").filter(Boolean);
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
     const newReferralCode = await generateUniqueReferralCode();
+
+    const referSetting = await ReferRedeemSetting.findOne().sort({
+      createdAt: 1,
+    });
+
+    const defaultReferCommission = Number(
+      referSetting?.referAmountForAllUsers || 0,
+    );
 
     const newUser = await User.create({
       userId: trimmedUserId,
@@ -230,16 +246,27 @@ router.post("/register", async (req, res) => {
       firstName,
       lastName,
       referredBy: referrerUser ? referrerUser._id : null,
+
+      // Admin setting theke new user er default refer commission
+      referCommission: defaultReferCommission,
     });
 
     if (referrerUser) {
-      await User.findByIdAndUpdate(referrerUser._id, {
-        $push: { createdUsers: newUser._id },
-        $inc: {
-          referralCount: 1,
-          referCommissionBalance: Number(referrerUser.referCommission || 0),
+      const referReward = Number(referrerUser.referCommission || 0);
+
+      await User.findByIdAndUpdate(
+        referrerUser._id,
+        {
+          $addToSet: {
+            createdUsers: newUser._id,
+          },
+          $inc: {
+            referralCount: 1,
+            referCommissionBalance: referReward,
+          },
         },
-      });
+        { new: false },
+      );
     }
 
     const token = createToken(newUser);
@@ -252,6 +279,13 @@ router.post("/register", async (req, res) => {
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
+
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "User Id, phone or referral code already exists",
+      });
+    }
 
     return res.status(500).json({
       success: false,

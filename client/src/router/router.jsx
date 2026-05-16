@@ -28,6 +28,7 @@ import Dispute from "../pages/Dispute/Dispute";
 import Wallet from "../pages/Wallet/Wallet";
 import FeaturedPlayGame from "../pages/FeaturedPlayGame/FeaturedPlayGame";
 import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
+import Shear from "../pages/Shear/Shear";
 
 export const routes = createBrowserRouter([
   {
@@ -100,6 +101,14 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute>
             <Promotions />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "shear",
+        element: (
+          <PrivateRoute>
+            <Shear />
           </PrivateRoute>
         ),
       },

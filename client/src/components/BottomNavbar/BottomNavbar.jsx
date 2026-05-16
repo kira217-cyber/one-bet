@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, House, Ticket, Wallet, UserRound, LogOut } from "lucide-react";
+import { X, House, Ticket, Wallet, UserRound, LogOut, Share, Network } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useLanguage } from "../../Context/LanguageProvider";
@@ -55,6 +55,11 @@ const BottomNavbar = () => {
       to: "/promotions",
       label: isBangla ? "প্রমোশন" : "Promotions",
       icon: Ticket,
+    },
+    {
+      to: "/shear",
+      label: isBangla ? "শেয়ার" : "Share",
+      icon: Network,
     },
     {
       to: "/auto-deposit",

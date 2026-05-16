@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FaEye, FaEyeSlash, FaSearch } from "react-icons/fa";
 import { FaAngleLeft } from "react-icons/fa6";
+import { ChevronDown } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -8,11 +9,22 @@ import { api } from "../../api/axios";
 import { setAuth } from "../../features/auth/authSlice";
 import { useLanguage } from "../../Context/LanguageProvider";
 
+const normalizeBdLocalPhone = (phone = "") => {
+  const clean = String(phone || "")
+    .replace(/\D/g, "")
+    .trim();
+
+  if (clean.startsWith("01")) return clean;
+  if (clean.startsWith("1")) return `0${clean}`;
+  if (clean.startsWith("8801")) return clean.slice(2);
+
+  return clean;
+};
+
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-
   const { isBangla } = useLanguage();
 
   const [showPass, setShowPass] = useState(false);
@@ -30,10 +42,29 @@ const Register = () => {
     verificationCode: "",
   });
 
+  const [countries, setCountries] = useState([]);
+  const [selected, setSelected] = useState({
+    name: "Bangladesh",
+    code: "+880",
+    cca2: "BD",
+    flag: "https://flagcdn.com/w40/bd.png",
+  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef(null);
+
   const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
+
+  const isBangladeshSelected = selected?.cca2 === "BD";
+
+  const resetOtp = () => {
+    setOtpSent(false);
+    setOtpCountdown(0);
+    setFormData((prev) => ({ ...prev, verificationCode: "" }));
+  };
 
   const text = useMemo(
     () => ({
@@ -46,17 +77,16 @@ const Register = () => {
       fullName: isBangla ? "পূর্ণ নাম" : "Full Name",
       email: isBangla ? "ইমেইল" : "Email",
       referCode: isBangla ? "রেফার কোড" : "Refer Code",
-      verificationCode: isBangla ? "ওটিপি কোড" : "OTP Code",
+      verificationCode: isBangla ? "ওটিপি " : "OTP",
       sendOtp: isBangla ? "ওটিপি পাঠান" : "Send OTP",
       resendOtp: isBangla ? "আবার পাঠান" : "Resend OTP",
       sendingOtp: isBangla ? "পাঠানো হচ্ছে..." : "Sending...",
-      otpSent: isBangla ? "ওটিপি পাঠানো হয়েছে" : "OTP sent successfully",
       confirm: isBangla ? "কনফার্ম" : "Confirm",
       loading: isBangla ? "লোড হচ্ছে..." : "Loading...",
       terms: isBangla
         ? "আমার বয়স ১৮ বছর, এবং আমি শর্তাবলীতে সম্মত"
         : "I'm 18 years old, and agree to terms and conditions",
-
+      searchCountry: isBangla ? "দেশ খুঁজুন..." : "Search country...",
       userIdPlaceholder: isBangla
         ? "৪-১৫ অক্ষর, @ . _ - ব্যবহার করা যাবে"
         : "4-15 char, allow @ . _ -",
@@ -71,7 +101,6 @@ const Register = () => {
       verificationPlaceholder: isBangla
         ? "এসএমএস ওটিপি লিখুন"
         : "Enter SMS OTP",
-
       requiredError: isBangla
         ? "সব প্রয়োজনীয় ঘর পূরণ করুন"
         : "Please fill all required fields",
@@ -104,7 +133,6 @@ const Register = () => {
 
   useEffect(() => {
     const refFromQuery = searchParams.get("ref");
-
     if (refFromQuery) {
       setFormData((prev) => ({
         ...prev,
@@ -112,6 +140,60 @@ const Register = () => {
       }));
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,cca2,idd,flags",
+        );
+        const data = await res.json();
+
+        const list = (Array.isArray(data) ? data : [])
+          .map((c) => {
+            const root = c?.idd?.root || "";
+            const suffix = c?.idd?.suffixes?.[0] || "";
+            const code = `${root}${suffix}`.trim();
+
+            return {
+              name: c?.name?.common || "",
+              code,
+              cca2: c?.cca2 || "",
+              flag:
+                c?.flags?.png ||
+                `https://flagcdn.com/w40/${String(
+                  c?.cca2 || "",
+                ).toLowerCase()}.png`,
+            };
+          })
+          .filter((item) => item.name && item.code && item.cca2)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setCountries(list);
+        const bd = list.find((item) => item.cca2 === "BD");
+        if (bd) setSelected(bd);
+      } catch (error) {
+        console.error("Country fetch failed:", error);
+      }
+    };
+
+    loadCountries();
+  }, []);
+
+  useEffect(() => {
+    if (!isBangladeshSelected) resetOtp();
+  }, [isBangladeshSelected]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -122,7 +204,6 @@ const Register = () => {
           clearInterval(timer);
           return 0;
         }
-
         return prev - 1;
       });
     }, 1000);
@@ -130,27 +211,64 @@ const Register = () => {
     return () => clearInterval(timer);
   }, [otpCountdown]);
 
+  const filteredCountries = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return countries;
+
+    return countries.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.code.toLowerCase().includes(q) ||
+        item.cca2.toLowerCase().includes(q),
+    );
+  }, [countries, search]);
+
+  const cleanLocalPhone = useMemo(() => {
+    return String(formData.phone || "")
+      .replace(/\D/g, "")
+      .trim();
+  }, [formData.phone]);
+
+  const bdPhoneForApi = useMemo(() => {
+    return normalizeBdLocalPhone(cleanLocalPhone);
+  }, [cleanLocalPhone]);
+
+  const fullPhone = useMemo(() => {
+    const code = String(selected.code || "").replace(/\D/g, "");
+    return `${code}${cleanLocalPhone}`;
+  }, [selected.code, cleanLocalPhone]);
+
+  const registerPhone = isBangladeshSelected ? bdPhoneForApi : fullPhone;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "referralCode" ? value.toUpperCase() : value,
+      [name]:
+        name === "referralCode"
+          ? value.toUpperCase()
+          : name === "phone" || name === "verificationCode"
+            ? value.replace(/\D/g, "")
+            : value,
     }));
+
+    if (name === "phone") resetOtp();
   };
 
   const handleSendOtp = async () => {
     try {
-      const phone = formData.phone.trim();
+      if (!isBangladeshSelected) return;
 
-      if (!phone) {
+      if (!bdPhoneForApi) {
         return toast.error(text.phoneRequiredError);
       }
 
       setSendingOtp(true);
+      setOtpSent(false);
 
       const { data } = await api.post("/api/users/send-register-otp", {
-        phone,
+        phone: bdPhoneForApi,
       });
 
       if (!data?.success) {
@@ -159,15 +277,13 @@ const Register = () => {
 
       setOtpSent(true);
       setOtpCountdown(Number(data?.resendAfter || 60));
-      toast.success(data?.message || text.otpSent);
+
+      toast.success(data?.message || "OTP sent successfully");
     } catch (error) {
       console.error(error);
 
       const waitSeconds = error?.response?.data?.waitSeconds;
-
-      if (waitSeconds) {
-        setOtpCountdown(Number(waitSeconds));
-      }
+      if (waitSeconds) setOtpCountdown(Number(waitSeconds));
 
       toast.error(
         error?.response?.data?.message || error?.message || text.otpSendFailed,
@@ -186,12 +302,17 @@ const Register = () => {
         currency,
         fullName,
         email,
-        phone,
         referralCode,
         verificationCode,
       } = formData;
 
-      if (!userId || !password || !confirmPassword || !fullName || !phone) {
+      if (
+        !userId ||
+        !password ||
+        !confirmPassword ||
+        !fullName ||
+        !cleanLocalPhone
+      ) {
         return toast.error(text.requiredError);
       }
 
@@ -212,22 +333,28 @@ const Register = () => {
         return toast.error(text.passwordMatchError);
       }
 
-      if (!verificationCode.trim()) {
+      if (isBangladeshSelected && !verificationCode.trim()) {
         return toast.error(text.otpRequiredError);
       }
 
       setLoading(true);
 
-      const { data } = await api.post("/api/users/register", {
+      const payload = {
         userId: userId.trim(),
         password,
+        confirmPassword,
         currency,
         fullName: fullName.trim(),
         email: email.trim(),
-        phone: phone.trim(),
+        phone: registerPhone,
         referralCode: referralCode.trim().toUpperCase(),
-        verificationCode: verificationCode.trim(),
-      });
+      };
+
+      if (isBangladeshSelected) {
+        payload.verificationCode = verificationCode.trim();
+      }
+
+      const { data } = await api.post("/api/users/register", payload);
 
       if (data?.success) {
         dispatch(
@@ -237,7 +364,7 @@ const Register = () => {
           }),
         );
 
-        toast.success(text.registerSuccess);
+        toast.success(data?.message || text.registerSuccess);
         navigate("/");
       }
     } catch (error) {
@@ -250,7 +377,6 @@ const Register = () => {
 
   return (
     <>
-      {/* Top Bar */}
       <div className="mb-4 relative bg-[#0b5c45] px-4 py-4">
         <button
           type="button"
@@ -263,9 +389,7 @@ const Register = () => {
       </div>
 
       <div className="px-4 pt-2 text-white">
-        {/* FORM SECTION 1 */}
-        <div className="bg-[#0b5c45] overflow-hidden mb-4">
-          {/* User ID */}
+        <div className="bg-[#0b5c45] overflow-visible mb-4">
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.userId}</label>
             <input
@@ -278,7 +402,6 @@ const Register = () => {
             />
           </div>
 
-          {/* Password */}
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.password}</label>
             <div className="flex items-center flex-1">
@@ -300,7 +423,6 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Confirm Password */}
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">
               {text.confirmPassword}
@@ -324,7 +446,6 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Currency */}
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.currency}</label>
             <select
@@ -339,54 +460,125 @@ const Register = () => {
             </select>
           </div>
 
-          {/* Phone */}
-          <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
+          <div className="relative flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.phone}</label>
-            <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              type="text"
-              placeholder={text.phonePlaceholder}
-              className="bg-transparent outline-none text-md flex-1 placeholder-gray-400"
-            />
-          </div>
 
-          {/* OTP */}
-          <div className="flex items-center px-4 py-4">
-            <label className="w-28 text-md text-white">
-              {text.verificationCode}
-            </label>
-
-            <input
-              name="verificationCode"
-              value={formData.verificationCode}
-              onChange={handleChange}
-              type="text"
-              placeholder={text.verificationPlaceholder}
-              className="bg-transparent outline-none text-md flex-1 placeholder-gray-400"
-            />
-
-            <button
-              type="button"
-              onClick={handleSendOtp}
-              disabled={sendingOtp || otpCountdown > 0}
-              className="ml-2 min-w-[105px] bg-[#F0DC05] px-3 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+            <div
+              ref={dropdownRef}
+              className="relative flex flex-1 items-center"
             >
-              {sendingOtp
-                ? text.sendingOtp
-                : otpCountdown > 0
-                  ? `${otpCountdown}s`
-                  : otpSent
-                    ? text.resendOtp
-                    : text.sendOtp}
-            </button>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-1 pr-2 text-white cursor-pointer"
+              >
+                <img
+                  src={selected.flag}
+                  alt={selected.name}
+                  className="h-[14px] w-[22px] object-cover border border-white/30"
+                />
+                <span className="text-sm font-semibold">{selected.code}</span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              <input
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                type="text"
+                placeholder={text.phonePlaceholder}
+                className="min-w-0 bg-transparent outline-none text-md flex-1 placeholder-gray-400"
+              />
+
+              {dropdownOpen && (
+                <div className="absolute left-0 top-10 z-50 w-[260px] rounded-md border border-[#0f6b50] bg-[#073b2d] shadow-lg">
+                  <div className="border-b border-[#0f6b50] p-2">
+                    <div className="flex items-center gap-2 rounded-md border border-[#0f6b50] px-2">
+                      <FaSearch className="text-gray-300" />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder={text.searchCountry}
+                        className="h-9 w-full bg-transparent text-sm outline-none placeholder-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-[240px] overflow-y-auto">
+                    {filteredCountries.map((item) => (
+                      <button
+                        key={`${item.cca2}-${item.code}`}
+                        type="button"
+                        onClick={() => {
+                          setSelected(item);
+                          setDropdownOpen(false);
+                          setSearch("");
+                          resetOtp();
+                        }}
+                        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-[#0b5c45] cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={item.flag}
+                            alt={item.name}
+                            className="h-[14px] w-[22px] object-cover border border-white/30"
+                          />
+                          <span className="text-sm text-white">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-[#F0DC05]">
+                          {item.code}
+                        </span>
+                      </button>
+                    ))}
+
+                    {filteredCountries.length === 0 && (
+                      <div className="px-3 py-4 text-center text-sm text-gray-300">
+                        {isBangla ? "কোন দেশ পাওয়া যায়নি" : "No country found"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
+          {isBangladeshSelected && (
+            <div className="flex items-center px-4 py-4">
+              <label className="w-28 text-md text-white">
+                {text.verificationCode}
+              </label>
+
+              <input
+                name="verificationCode"
+                value={formData.verificationCode}
+                onChange={handleChange}
+                type="text"
+                placeholder={text.verificationPlaceholder}
+                className="bg-transparent outline-none text-md flex-1 placeholder-gray-400"
+              />
+
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={sendingOtp || otpCountdown > 0}
+                className="ml-1 min-w-[80px] bg-[#F0DC05] px-1 py-1 sm:px-3 sm:py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+              >
+                {sendingOtp
+                  ? text.sendingOtp
+                  : otpCountdown > 0
+                    ? `${otpCountdown}s`
+                    : otpSent
+                      ? text.resendOtp
+                      : text.sendOtp}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* FORM SECTION 2 */}
         <div className="bg-[#0b5c45] overflow-hidden mb-4">
-          {/* Full Name */}
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.fullName}</label>
             <input
@@ -399,7 +591,6 @@ const Register = () => {
             />
           </div>
 
-          {/* Email */}
           <div className="flex items-center border-b border-[#0f6b50] px-4 py-4">
             <label className="w-28 text-md text-white">{text.email}</label>
             <input
@@ -412,7 +603,6 @@ const Register = () => {
             />
           </div>
 
-          {/* Refer Code */}
           <div className="flex items-center px-4 py-4">
             <label className="w-28 text-md text-white">{text.referCode}</label>
             <input
@@ -426,7 +616,6 @@ const Register = () => {
           </div>
         </div>
 
-        {/* BUTTON */}
         <div className="flex justify-center">
           <button
             type="button"
@@ -438,7 +627,6 @@ const Register = () => {
           </button>
         </div>
 
-        {/* TERMS */}
         <p className="text-center text-sm mt-5 text-green-400">{text.terms}</p>
       </div>
     </>

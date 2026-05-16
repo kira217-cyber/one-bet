@@ -51,6 +51,7 @@ import SupportsController from "../pages/SupportsController/SupportsController";
 import AffFooterController from "../pages/AffFooterController/AffFooterController";
 import GameLossRewardAdmin from "../pages/GameLossRewardAdmin/GameLossRewardAdmin";
 import WeeklyBonusAdmin from "../pages/WeeklyBonusAdmin/WeeklyBonusAdmin";
+import UserReferRedeem from "../pages/UserReferRedeem/UserReferRedeem";
 
 export const routes = createBrowserRouter([
   {
@@ -447,6 +448,14 @@ export const routes = createBrowserRouter([
         element: (
           <PrivateRoute permKey="weekly-bonus">
             <WeeklyBonusAdmin />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/user-refer-redeem",
+        element: (
+          <PrivateRoute permKey="user-refer-redeem">
+            <UserReferRedeem />
           </PrivateRoute>
         ),
       },

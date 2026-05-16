@@ -20,6 +20,7 @@ import SingleUserMenualDepositHisotry from "../../components/SingleUserMenualDep
 import SingleUserAutoDepositHisotry from "../../components/SingleUserAutoDepositHisotry/SingleUserAutoDepositHisotry";
 import SingleUserWithdrawHisotry from "../../components/SingleUserWithdrawHisotry/SingleUserWithdrawHisotry";
 import SingleUserGameLossBonusClaimHistory from "../../components/SingleUserGameLossBonusClaimHistory/SingleUserGameLossBonusClaimHistory";
+import SingleUserWeeklyBonusHistory from "../../components/SingleUserWeeklyBonusHistory/SingleUserWeeklyBonusHistory";
 
 const UserDetails = () => {
   const { id } = useParams();
@@ -589,6 +590,7 @@ const UserDetails = () => {
       <SingleUserAutoDepositHisotry />
       <SingleUserWithdrawHisotry />
       <SingleUserGameLossBonusClaimHistory userId={formData.userId} />
+      {/* <SingleUserWeeklyBonusHistory userId={formData.userId} /> */}
     </>
   );
 };
