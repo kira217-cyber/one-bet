@@ -1,58 +1,77 @@
 import express from "express";
-import mongoose from "mongoose";
 import User from "../models/User.js";
 import TurnOver from "../models/TurnOver.js";
 import GameHistory from "../models/gameHistory.js";
 
 const router = express.Router();
 
-/**
- * ✅ Apply wager amount to running turnovers
- * oldest running turnover first
- */
-const applyTurnoverProgress = async ({ session, userMongoId, wagerAmount }) => {
-  const amt = Number(wagerAmount || 0);
-  if (!Number.isFinite(amt) || amt <= 0) return;
+const toNum = (value = 0) => {
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) ? n : 0;
+};
 
-  const runningTurnovers = await TurnOver.find({
-    user: userMongoId,
+const money = (value = 0) => {
+  const n = toNum(value);
+  return Math.trunc(n * 100) / 100;
+};
+
+const clean = (value = "") => String(value || "").trim();
+
+const cleanMemberAccount = (value = "") => {
+  let username = clean(value).toLowerCase();
+
+  if (username.endsWith("orclegames")) {
+    username = username.slice(0, -"orclegames".length);
+  }
+
+  if (username.endsWith("oraclegames")) {
+    username = username.slice(0, -"oraclegames".length);
+  }
+
+  return username;
+};
+
+const applyTurnoverProgress = async ({ userId, wagerAmount }) => {
+  const amt = money(wagerAmount);
+  if (amt <= 0) return;
+
+  const running = await TurnOver.find({
+    user: userId,
     status: "running",
-  })
-    .sort({ createdAt: 1 })
-    .session(session);
-
-  if (!runningTurnovers.length) return;
+  }).sort({ createdAt: 1 });
 
   let remaining = amt;
 
-  for (const turnover of runningTurnovers) {
+  for (const t of running) {
     if (remaining <= 0) break;
 
-    const required = Number(turnover.required || 0);
-    const progress = Number(turnover.progress || 0);
-    const left = Math.max(0, required - progress);
+    const required = money(t.required);
+    const progress = money(t.progress);
+    const left = Math.max(0, money(required - progress));
 
     if (left <= 0) {
       await TurnOver.updateOne(
-        { _id: turnover._id },
+        { _id: t._id },
         {
           $set: {
             status: "completed",
             completedAt: new Date(),
           },
         },
-      ).session(session);
+      );
       continue;
     }
 
-    const addAmount = Math.min(left, remaining);
-    const nextProgress = progress + addAmount;
-    const completed = nextProgress >= required;
+    const add = money(Math.min(left, remaining));
+    const newProgress = money(progress + add);
+    const completed = newProgress >= required;
 
     await TurnOver.updateOne(
-      { _id: turnover._id },
+      { _id: t._id },
       {
-        $inc: { progress: addAmount },
+        $inc: {
+          progress: add,
+        },
         ...(completed
           ? {
               $set: {
@@ -62,243 +81,300 @@ const applyTurnoverProgress = async ({ session, userMongoId, wagerAmount }) => {
             }
           : {}),
       },
-    ).session(session);
+    );
 
-    remaining -= addAmount;
+    remaining = money(remaining - add);
   }
+};
+
+const applyAffiliateCommission = async ({ player, betAmount, winAmount }) => {
+  let affiliateInfo = null;
+
+  if (!player.referredBy) return affiliateInfo;
+
+  const affiliator = await User.findById(player.referredBy);
+
+  if (
+    !affiliator ||
+    affiliator.role !== "aff-user" ||
+    affiliator.isActive !== true
+  ) {
+    return affiliateInfo;
+  }
+
+  const lossPct = Number(affiliator.gameLossCommission || 0);
+  const winPct = Number(affiliator.gameWinCommission || 0);
+
+  let totalCommission = 0;
+  const details = [];
+
+  if (betAmount > 0 && lossPct > 0) {
+    const commissionAmount = money((betAmount * lossPct) / 100);
+
+    if (commissionAmount > 0) {
+      await User.updateOne(
+        { _id: affiliator._id },
+        {
+          $inc: {
+            gameLossCommissionBalance: commissionAmount,
+          },
+        },
+      );
+
+      totalCommission = money(totalCommission + commissionAmount);
+
+      details.push({
+        type: "gameLossCommission",
+        commissionPercent: lossPct,
+        commissionAmount,
+        walletField: "gameLossCommissionBalance",
+      });
+    }
+  }
+
+  if (winAmount > 0 && winPct > 0) {
+    const commissionAmount = money((winAmount * winPct) / 100);
+
+    if (commissionAmount > 0) {
+      await User.updateOne(
+        { _id: affiliator._id },
+        {
+          $inc: {
+            gameWinCommissionBalance: commissionAmount,
+          },
+        },
+      );
+
+      totalCommission = money(totalCommission + commissionAmount);
+
+      details.push({
+        type: "gameWinCommission",
+        commissionPercent: winPct,
+        commissionAmount,
+        walletField: "gameWinCommissionBalance",
+      });
+    }
+  }
+
+  if (details.length) {
+    affiliateInfo = {
+      affiliatorId: String(affiliator._id),
+      affiliatorUserId: affiliator.userId,
+      totalCommission,
+      details,
+    };
+  }
+
+  return affiliateInfo;
 };
 
 router.post("/", async (req, res) => {
   try {
-    const {
-      account_id,
-      username: rawUsername,
-      provider_code,
-      amount,
-      game_code,
-      verification_key,
-      bet_type,
-      transaction_id,
-      times,
-      round_id,
-      bet_details,
-    } = req.body;
+    console.log("\n================ CALLBACK RECEIVED ================");
+    console.log("Time:", new Date().toISOString());
+    console.log("Headers:", req.headers);
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+    console.log("===================================================\n");
 
-    console.log("✅ Callback received:", req.body);
+    const {
+      game_uid,
+      game_round,
+      bet_amount,
+      serial_number,
+      win_amount,
+      member_account,
+      currency_code,
+      timestamp,
+    } = req.body || {};
 
     if (
-      !rawUsername ||
-      !provider_code ||
-      amount === undefined ||
-      !game_code ||
-      !bet_type
+      !game_uid ||
+      !game_round ||
+      !serial_number ||
+      bet_amount === undefined ||
+      win_amount === undefined ||
+      !member_account
     ) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
+        balance: 0,
         message: "Missing required fields",
       });
     }
 
-    const cleanUserId = String(rawUsername).trim();
-    const normalizedBetType = String(bet_type).trim().toUpperCase();
-    const amountFloat = Number.parseFloat(amount);
+    const gameUId = clean(game_uid);
+    const gameRound = clean(game_round);
+    const serialNumber = clean(serial_number);
+    const rawMemberAccount = clean(member_account);
+    const userGamePlayName = cleanMemberAccount(member_account);
 
-    if (!Number.isFinite(amountFloat) || amountFloat < 0) {
-      return res.status(400).json({
+    const betAmount = money(bet_amount);
+    const winAmount = money(win_amount);
+
+    if (betAmount < 0 || winAmount < 0) {
+      return res.status(200).json({
         success: false,
+        balance: 0,
         message: "Invalid amount",
       });
     }
 
-    let balanceChange = 0;
-    let nextStatus = "pending";
-    let winAmount = 0;
+    const duplicate = await GameHistory.findOne({
+      $or: [{ serial_number: serialNumber }, { game_round: gameRound }],
+    }).lean();
 
-    if (normalizedBetType === "BET") {
-      balanceChange = -amountFloat;
-      nextStatus = "bet";
-      winAmount = 0;
-    } else if (normalizedBetType === "SETTLE") {
-      balanceChange = amountFloat;
-      nextStatus = "settled";
-      winAmount = amountFloat;
-    } else if (normalizedBetType === "CANCEL") {
-      balanceChange = amountFloat;
-      nextStatus = "cancelled";
-      winAmount = 0;
-    } else if (normalizedBetType === "REFUND") {
-      balanceChange = amountFloat;
-      nextStatus = "refunded";
-      winAmount = 0;
-    } else if (normalizedBetType === "BONUS" || normalizedBetType === "PROMO") {
-      balanceChange = amountFloat;
-      nextStatus = "settled";
-      winAmount = amountFloat;
-    } else {
-      return res.status(400).json({
+    if (duplicate) {
+      return res.status(200).json({
         success: false,
-        message: "Invalid bet_type",
-      });
-    }
-
-    const player = await User.findOne({ userId: cleanUserId });
-
-    if (!player) {
-      throw Object.assign(new Error("User not found"), {
-        statusCode: 404,
-      });
-    }
-
-    if (player.isActive === false) {
-      throw Object.assign(new Error("User inactive"), {
-        statusCode: 403,
-      });
-    }
-
-    // ✅ verification_key always unique
-    if (verification_key) {
-      const existingHistory = await GameHistory.findOne({
-        verification_key: String(verification_key).trim(),
-      });
-
-      if (existingHistory) {
-        throw Object.assign(new Error("DUPLICATE_VERIFICATION_KEY"), {
-          duplicate: true,
-          statusCode: 200,
-          currentBalance: Number(player.balance || 0),
-        });
-      }
-    }
-
-    const currentBalance = Number(player.balance || 0);
-    const newBalance = currentBalance + balanceChange;
-
-    // ✅ optional: prevent minus balance on BET
-    if (normalizedBetType === "BET" && newBalance < 0) {
-      throw Object.assign(new Error("Insufficient balance"), {
-        statusCode: 400,
-      });
-    }
-
-    const gameRecord = await GameHistory.create({
-      userId: player.userId,
-      provider_code: String(provider_code).trim().toUpperCase(),
-      game_code: String(game_code).trim(),
-      bet_type: normalizedBetType,
-      amount: amountFloat,
-      win_amount: winAmount,
-      balance_after: newBalance,
-      transaction_id: transaction_id ? String(transaction_id).trim() : null,
-      round_id: round_id ? String(round_id).trim() : null,
-      verification_key: verification_key
-        ? String(verification_key).trim()
-        : null,
-      times: times ? String(times).trim() : null,
-      status: nextStatus,
-      bet_details:
-        bet_details && typeof bet_details === "object" ? bet_details : {},
-      flagged: false,
-    });
-
-    await User.updateOne(
-      { _id: player._id },
-      {
-        $inc: { balance: balanceChange },
-      },
-    );
-
-    // ✅ Turnover only for BET
-    if (normalizedBetType === "BET" && amountFloat > 0) {
-      await applyTurnoverProgress({
-        userMongoId: player._id,
-        wagerAmount: amountFloat,
-      });
-    }
-
-    // ✅ Affiliate commission
-    let affiliateInfo = null;
-
-    if (player.referredBy) {
-      const affiliator = await User.findById(player.referredBy);
-
-      if (
-        affiliator &&
-        affiliator.role === "aff-user" &&
-        affiliator.isActive === true
-      ) {
-        const lossPct = Number(affiliator.gameLossCommission || 0);
-        const winPct = Number(affiliator.gameWinCommission || 0);
-
-        let commissionAmount = 0;
-        let walletField = null;
-
-        if (normalizedBetType === "BET" && lossPct > 0) {
-          commissionAmount = (amountFloat * lossPct) / 100;
-          walletField = "gameLossCommissionBalance";
-        }
-
-        if (normalizedBetType === "SETTLE" && winPct > 0) {
-          commissionAmount = (amountFloat * winPct) / 100;
-          walletField = "gameWinCommissionBalance";
-        }
-
-        if (commissionAmount > 0 && walletField) {
-          await User.updateOne(
-            { _id: affiliator._id },
-            {
-              $inc: {
-                [walletField]: commissionAmount,
-              },
-            },
-          );
-
-          affiliateInfo = {
-            affiliatorId: String(affiliator._id),
-            affiliatorUserId: affiliator.userId,
-            bet_type: normalizedBetType,
-            commissionPercent: normalizedBetType === "BET" ? lossPct : winPct,
-            commissionAmount,
-            walletField,
-          };
-        }
-      }
-    }
-
-    const result = {
-      historyId: String(gameRecord._id),
-      playerUserId: player.userId,
-      newBalance,
-      balanceChange,
-      transaction_id: transaction_id || null,
-      verification_key: verification_key || null,
-      affiliateInfo,
-    };
-
-    return res.json({
-      success: true,
-      message: "Processed successfully",
-      data: result,
-    });
-  } catch (err) {
-    if (err?.message === "DUPLICATE_VERIFICATION_KEY" && err?.duplicate) {
-      return res.json({
-        success: true,
-        message: "Already processed",
+        balance: duplicate.balance_after || 0,
+        message: "DUPLICATE",
         data: {
-          verification_key: req.body?.verification_key || null,
-          current_balance: err.currentBalance,
+          status: "DUPLICATE",
+          balance: duplicate.balance_after || 0,
+          game_round: gameRound,
+          serial_number: serialNumber,
         },
       });
     }
 
-    const status = err?.statusCode || 500;
+    const player = await User.findOne({
+      userGamePlayName,
+      isActive: true,
+    });
 
-    console.error("❌ Callback error:", err);
+    if (!player) {
+      return res.status(200).json({
+        success: false,
+        balance: 0,
+        message: "USER_NOT_FOUND",
+        data: {
+          member_account: rawMemberAccount,
+          userGamePlayName,
+        },
+      });
+    }
 
-    return res.status(status).json({
+    const currentBalance = money(player.balance || 0);
+
+    if (currentBalance < betAmount) {
+      return res.status(200).json({
+        success: false,
+        balance: currentBalance,
+        message: "INSUFFICIENT_BALANCE",
+        data: {
+          status: "INSUFFICIENT_BALANCE",
+          balance: currentBalance,
+          currentBalance,
+          betAmount,
+          game_round: gameRound,
+          serial_number: serialNumber,
+        },
+      });
+    }
+
+    const netAmount = money(winAmount - betAmount);
+
+    let resultType = "push";
+    if (netAmount > 0) resultType = "win";
+    if (netAmount < 0) resultType = "loss";
+
+    const newBalance = money(currentBalance - betAmount + winAmount);
+
+    const updatedPlayer = await User.findByIdAndUpdate(
+      player._id,
+      {
+        $set: {
+          balance: newBalance,
+        },
+      },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    const finalBalance = money(updatedPlayer.balance || 0);
+
+    let affiliateInfo = null;
+
+    try {
+      affiliateInfo = await applyAffiliateCommission({
+        player,
+        betAmount,
+        winAmount,
+      });
+    } catch (affiliateError) {
+      console.error("Affiliate commission error:", affiliateError.message);
+    }
+
+    const history = await GameHistory.create({
+      user: player._id,
+      userId: player.userId,
+      userGamePlayName: player.userGamePlayName,
+      member_account: rawMemberAccount,
+      phone: `${player.countryCode || ""}${player.phone || ""}`,
+      currency: currency_code || player.currency || "BDT",
+      userRole: player.role || "user",
+
+      game_uid: gameUId,
+      game_round: gameRound,
+      serial_number: serialNumber,
+
+      bet_amount: betAmount,
+      win_amount: winAmount,
+      net_amount: netAmount,
+      resultType,
+
+      balance_before: currentBalance,
+      balance_after: finalBalance,
+
+      affiliateInfo,
+      oracleTimestamp: clean(timestamp),
+      rawPayload: req.body || {},
+    });
+
+    if (betAmount > 0) {
+      await applyTurnoverProgress({
+        userId: player._id,
+        wagerAmount: betAmount,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      balance: finalBalance,
+      message: "SUCCESS",
+      data: {
+        status: "SUCCESS",
+        resultType,
+        betAmount,
+        winAmount,
+        netAmount,
+        balanceBefore: currentBalance,
+        newBalance: finalBalance,
+        game_round: gameRound,
+        serial_number: serialNumber,
+        historyId: history._id,
+        affiliateInfo,
+      },
+    });
+  } catch (error) {
+    console.error("Callback Error:", error.message);
+
+    if (error?.code === 11000) {
+      return res.status(200).json({
+        success: false,
+        balance: 0,
+        message: "DUPLICATE",
+        data: {
+          status: "DUPLICATE",
+        },
+      });
+    }
+
+    return res.status(200).json({
       success: false,
-      message:
-        status === 404 ? "User not found" : err.message || "Server error",
+      balance: 0,
+      message: "Internal processing error, but acknowledged",
     });
   }
 });

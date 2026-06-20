@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { FaSearch } from "react-icons/fa";
 import { FaRegStar } from "react-icons/fa6";
@@ -9,29 +8,26 @@ import { selectIsAuthenticated } from "../../features/auth/authSelectors";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
-const ORACLE_BY_IDS_API = "https://api.oraclegames.live/api/games/by-ids";
-const ORACLE_PROVIDER_API = "https://api.oraclegames.live/api/providers";
-const ORACLE_KEY = import.meta.env.VITE_ORACLE_TOKEN;
-const GAMES_PER_PAGE = 20;
-const ORACLE_CHUNK_SIZE = 100;
+const GAMES_PER_PAGE = 21;
 
 const Games = () => {
   const navigate = useNavigate();
   const { categoryId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  const { isBangla, isEnglish } = useLanguage();
+  const { isBangla } = useLanguage();
 
   const providerFromQuery = searchParams.get("provider") || "";
 
   const [providers, setProviders] = useState([]);
-  const [oracleProviders, setOracleProviders] = useState([]);
-  const [dbGames, setDbGames] = useState([]);
-  const [oracleGameMap, setOracleGameMap] = useState({});
+  const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [providerLoading, setProviderLoading] = useState(false);
 
   const [selectedProviderDbId, setSelectedProviderDbId] =
     useState(providerFromQuery);
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,13 +44,18 @@ const Games = () => {
       }
 
       try {
-        const res = await api.get(
-          `/api/game-providers?categoryId=${categoryId}&status=active`,
-        );
-        setProviders(res?.data?.data || []);
+        setProviderLoading(true);
+
+        const res = await api.get("/api/client-games/providers", {
+          params: { categoryId },
+        });
+
+        setProviders(Array.isArray(res?.data?.data) ? res.data.data : []);
       } catch (error) {
         console.error("Failed to load providers:", error);
         setProviders([]);
+      } finally {
+        setProviderLoading(false);
       }
     };
 
@@ -62,177 +63,140 @@ const Games = () => {
   }, [categoryId]);
 
   useEffect(() => {
-    const loadOracleProviders = async () => {
-      try {
-        const res = await axios.get(ORACLE_PROVIDER_API, {
-          headers: {
-            "x-api-key": ORACLE_KEY,
-          },
-        });
-
-        setOracleProviders(res?.data?.data || []);
-      } catch (error) {
-        console.error("Failed to load oracle providers:", error);
-        setOracleProviders([]);
-      }
-    };
-
-    loadOracleProviders();
-  }, []);
-
-  const providerNameMap = useMemo(() => {
-    const map = new Map();
-
-    for (const item of oracleProviders) {
-      if (item?.providerCode) {
-        map.set(
-          String(item.providerCode),
-          item?.providerName || item?.providerCode,
-        );
-      }
-    }
-
-    return map;
-  }, [oracleProviders]);
-
-  const getProviderName = (providerId) => {
-    return providerNameMap.get(String(providerId)) || providerId || "";
-  };
-
-  useEffect(() => {
-    const loadDbGames = async () => {
+    const loadGames = async () => {
       if (!categoryId) {
-        setDbGames([]);
-        setOracleGameMap({});
+        setGames([]);
         return;
       }
 
       try {
         setLoading(true);
 
-        const res = await api.get(
-          `/api/games?categoryId=${categoryId}&status=active`,
-        );
-        const gamesFromDb = res?.data?.data || [];
-        setDbGames(gamesFromDb);
+        const res = await api.get("/api/client-games/games", {
+          params: {
+            categoryId,
+            providerDbId: selectedProviderDbId || "",
+            page: 1,
+            limit: 10000,
+          },
+        });
 
-        const uniqueIds = [
-          ...new Set(
-            gamesFromDb
-              .map((item) => item?.gameId)
-              .filter(Boolean)
-              .map((id) => String(id)),
-          ),
-        ];
+        const payload = res?.data?.data;
 
-        if (!uniqueIds.length) {
-          setOracleGameMap({});
-          return;
-        }
+        const gameList = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.games)
+            ? payload.games
+            : [];
 
-        const chunks = [];
-        for (let i = 0; i < uniqueIds.length; i += ORACLE_CHUNK_SIZE) {
-          chunks.push(uniqueIds.slice(i, i + ORACLE_CHUNK_SIZE));
-        }
-
-        const results = await Promise.all(
-          chunks.map((chunk) =>
-            axios.post(
-              ORACLE_BY_IDS_API,
-              {
-                ids: chunk,
-              },
-              {
-                headers: {
-                  "x-api-key": ORACLE_KEY,
-                },
-              },
-            ),
-          ),
-        );
-
-        const fullMap = {};
-        for (const response of results) {
-          const list = response?.data?.data || [];
-          for (const game of list) {
-            fullMap[String(game._id)] = game;
-          }
-        }
-
-        setOracleGameMap(fullMap);
+        setGames(gameList);
       } catch (error) {
         console.error("Failed to load games:", error);
-        setDbGames([]);
-        setOracleGameMap({});
+        setGames([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadDbGames();
-  }, [categoryId]);
+    loadGames();
+  }, [categoryId, selectedProviderDbId]);
 
-  const mergedGames = useMemo(() => {
-    return dbGames.map((dbGame) => {
-      const oracleGame = oracleGameMap[String(dbGame.gameId)] || null;
-
-      const finalImage = dbGame?.imageUrl
-        ? dbGame.imageUrl
-        : oracleGame?.image || "";
-
-      return {
-        ...dbGame,
-        oracleGame,
-        displayName:
-          oracleGame?.gameName ||
-          oracleGame?.name ||
-          oracleGame?.game_code ||
-          "Unnamed Game",
-        displayImage: finalImage,
-        displayGameCode: oracleGame?.game_code || "",
-      };
-    });
-  }, [dbGames, oracleGameMap]);
-
-  const filteredByProvider = useMemo(() => {
-    if (!selectedProviderDbId) return mergedGames;
-
-    return mergedGames.filter(
-      (item) =>
-        String(item?.providerDbId?._id || item?.providerDbId) ===
-        String(selectedProviderDbId),
+  const getProviderName = (provider) => {
+    return (
+      provider?.providerName ||
+      provider?.providerTitle ||
+      provider?.displayName ||
+      provider?.providerId ||
+      ""
     );
-  }, [mergedGames, selectedProviderDbId]);
+  };
 
-  const finalFilteredGames = useMemo(() => {
-    const keyword = searchText.trim().toLowerCase();
+  const getGameName = (game) => {
+    return (
+      game?.displayName ||
+      game?.gameName ||
+      game?.name ||
+      game?.oracleGame?.gameName ||
+      game?.oracleGame?.name ||
+      game?.oracleGame?.game_code ||
+      game?.gameId ||
+      "Unnamed Game"
+    );
+  };
 
-    let filtered = filteredByProvider;
+  const getGameImage = (game) => {
+    if (!game) return "";
 
-    if (keyword) {
-      filtered = filteredByProvider.filter((item) => {
-        const name = String(item.displayName || "").toLowerCase();
-        const code = String(item.displayGameCode || "").toLowerCase();
-        const gameId = String(item.gameId || "").toLowerCase();
+    if (game?.imageUrl) return game.imageUrl;
+    if (game?.gameImage) return game.gameImage;
+    if (game?.displayImage) return game.displayImage;
 
-        return (
-          name.includes(keyword) ||
-          code.includes(keyword) ||
-          gameId.includes(keyword)
-        );
-      });
+    const oracleGame = game?.oracleGame || game?.oracle || {};
+    const imageType = game?.oracleImageType || "thumbnail";
+
+    if (imageType === "original") {
+      return (
+        oracleGame?.original ||
+        oracleGame?.images?.original ||
+        oracleGame?.image ||
+        oracleGame?.img ||
+        ""
+      );
     }
 
-    return filtered.sort((a, b) => {
+    if (imageType === "height") {
+      return (
+        oracleGame?.height ||
+        oracleGame?.images?.height ||
+        oracleGame?.image ||
+        oracleGame?.img ||
+        ""
+      );
+    }
+
+    return (
+      oracleGame?.thumbnail ||
+      oracleGame?.images?.thumbnail ||
+      oracleGame?.image ||
+      oracleGame?.img ||
+      oracleGame?.original ||
+      oracleGame?.images?.original ||
+      ""
+    );
+  };
+
+  const filteredGames = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+
+    if (!keyword) return games;
+
+    return games.filter((item) => {
+      const name = String(getGameName(item)).toLowerCase();
+      const code = String(
+        item?.displayGameCode || item?.oracleGame?.game_code || "",
+      ).toLowerCase();
+      const gameId = String(item?.gameId || "").toLowerCase();
+
+      return (
+        name.includes(keyword) ||
+        code.includes(keyword) ||
+        gameId.includes(keyword)
+      );
+    });
+  }, [games, searchText]);
+
+  const finalFilteredGames = useMemo(() => {
+    return [...filteredGames].sort((a, b) => {
       return new Date(a.createdAt) - new Date(b.createdAt);
     });
-  }, [filteredByProvider, searchText]);
+  }, [filteredGames]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedProviderDbId, searchText, categoryId]);
 
-  const totalPages = Math.ceil(finalFilteredGames.length / GAMES_PER_PAGE);
+  const totalPages = Math.ceil(finalFilteredGames.length / GAMES_PER_PAGE) || 1;
+
   const paginatedGames = finalFilteredGames.slice(
     (currentPage - 1) * GAMES_PER_PAGE,
     currentPage * GAMES_PER_PAGE,
@@ -247,9 +211,9 @@ const Games = () => {
     return providers.map((provider) => ({
       _id: provider._id,
       providerId: provider.providerId,
-      label: getProviderName(provider.providerId),
+      label: getProviderName(provider),
     }));
-  }, [providers, providerNameMap]);
+  }, [providers]);
 
   const handleProviderTabClick = (providerDbId) => {
     setSelectedProviderDbId(providerDbId);
@@ -268,7 +232,7 @@ const Games = () => {
       return;
     }
 
-    const targetId = game?._id || game?.gameId;
+    const targetId = game?.gameId || game?._id;
 
     if (!targetId) {
       toast.error(isBangla ? "গেম আইডি পাওয়া যায়নি" : "Game id not found");
@@ -280,7 +244,7 @@ const Games = () => {
 
   if (!categoryId) return null;
 
-  if (loading) {
+  if (loading || providerLoading) {
     return (
       <div className="px-3 pb-4">
         <div className="flex gap-[3px] overflow-x-auto no-scrollbar bg-[#00563c] p-[3px]">
@@ -348,7 +312,6 @@ const Games = () => {
       </style>
 
       <div className="px-3 pb-4">
-        {/* Top Provider Tabs */}
         <div className="mt-2">
           <div className="flex items-stretch gap-[4px] bg-[#00563c] p-[4px] rounded-[4px]">
             <div className="relative flex-1 min-w-0">
@@ -446,75 +409,70 @@ const Games = () => {
         ) : (
           <>
             <div className="grid grid-cols-3 gap-[6px] mt-[6px]">
-              {paginatedGames.map((game) => (
-                <button
-                  key={game._id}
-                  type="button"
-                  onClick={() => handleGameClick(game)}
-                  className="cursor-pointer text-left bg-[#00563c] p-[3px] hover:brightness-110 transition-all"
-                >
-                  <div className="provider-glass-shine relative bg-[#003c29] overflow-hidden">
-                    {game.displayImage ? (
-                      <img
-                        src={game.displayImage}
-                        alt={game.displayName}
-                        className="w-full h-[100px] sm:h-[145px] object-container"
-                      />
-                    ) : (
-                      <div className="w-full h-[100px] sm:h-[145px] bg-[#0b6e4d] flex items-center justify-center text-white/70 text-sm">
-                        {isBangla ? "ইমেজ নেই" : "No Image"}
-                      </div>
-                    )}
-                  </div>
+              {paginatedGames.map((game) => {
+                const displayName = getGameName(game);
+                const displayImage = getGameImage(game);
 
-                  <div className="bg-[#003c29] px-[6px] py-[5px] flex items-center justify-between gap-2">
-                    <p className="text-white font-bold text-[12px] sm:text-[14px] leading-tight truncate">
-                      {game.displayName}
-                    </p>
+                return (
+                  <button
+                    key={game._id || game.gameId}
+                    type="button"
+                    onClick={() => handleGameClick(game)}
+                    className="cursor-pointer text-left bg-[#00563c] p-[3px] hover:brightness-110 transition-all"
+                  >
+                    <div className="provider-glass-shine relative bg-[#003c29] overflow-hidden">
+                      {displayImage ? (
+                        <img
+                          src={displayImage}
+                          alt={displayName}
+                          className="w-full h-[100px] sm:h-[145px] object-contain"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-[100px] sm:h-[145px] bg-[#0b6e4d] flex items-center justify-center text-white/70 text-sm">
+                          {isBangla ? "ইমেজ নেই" : "No Image"}
+                        </div>
+                      )}
+                    </div>
 
-                    <FaRegStar className="text-[#c9982f] text-[20px] shrink-0" />
-                  </div>
-                </button>
-              ))}
+                    <div className="bg-[#003c29] px-[6px] py-[5px] flex items-center justify-between gap-2">
+                      <p className="text-white font-bold text-[12px] sm:text-[14px] leading-tight truncate">
+                        {displayName}
+                      </p>
+
+                      <FaRegStar className="text-[#c9982f] text-[20px] shrink-0" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {totalPages > 1 && (
               <div className="mt-4 flex items-center justify-center gap-3">
                 <style>
                   {`
-      @keyframes rgbPagination {
-        0% {
-          background-position: 0% 50%;
-        }
+                    @keyframes rgbPagination {
+                      0% { background-position: 0% 50%; }
+                      50% { background-position: 100% 50%; }
+                      100% { background-position: 0% 50%; }
+                    }
 
-        50% {
-          background-position: 100% 50%;
-        }
-
-        100% {
-          background-position: 0% 50%;
-        }
-      }
-
-      .rgb-pagination-btn {
-        background: linear-gradient(
-          90deg,
-          rgb(255, 0, 80),
-          rgb(255, 140, 0),
-          rgb(255, 230, 0),
-          rgb(0, 255, 180),
-          rgb(0, 120, 255),
-          rgb(180, 0, 255),
-          rgb(255, 0, 80)
-        );
-
-        background-size: 250% 250%;
-
-        animation: rgbPagination 10s ease-in-out infinite;
-
-        transition: all 0.3s ease;
-      }
-    `}
+                    .rgb-pagination-btn {
+                      background: linear-gradient(
+                        90deg,
+                        rgb(255, 0, 80),
+                        rgb(255, 140, 0),
+                        rgb(255, 230, 0),
+                        rgb(0, 255, 180),
+                        rgb(0, 120, 255),
+                        rgb(180, 0, 255),
+                        rgb(255, 0, 80)
+                      );
+                      background-size: 250% 250%;
+                      animation: rgbPagination 10s ease-in-out infinite;
+                      transition: all 0.3s ease;
+                    }
+                  `}
                 </style>
 
                 <button

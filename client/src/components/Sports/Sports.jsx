@@ -9,7 +9,7 @@ import {
   selectIsAuthenticated,
   selectUser,
 } from "../../features/auth/authSelectors";
-import { useLanguage } from "../../Context/LanguageProvider";
+import { useLanguage } from "../../context/LanguageProvider";
 import HotGames from "../HotGames/HotGames";
 import Provider from "../Provider/Provider";
 import FeatureGames from "../FeatureGames/FeatureGames";
@@ -29,13 +29,16 @@ const Sports = () => {
   const reduxUser = useSelector(selectUser);
 
   const token =
-    localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("user_token") ||
+    "";
 
   const loadSports = async () => {
     try {
       setLoading(true);
 
-      const { data } = await api.get("/api/sports");
+      const { data } = await api.get("/api/client-games/sports");
 
       if (!data?.success) {
         throw new Error(data?.message || "Failed to load sports");
@@ -58,14 +61,24 @@ const Sports = () => {
     loadSports();
   }, []);
 
+  const getSportName = (sport) => {
+    return isBangla
+      ? sport?.name?.bn || sport?.name?.en || "Sport"
+      : sport?.name?.en || sport?.name?.bn || "Sport";
+  };
+
+  const getSportIcon = (sport) => {
+    return sport?.iconImageUrl || sport?.iconImage || "";
+  };
+
   const handleClick = async (sport) => {
     if (!sport?.gameId) {
-      toast.error("Game ID not found");
+      toast.error(isBangla ? "গেম আইডি পাওয়া যায়নি" : "Game ID not found");
       return;
     }
 
     if (!isAuthenticated || !token) {
-      toast.error("Please login first");
+      toast.error(isBangla ? "প্রথমে লগইন করুন" : "Please login first");
       navigate("/login");
       return;
     }
@@ -90,20 +103,22 @@ const Sports = () => {
       const isActive = currentUser?.isActive === true;
 
       if (!currentUser) {
-        toast.error("User profile not found");
+        toast.error(isBangla ? "ইউজার পাওয়া যায়নি" : "User profile not found");
         navigate("/login");
         return;
       }
 
       if (!isActive) {
-        toast.error("Your account is not active");
+        toast.error(
+          isBangla
+            ? "আপনার একাউন্ট অ্যাক্টিভ নয়"
+            : "Your account is not active",
+        );
         navigate("/");
         return;
       }
 
-      // ✅ balance check remove — 0 holeo game open hobe
-
-      navigate(`/sports/${sport.gameId}`);
+      navigate(`/play-game/${sport.gameId}`);
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
@@ -127,7 +142,7 @@ const Sports = () => {
 
         {loading ? (
           <div className="grid grid-cols-4 gap-1">
-            {[...Array(4)].map((_, i) => (
+            {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
                 className="bg-[#005C40] rounded-sm py-4 px-2 animate-pulse h-[116px]"
@@ -137,9 +152,8 @@ const Sports = () => {
         ) : sportsList.length ? (
           <div className="grid grid-cols-4 gap-1">
             {sportsList.map((sport) => {
-              const iconUrl = sport?.iconImage
-                ? `${import.meta.env.VITE_APP_URL}${sport.iconImage}`
-                : "";
+              const iconUrl = getSportIcon(sport);
+              const sportName = getSportName(sport);
 
               const isChecking =
                 checkingSportId === String(sport._id || sport.gameId);
@@ -156,8 +170,9 @@ const Sports = () => {
                     {iconUrl ? (
                       <img
                         src={iconUrl}
-                        alt={sport?.name?.en || "sport"}
+                        alt={sportName}
                         className="h-full w-full object-contain"
+                        loading="lazy"
                       />
                     ) : sport?.name?.en?.toLowerCase() === "cricket" ? (
                       <GiCricketBat className="text-4xl text-yellow-400" />
@@ -167,7 +182,11 @@ const Sports = () => {
                   </div>
 
                   <p className="text-white text-md text-center leading-tight px-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
-                    {isChecking ? "Checking..." : sport?.name?.en || "Sport"}
+                    {isChecking
+                      ? isBangla
+                        ? "চেক হচ্ছে..."
+                        : "Checking..."
+                      : sportName}
                   </p>
                 </button>
               );
@@ -175,10 +194,11 @@ const Sports = () => {
           </div>
         ) : (
           <div className="text-center text-white/70 py-6 bg-[#005C40] rounded-sm">
-            No sports found
+            {isBangla ? "কোনো স্পোর্টস পাওয়া যায়নি" : "No sports found"}
           </div>
         )}
       </div>
+
       <HotGames />
       <Provider />
       <FeatureGames />

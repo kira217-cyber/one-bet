@@ -40,7 +40,6 @@ const GameProviderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// একই category এর মধ্যে একই providerId duplicate হবে না
 GameProviderSchema.index({ categoryId: 1, providerId: 1 }, { unique: true });
 
 export default mongoose.model("GameProvider", GameProviderSchema);

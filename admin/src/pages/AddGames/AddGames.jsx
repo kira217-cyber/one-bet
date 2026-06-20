@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
 import {
@@ -12,9 +11,6 @@ import {
   FaSearch,
 } from "react-icons/fa";
 
-const ORACLE_BASE = "https://api.oraclegames.live/api";
-const ORACLE_PROVIDER_API = "https://api.oraclegames.live/api/providers";
-const ORACLE_KEY = import.meta.env.VITE_ORACLE_TOKEN;
 const GAMES_PER_PAGE = 50;
 
 const AddGames = () => {
@@ -34,6 +30,8 @@ const AddGames = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [searchText, setSearchText] = useState("");
+  const [defaultOracleImageType, setDefaultOracleImageType] =
+    useState("thumbnail");
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingGame, setEditingGame] = useState(null);
@@ -42,6 +40,7 @@ const AddGames = () => {
     status: "active",
     isHot: false,
     isFavourite: false,
+    oracleImageType: "thumbnail",
   });
   const [editPreview, setEditPreview] = useState("");
   const [removeOldImage, setRemoveOldImage] = useState(false);
@@ -57,8 +56,85 @@ const AddGames = () => {
     [providers, selectedProviderDbId],
   );
 
+  const cleanText = (value = "") => String(value || "").trim();
+
+  const cleanProviderCode = (value = "") => cleanText(value).toUpperCase();
+
+  const normalizeOracleProviders = (payload) => {
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.providers)
+          ? payload.providers
+          : [];
+
+    return list
+      .map((item) => {
+        const providerCode = cleanProviderCode(
+          item?.providerCode || item?.providerId || item?.code,
+        );
+
+        return {
+          ...item,
+          providerCode,
+          providerId: providerCode,
+          providerName:
+            cleanText(item?.providerName || item?.name) ||
+            providerCode ||
+            "Unknown Provider",
+        };
+      })
+      .filter((item) => item.providerCode);
+  };
+
+  const normalizeOracleGames = (payload) => {
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.games)
+        ? payload.games
+        : Array.isArray(payload?.data?.games)
+          ? payload.data.games
+          : [];
+
+    return list
+      .map((game) => {
+        const gameId = cleanText(
+          game?.gameId ||
+            game?.game_uid ||
+            game?.gameUId ||
+            game?._id ||
+            game?.id,
+        );
+
+        return {
+          ...game,
+          _id: gameId,
+          gameId,
+          game_uid: gameId,
+          name:
+            game?.name || game?.gameName || game?.game_code || "Unnamed Game",
+          thumbnail:
+            game?.thumbnail ||
+            game?.images?.thumbnail ||
+            game?.raw?.thumbnail ||
+            game?.image ||
+            "",
+          height:
+            game?.height || game?.images?.height || game?.raw?.height || "",
+          original:
+            game?.original ||
+            game?.images?.original ||
+            game?.raw?.original ||
+            "",
+        };
+      })
+      .filter((game) => game.gameId);
+  };
+
   const providerNameMap = useMemo(() => {
     const map = new Map();
+
     for (const item of oracleProviders) {
       if (item?.providerCode) {
         map.set(
@@ -67,11 +143,13 @@ const AddGames = () => {
         );
       }
     }
+
     return map;
   }, [oracleProviders]);
 
   const selectedProviderName = useMemo(() => {
     if (!selectedProvider?.providerId) return "";
+
     return (
       providerNameMap.get(String(selectedProvider.providerId)) ||
       selectedProvider.providerId
@@ -92,10 +170,10 @@ const AddGames = () => {
 
     const loadOracleProviders = async () => {
       try {
-        const res = await axios.get(ORACLE_PROVIDER_API, {
-          headers: { "x-api-key": ORACLE_KEY },
-        });
-        setOracleProviders(res?.data?.data || []);
+        const res = await api.get("/api/game-providers/oracle/list");
+        setOracleProviders(
+          normalizeOracleProviders(res?.data?.data || res?.data),
+        );
       } catch (error) {
         console.error(error);
       }
@@ -114,9 +192,14 @@ const AddGames = () => {
       }
 
       try {
-        const res = await api.get(
-          `/api/game-providers?categoryId=${selectedCategoryId}`,
-        );
+        const res = await api.get("/api/game-providers", {
+          params: {
+            categoryId: selectedCategoryId,
+            status: "active",
+            limit: 500,
+          },
+        });
+
         setProviders(res?.data?.data || []);
       } catch (error) {
         toast.error(
@@ -137,9 +220,14 @@ const AddGames = () => {
 
       try {
         setLoadingSaved(true);
-        const res = await api.get(
-          `/api/games?providerDbId=${selectedProviderDbId}`,
-        );
+
+        const res = await api.get("/api/games", {
+          params: {
+            providerDbId: selectedProviderDbId,
+            limit: 10000,
+          },
+        });
+
         setSavedGames(res?.data?.data || []);
       } catch (error) {
         toast.error(
@@ -163,18 +251,19 @@ const AddGames = () => {
     const fetchOracleGames = async () => {
       try {
         setLoadingGames(true);
-        const res = await axios.get(
-          `${ORACLE_BASE}/providers/${selectedProvider.providerId}`,
-          {
-            headers: { "x-api-key": ORACLE_KEY },
-          },
+
+        const res = await api.get(
+          `/api/games/oracle/${selectedProvider.providerId}`,
         );
 
-        setProviderGames(res?.data?.games || []);
+        setProviderGames(normalizeOracleGames(res?.data?.data || res?.data));
         setCurrentPage(1);
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load games from provider");
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to load games from provider",
+        );
         setProviderGames([]);
       } finally {
         setLoadingGames(false);
@@ -197,8 +286,32 @@ const AddGames = () => {
     return game?.gameName || game?.name || game?.game_code || "Unnamed Game";
   };
 
-  const getOracleImage = (game) => {
-    return game?.image || "";
+  const getOracleGameId = (game) => {
+    return cleanText(game?.gameId || game?.game_uid || game?._id || game?.id);
+  };
+
+  const getOracleImage = (game, type = "thumbnail") => {
+    if (!game) return "";
+
+    if (type === "original") {
+      return (
+        game?.original || game?.images?.original || game?.raw?.original || ""
+      );
+    }
+
+    if (type === "height") {
+      return game?.height || game?.images?.height || game?.raw?.height || "";
+    }
+
+    return (
+      game?.thumbnail ||
+      game?.images?.thumbnail ||
+      game?.raw?.thumbnail ||
+      game?.image ||
+      game?.original ||
+      game?.images?.original ||
+      ""
+    );
   };
 
   const filteredGames = useMemo(() => {
@@ -209,7 +322,7 @@ const AddGames = () => {
     return providerGames.filter((game) => {
       const name = getGameDisplayName(game).toLowerCase();
       const gameCode = String(game?.game_code || "").toLowerCase();
-      const gameId = String(game?._id || "").toLowerCase();
+      const gameId = String(getOracleGameId(game)).toLowerCase();
 
       return (
         name.includes(keyword) ||
@@ -219,8 +332,9 @@ const AddGames = () => {
     });
   }, [providerGames, searchText]);
 
-  const totalPages = Math.ceil(filteredGames.length / GAMES_PER_PAGE);
+  const totalPages = Math.ceil(filteredGames.length / GAMES_PER_PAGE) || 1;
   const startIndex = (currentPage - 1) * GAMES_PER_PAGE;
+
   const paginatedGames = filteredGames.slice(
     startIndex,
     startIndex + GAMES_PER_PAGE,
@@ -242,7 +356,7 @@ const AddGames = () => {
 
   const selectedCountThisPage = useMemo(() => {
     return paginatedGames.reduce(
-      (acc, game) => (isGameSelected(game._id) ? acc + 1 : acc),
+      (acc, game) => (isGameSelected(getOracleGameId(game)) ? acc + 1 : acc),
       0,
     );
   }, [paginatedGames, savedGames]);
@@ -252,7 +366,7 @@ const AddGames = () => {
     selectedCountThisPage === paginatedGames.length;
 
   const handleSelectGame = async (game) => {
-    const oracleGameId = game?._id;
+    const oracleGameId = getOracleGameId(game);
     const alreadySelected = isGameSelected(oracleGameId);
 
     try {
@@ -261,9 +375,11 @@ const AddGames = () => {
         if (!existingDoc?._id) return;
 
         await api.delete(`/api/games/${existingDoc._id}`);
+
         setSavedGames((prev) =>
           prev.filter((item) => item._id !== existingDoc._id),
         );
+
         toast.success("Game removed successfully");
         return;
       }
@@ -272,6 +388,7 @@ const AddGames = () => {
         categoryId: selectedCategoryId,
         providerDbId: selectedProviderDbId,
         gameId: oracleGameId,
+        oracleImageType: defaultOracleImageType,
         status: "active",
       };
 
@@ -294,7 +411,9 @@ const AddGames = () => {
 
     try {
       for (const game of paginatedGames) {
-        if (isGameSelected(game._id)) {
+        const oracleGameId = getOracleGameId(game);
+
+        if (isGameSelected(oracleGameId)) {
           skipped++;
           continue;
         }
@@ -302,7 +421,8 @@ const AddGames = () => {
         const payload = {
           categoryId: selectedCategoryId,
           providerDbId: selectedProviderDbId,
-          gameId: game._id,
+          gameId: oracleGameId,
+          oracleImageType: defaultOracleImageType,
           status: "active",
         };
 
@@ -333,7 +453,7 @@ const AddGames = () => {
 
     try {
       for (const game of paginatedGames) {
-        const existingDoc = getSelectedGame(game._id);
+        const existingDoc = getSelectedGame(getOracleGameId(game));
 
         if (!existingDoc?._id) {
           skipped++;
@@ -361,12 +481,15 @@ const AddGames = () => {
 
   const openEditModal = (gameDoc) => {
     setEditingGame(gameDoc);
+
     setEditForm({
       image: null,
       status: gameDoc?.status || "active",
       isHot: !!gameDoc?.isHot,
       isFavourite: !!gameDoc?.isFavourite,
+      oracleImageType: gameDoc?.oracleImageType || "thumbnail",
     });
+
     setRemoveOldImage(false);
 
     if (gameDoc?.imageUrl) {
@@ -386,6 +509,7 @@ const AddGames = () => {
       status: "active",
       isHot: false,
       isFavourite: false,
+      oracleImageType: "thumbnail",
     });
     setEditPreview("");
     setRemoveOldImage(false);
@@ -400,6 +524,7 @@ const AddGames = () => {
       fd.append("status", editForm.status);
       fd.append("isHot", String(!!editForm.isHot));
       fd.append("isFavourite", String(!!editForm.isFavourite));
+      fd.append("oracleImageType", editForm.oracleImageType);
       fd.append("removeOldImage", removeOldImage ? "true" : "false");
 
       if (editForm.image instanceof File) {
@@ -443,6 +568,7 @@ const AddGames = () => {
     try {
       const res = await api.delete(`/api/games/${deleteModal.id}`);
       toast.success(res?.data?.message || "Game deleted successfully");
+
       setSavedGames((prev) =>
         prev.filter((item) => item._id !== deleteModal.id),
       );
@@ -549,7 +675,7 @@ const AddGames = () => {
             {selectedProviderDbId && (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                  <div className="lg:col-span-1">
+                  <div>
                     <label className="block mb-2 text-sm font-semibold text-green-200">
                       Search Game
                     </label>
@@ -565,7 +691,24 @@ const AddGames = () => {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-2 flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block mb-2 text-sm font-semibold text-green-200">
+                      Default Oracle Image Type
+                    </label>
+                    <select
+                      value={defaultOracleImageType}
+                      onChange={(e) =>
+                        setDefaultOracleImageType(e.target.value)
+                      }
+                      className="w-full rounded-2xl border border-green-700/40 bg-black/60 px-4 py-3 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/30 cursor-pointer"
+                    >
+                      <option value="thumbnail">Thumbnail</option>
+                      <option value="height">Height</option>
+                      <option value="original">Original</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap items-end gap-3">
                     <button
                       type="button"
                       onClick={handleSelectAllThisPage}
@@ -611,6 +754,7 @@ const AddGames = () => {
                     >
                       Next
                     </button>
+
                     <div className="text-sm text-green-200/80">
                       Selected This Page:{" "}
                       <span className="font-bold text-yellow-400">
@@ -645,18 +789,22 @@ const AddGames = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                 {paginatedGames.map((game) => {
-                  const selected = isGameSelected(game._id);
-                  const selectedDoc = getSelectedGame(game._id);
+                  const oracleGameId = getOracleGameId(game);
+                  const selected = isGameSelected(oracleGameId);
+                  const selectedDoc = getSelectedGame(oracleGameId);
                   const displayName = getGameDisplayName(game);
+
+                  const activeImageType =
+                    selectedDoc?.oracleImageType || defaultOracleImageType;
 
                   const imageToShow =
                     selected && selectedDoc?.imageUrl
                       ? selectedDoc.imageUrl
-                      : getOracleImage(game);
+                      : getOracleImage(game, activeImageType);
 
                   return (
                     <div
-                      key={game._id}
+                      key={oracleGameId}
                       className={`rounded-3xl border bg-gradient-to-br from-black via-green-950/10 to-black overflow-hidden shadow-xl transition-all ${
                         selected
                           ? "border-yellow-400 ring-2 ring-yellow-400/30"
@@ -701,15 +849,23 @@ const AddGames = () => {
                         </h3>
 
                         <div className="mt-2 text-xs text-green-200/80 space-y-1">
-                          <div className="break-all">gameId: {game._id}</div>
+                          <div className="break-all">
+                            gameId: {oracleGameId}
+                          </div>
+
                           {game?.game_code && (
                             <div className="break-all">
                               game_code: {game.game_code}
                             </div>
                           )}
+
                           {selected && (
                             <>
                               <div>Status: {selectedDoc?.status}</div>
+                              <div>
+                                Image Type:{" "}
+                                {selectedDoc?.oracleImageType || "thumbnail"}
+                              </div>
                               <div>
                                 Hot: {selectedDoc?.isHot ? "Yes" : "No"}
                               </div>
@@ -785,6 +941,7 @@ const AddGames = () => {
           >
             Next
           </button>
+
           <div className="text-sm text-green-200/80">
             Selected This Page:{" "}
             <span className="font-bold text-yellow-400">
@@ -846,6 +1003,26 @@ const AddGames = () => {
                     Remove Old Image
                   </button>
                 )}
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-green-200">
+                  Oracle Image Type
+                </label>
+                <select
+                  value={editForm.oracleImageType}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      oracleImageType: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-2xl border border-green-700/40 bg-black/60 px-4 py-3 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-500/30 cursor-pointer"
+                >
+                  <option value="thumbnail">Thumbnail</option>
+                  <option value="height">Height</option>
+                  <option value="original">Original</option>
+                </select>
               </div>
 
               <div>

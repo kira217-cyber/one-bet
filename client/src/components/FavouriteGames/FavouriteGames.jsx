@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -13,17 +12,12 @@ import { api } from "../../api/axios";
 import { selectIsAuthenticated } from "../../features/auth/authSelectors";
 import { useLanguage } from "../../context/LanguageProvider";
 
-const ORACLE_BY_IDS_API = "https://api.oraclegames.live/api/games/by-ids";
-const ORACLE_KEY = import.meta.env.VITE_ORACLE_TOKEN;
-const ORACLE_CHUNK_SIZE = 100;
-
 const FavouriteGames = () => {
   const navigate = useNavigate();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const { isBangla } = useLanguage();
 
-  const [dbGames, setDbGames] = useState([]);
-  const [oracleGameMap, setOracleGameMap] = useState({});
+  const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,63 +25,12 @@ const FavouriteGames = () => {
       try {
         setLoading(true);
 
-        const res = await api.get("/api/games?status=active");
-        const allGames = res?.data?.data || [];
-        const favouriteGames = allGames.filter(
-          (item) => item?.isFavourite === true,
-        );
+        const res = await api.get("/api/client-games/favourite-games");
 
-        setDbGames(favouriteGames);
-
-        const uniqueIds = [
-          ...new Set(
-            favouriteGames
-              .map((item) => item?.gameId)
-              .filter(Boolean)
-              .map((id) => String(id)),
-          ),
-        ];
-
-        if (!uniqueIds.length) {
-          setOracleGameMap({});
-          return;
-        }
-
-        const chunks = [];
-        for (let i = 0; i < uniqueIds.length; i += ORACLE_CHUNK_SIZE) {
-          chunks.push(uniqueIds.slice(i, i + ORACLE_CHUNK_SIZE));
-        }
-
-        const results = await Promise.all(
-          chunks.map((chunk) =>
-            axios.post(
-              ORACLE_BY_IDS_API,
-              { ids: chunk },
-              {
-                headers: {
-                  "x-api-key": ORACLE_KEY,
-                  "Content-Type": "application/json",
-                },
-              },
-            ),
-          ),
-        );
-
-        const fullMap = {};
-
-        for (const response of results) {
-          const list = response?.data?.data || [];
-
-          for (const game of list) {
-            fullMap[String(game._id)] = game;
-          }
-        }
-
-        setOracleGameMap(fullMap);
+        setGames(Array.isArray(res?.data?.data) ? res.data.data : []);
       } catch (error) {
         console.error("Failed to load favourite games:", error);
-        setDbGames([]);
-        setOracleGameMap({});
+        setGames([]);
       } finally {
         setLoading(false);
       }
@@ -96,31 +39,42 @@ const FavouriteGames = () => {
     loadFavouriteGames();
   }, []);
 
+  const getGameName = (game) => {
+    return (
+      game?.displayName ||
+      game?.gameName ||
+      game?.name ||
+      game?.oracleGame?.gameName ||
+      game?.oracleGame?.name ||
+      game?.oracleGame?.game_code ||
+      game?.gameId ||
+      "Unnamed Game"
+    );
+  };
+
+  const getGameImage = (game) => {
+    if (!game) return "";
+
+    return (
+      game?.imageUrl ||
+      game?.gameImage ||
+      game?.displayImage ||
+      game?.oracle?.image ||
+      game?.oracleGame?.thumbnail ||
+      game?.oracleGame?.images?.thumbnail ||
+      game?.oracleGame?.image ||
+      game?.oracleGame?.img ||
+      ""
+    );
+  };
+
   const mergedGames = useMemo(() => {
-    return dbGames.map((dbGame) => {
-      const oracleGame = oracleGameMap[String(dbGame.gameId)] || null;
-
-      const finalImage =
-        dbGame?.imageUrl ||
-        dbGame?.image ||
-        oracleGame?.image ||
-        oracleGame?.img ||
-        "";
-
-      return {
-        ...dbGame,
-        oracleGame,
-        displayName:
-          dbGame?.gameName ||
-          dbGame?.name ||
-          oracleGame?.gameName ||
-          oracleGame?.name ||
-          oracleGame?.game_code ||
-          "Unnamed Game",
-        displayImage: finalImage,
-      };
-    });
-  }, [dbGames, oracleGameMap]);
+    return games.map((game) => ({
+      ...game,
+      displayName: getGameName(game),
+      displayImage: getGameImage(game),
+    }));
+  }, [games]);
 
   const handleGameClick = (game) => {
     if (!isAuthenticated) {
@@ -129,7 +83,7 @@ const FavouriteGames = () => {
       return;
     }
 
-    const targetId = game?._id || game?.gameId;
+    const targetId = game?.gameId || game?._id;
 
     if (!targetId) {
       toast.error(isBangla ? "গেম আইডি পাওয়া যায়নি" : "Game id not found");
@@ -183,7 +137,6 @@ const FavouriteGames = () => {
       </style>
 
       <div className="bg-[#005C40] px-3 py-4">
-        {/* Title */}
         <div className="mb-3 flex items-center">
           <div className="mr-2 h-5 w-1 bg-yellow-400"></div>
 
@@ -192,7 +145,6 @@ const FavouriteGames = () => {
           </h2>
         </div>
 
-        {/* Loading */}
         {loading ? (
           <Swiper
             modules={[Autoplay]}
@@ -235,8 +187,8 @@ const FavouriteGames = () => {
           <Swiper
             modules={[Autoplay]}
             spaceBetween={12}
-            slidesPerView={3.3}
-            loop={true}
+            slidesPerView={2.3}
+            loop={mergedGames.length > 3}
             speed={900}
             autoplay={{
               delay: 2500,
@@ -272,7 +224,6 @@ const FavouriteGames = () => {
                       )}
                     </div>
 
-                    {/* Game Name */}
                     <div className="bg-[#111111] px-4 py-1">
                       <p className="truncate text-sm font-medium text-white">
                         {game.displayName}

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FaEye, FaEyeSlash, FaRedoAlt } from "react-icons/fa";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
@@ -16,13 +16,9 @@ const Login = () => {
   const [formData, setFormData] = useState({
     userId: "",
     password: "",
-    verificationCode: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [captcha, setCaptcha] = useState(
-    Math.floor(1000 + Math.random() * 9000).toString(),
-  );
   const [loading, setLoading] = useState(false);
 
   const text = useMemo(
@@ -31,29 +27,22 @@ const Login = () => {
 
       userId: isBangla ? "ইউজার আইডি" : "User Id",
       password: isBangla ? "পাসওয়ার্ড" : "Password",
-      validationCode: isBangla ? "ভ্যালিডেশন কোড" : "Validation Code",
 
       login: isBangla ? "লগইন" : "Login",
       loading: isBangla ? "লোড হচ্ছে..." : "Loading...",
 
+      forgotPassword: isBangla ? "পাসওয়ার্ড ভুলে গেছেন?" : "Forgot password?",
       noAccount: isBangla ? "অ্যাকাউন্ট নেই?" : "Don't have an account?",
       register: isBangla ? "রেজিস্টার" : "Register",
 
       required: isBangla
-        ? "সব তথ্য পূরণ করুন"
-        : "Please fill all required fields",
-      mismatch: isBangla
-        ? "ভ্যালিডেশন কোড মিলছে না"
-        : "Validation code does not match",
+        ? "ইউজার আইডি এবং পাসওয়ার্ড দিন"
+        : "Please enter user id and password",
       success: isBangla ? "লগইন সফল হয়েছে" : "Affiliate login successful",
       failed: isBangla ? "লগইন ব্যর্থ হয়েছে" : "Affiliate login failed",
     }),
     [isBangla],
   );
-
-  const refreshCaptcha = () => {
-    setCaptcha(Math.floor(1000 + Math.random() * 9000).toString());
-  };
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -64,14 +53,10 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const { userId, password, verificationCode } = formData;
+      const { userId, password } = formData;
 
-      if (!userId || !password || !verificationCode) {
+      if (!userId || !password) {
         return toast.error(text.required);
-      }
-
-      if (verificationCode !== captcha) {
-        return toast.error(text.mismatch);
       }
 
       setLoading(true);
@@ -106,15 +91,12 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md mx-auto"
       >
-        {/* Header */}
         <div className="mb-6 text-center">
           <h2 className="text-2xl font-bold text-green-400">{text.title}</h2>
         </div>
 
-        {/* Form */}
         <div className="rounded-2xl border border-green-700/40 bg-gradient-to-b from-black via-green-950/20 to-black p-5 shadow-lg">
           <div className="space-y-4">
-            {/* User ID */}
             <div>
               <label className="block text-sm mb-1 text-green-300">
                 {text.userId}
@@ -128,7 +110,6 @@ const Login = () => {
               />
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm mb-1 text-green-300">
                 {text.password}
@@ -143,52 +124,33 @@ const Login = () => {
                   className="w-full p-3 rounded-lg bg-black border border-green-700/40 outline-none pr-10"
                 />
                 <button
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-green-400"
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-            </div>
 
-            {/* Captcha */}
-            <div>
-              <label className="block text-sm mb-1 text-green-300">
-                {text.validationCode}
-              </label>
-
-              <div className="flex gap-1 md:gap-2">
-                <input
-                  name="verificationCode"
-                  value={formData.verificationCode}
-                  onChange={handleChange}
-                  placeholder={text.validationCode}
-                  className="flex-1 p-3 rounded-lg bg-black border border-green-700/40 w-32 md:w-auto"
-                />
-
-                <div className="bg-white text-black px-2 md:px-4 flex items-center font-bold rounded">
-                  {captcha}
-                </div>
-
-                <button
-                  onClick={refreshCaptcha}
-                  className="cursor-pointer bg-green-500 text-black px-3 rounded"
+              <div className="mt-2 text-right">
+                <Link
+                  to="/forget-password"
+                  className="text-sm text-green-400 underline cursor-pointer"
                 >
-                  <FaRedoAlt />
-                </button>
+                  {text.forgotPassword}
+                </Link>
               </div>
             </div>
 
-            {/* Login Button */}
             <button
+              type="button"
               onClick={handleLogin}
               disabled={loading}
-              className="w-full cursor-pointer bg-green-500 text-black py-3 rounded-lg font-semibold"
+              className="w-full cursor-pointer bg-green-500 text-black py-3 rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? text.loading : text.login}
             </button>
 
-            {/* Register */}
             <p className="text-center text-sm">
               {text.noAccount}{" "}
               <Link

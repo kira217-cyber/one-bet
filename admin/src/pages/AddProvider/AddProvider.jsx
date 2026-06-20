@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
 import {
   FaSave,
@@ -10,11 +9,10 @@ import {
   FaImage,
   FaServer,
   FaHome,
+  FaSync,
+  FaSearch,
 } from "react-icons/fa";
 import { api } from "../../api/axios";
-
-const ORACLE_PROVIDER_API = "https://api.oraclegames.live/api/providers";
-const ORACLE_PROVIDER_KEY = import.meta.env.VITE_ORACLE_TOKEN;
 
 const initialForm = {
   categoryId: "",
@@ -33,6 +31,8 @@ const AddProvider = () => {
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [oracleLoading, setOracleLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
 
   const [iconPreview, setIconPreview] = useState("");
@@ -43,6 +43,9 @@ const AddProvider = () => {
   const [oldImageUrl, setOldImageUrl] = useState("");
   const [removeOldImage, setRemoveOldImage] = useState(false);
 
+  const [oracleSearch, setOracleSearch] = useState("");
+  const [savedSearch, setSavedSearch] = useState("");
+
   const [deleteModal, setDeleteModal] = useState({
     open: false,
     id: null,
@@ -50,6 +53,44 @@ const AddProvider = () => {
   });
 
   const isEdit = useMemo(() => !!editId, [editId]);
+
+  const cleanText = (value = "") => String(value || "").trim();
+  const cleanProviderCode = (value = "") => cleanText(value).toUpperCase();
+
+  const normalizeOracleProviders = (payload) => {
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.providers)
+          ? payload.providers
+          : [];
+
+    return list
+      .filter(
+        (item) =>
+          item?.providerCode ||
+          item?.providerId ||
+          item?.code ||
+          item?.providerName ||
+          item?.name,
+      )
+      .map((item) => {
+        const code = cleanProviderCode(
+          item.providerCode || item.providerId || item.code,
+        );
+
+        return {
+          ...item,
+          providerCode: code,
+          providerId: code,
+          providerName:
+            cleanText(item.providerName || item.name) || code || "Unknown",
+          image: item.image || item.providerIcon || item.providerImage || "",
+        };
+      })
+      .filter((item) => item.providerCode);
+  };
 
   const loadCategories = async () => {
     try {
@@ -64,22 +105,21 @@ const AddProvider = () => {
 
   const loadOracleProviders = async () => {
     try {
-      const res = await axios.get(ORACLE_PROVIDER_API, {
-        headers: {
-          "x-api-key": ORACLE_PROVIDER_KEY,
-        },
-      });
-
-      setOracleProviders(res?.data?.data || []);
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error?.response?.data?.message || "Failed to load providers from API",
+      setOracleLoading(true);
+      const res = await api.get("/api/game-providers/oracle/list");
+      setOracleProviders(
+        normalizeOracleProviders(res?.data?.data || res?.data),
       );
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to load Oracle providers",
+      );
+    } finally {
+      setOracleLoading(false);
     }
   };
 
-  const loadSavedProviders = async (categoryId) => {
+  const loadSavedProviders = async (categoryId = form.categoryId) => {
     try {
       if (!categoryId) {
         setSavedProviders([]);
@@ -87,7 +127,15 @@ const AddProvider = () => {
       }
 
       setListLoading(true);
-      const res = await api.get(`/api/game-providers?categoryId=${categoryId}`);
+
+      const res = await api.get("/api/game-providers", {
+        params: {
+          categoryId,
+          search: savedSearch,
+          limit: 200,
+        },
+      });
+
       setSavedProviders(res?.data?.data || []);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load providers");
@@ -107,43 +155,79 @@ const AddProvider = () => {
     } else {
       setSavedProviders([]);
     }
-  }, [form.categoryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.categoryId, savedSearch]);
 
   useEffect(() => {
     if (form.providerIcon instanceof File) {
       const url = URL.createObjectURL(form.providerIcon);
       setIconPreview(url);
-
       return () => URL.revokeObjectURL(url);
     }
 
     if (oldIconUrl && !removeOldIcon) {
       setIconPreview(oldIconUrl);
-    } else {
-      setIconPreview("");
+      return;
     }
-  }, [form.providerIcon, oldIconUrl, removeOldIcon]);
+
+    const selected = oracleProviders.find(
+      (item) => item.providerCode === form.providerId,
+    );
+
+    if (!isEdit && selected?.image) {
+      setIconPreview(selected.image);
+      return;
+    }
+
+    setIconPreview("");
+  }, [
+    form.providerIcon,
+    form.providerId,
+    oldIconUrl,
+    removeOldIcon,
+    oracleProviders,
+    isEdit,
+  ]);
 
   useEffect(() => {
     if (form.providerImage instanceof File) {
       const url = URL.createObjectURL(form.providerImage);
       setImagePreview(url);
-
       return () => URL.revokeObjectURL(url);
     }
 
     if (oldImageUrl && !removeOldImage) {
       setImagePreview(oldImageUrl);
-    } else {
-      setImagePreview("");
+      return;
     }
-  }, [form.providerImage, oldImageUrl, removeOldImage]);
+
+    const selected = oracleProviders.find(
+      (item) => item.providerCode === form.providerId,
+    );
+
+    if (!isEdit && selected?.image) {
+      setImagePreview(selected.image);
+      return;
+    }
+
+    setImagePreview("");
+  }, [
+    form.providerImage,
+    form.providerId,
+    oldImageUrl,
+    removeOldImage,
+    oracleProviders,
+    isEdit,
+  ]);
 
   const getProviderName = (providerCode) => {
     const found = oracleProviders.find(
-      (item) => String(item.providerCode) === String(providerCode),
+      (item) =>
+        String(item.providerCode) === String(providerCode) ||
+        String(item.providerId) === String(providerCode),
     );
-    return found?.providerName || "Unknown Provider";
+
+    return found?.providerName || providerCode || "Unknown Provider";
   };
 
   const selectedCategoryName = useMemo(() => {
@@ -154,6 +238,21 @@ const AddProvider = () => {
   const selectedProviderName = useMemo(() => {
     return getProviderName(form.providerId);
   }, [form.providerId, oracleProviders]);
+
+  const filteredOracleProviders = useMemo(() => {
+    const q = oracleSearch.trim().toLowerCase();
+
+    if (!q) return [];
+
+    return oracleProviders
+      .filter((provider) => {
+        const code = String(provider.providerCode || "").toLowerCase();
+        const name = String(provider.providerName || "").toLowerCase();
+
+        return code.includes(q) || name.includes(q);
+      })
+      .slice(0, 30);
+  }, [oracleProviders, oracleSearch]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -169,10 +268,18 @@ const AddProvider = () => {
   };
 
   const handleProviderSelect = (providerCode) => {
+    const code = cleanProviderCode(providerCode);
+
     setForm((prev) => ({
       ...prev,
-      providerId: providerCode,
+      providerId: code,
     }));
+
+    const selected = oracleProviders.find((item) => item.providerCode === code);
+
+    if (selected) {
+      setOracleSearch(`${selected.providerName} (${selected.providerCode})`);
+    }
   };
 
   const handleIconChange = (e) => {
@@ -229,9 +336,10 @@ const AddProvider = () => {
 
   const startEdit = (provider) => {
     setEditId(provider._id);
+
     setForm({
       categoryId: provider?.categoryId?._id || provider?.categoryId || "",
-      providerId: provider?.providerId || "",
+      providerId: provider?.providerId || provider?.providerCode || "",
       providerIcon: null,
       providerImage: null,
       isHome: provider?.isHome === true,
@@ -244,10 +352,57 @@ const AddProvider = () => {
     setOldImageUrl(provider?.providerImageUrl || "");
     setRemoveOldImage(false);
 
+    setOracleSearch("");
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+  };
+
+  const handleSyncSelectedOracle = async () => {
+    if (!form.categoryId) {
+      return toast.error("Please select a category first");
+    }
+
+    if (!form.providerId) {
+      return toast.error("Please select a provider first");
+    }
+
+    const selected = oracleProviders.find(
+      (item) => item.providerCode === form.providerId,
+    );
+
+    try {
+      setSyncLoading(true);
+
+      const res = await api.post("/api/game-providers/oracle/sync", {
+        categoryId: form.categoryId,
+        providers: [
+          {
+            providerId: form.providerId,
+            providerCode: form.providerId,
+            providerName: selected?.providerName || form.providerId,
+            image: selected?.image || "",
+          },
+        ],
+      });
+
+      toast.success(res?.data?.message || "Provider synced successfully");
+
+      const selectedCategory = form.categoryId;
+      resetForm();
+      setForm((prev) => ({
+        ...prev,
+        categoryId: selectedCategory,
+      }));
+      setOracleSearch("");
+      loadSavedProviders(selectedCategory);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Provider sync failed");
+    } finally {
+      setSyncLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -266,7 +421,7 @@ const AddProvider = () => {
 
       const fd = new FormData();
       fd.append("categoryId", form.categoryId);
-      fd.append("providerId", form.providerId);
+      fd.append("providerId", cleanProviderCode(form.providerId));
       fd.append("status", form.status);
       fd.append("isHome", form.isHome ? "true" : "false");
 
@@ -301,6 +456,7 @@ const AddProvider = () => {
         ...prev,
         categoryId: selectedCategory,
       }));
+      setOracleSearch("");
       loadSavedProviders(selectedCategory);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Operation failed");
@@ -313,7 +469,7 @@ const AddProvider = () => {
     setDeleteModal({
       open: true,
       id: provider._id,
-      providerId: provider.providerId,
+      providerId: provider.providerId || provider.providerCode,
     });
   };
 
@@ -328,13 +484,21 @@ const AddProvider = () => {
   const confirmDelete = async () => {
     try {
       const res = await api.delete(`/api/game-providers/${deleteModal.id}`);
-      toast.success(res?.data?.message || "Provider deleted successfully");
+
+      const deletedGames = res?.data?.data?.deletedGames;
+
+      toast.success(
+        deletedGames !== undefined
+          ? `${res?.data?.message || "Provider deleted successfully"} | Deleted games: ${deletedGames}`
+          : res?.data?.message || "Provider deleted successfully",
+      );
 
       if (editId === deleteModal.id) {
         resetForm();
       }
 
       closeDeleteModal();
+
       if (form.categoryId) {
         loadSavedProviders(form.categoryId);
       }
@@ -349,7 +513,6 @@ const AddProvider = () => {
     <div className="min-h-full text-white">
       <div className="max-w-7xl mx-auto">
         <div className="rounded-3xl border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black shadow-2xl overflow-hidden">
-          {/* Header */}
           <div className="border-b border-green-700/40 bg-gradient-to-r from-green-700/20 via-emerald-600/10 to-green-700/20 px-6 py-5">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/40">
@@ -367,13 +530,11 @@ const AddProvider = () => {
             </div>
           </div>
 
-          {/* FORM */}
           <div className="p-4 md:p-6 lg:p-8">
             <form
               onSubmit={handleSubmit}
               className="grid grid-cols-1 xl:grid-cols-3 gap-6"
             >
-              {/* Left */}
               <div className="xl:col-span-2 space-y-5">
                 <div>
                   <label className="block mb-2 text-sm font-semibold text-green-200">
@@ -404,6 +565,86 @@ const AddProvider = () => {
                         {selectedCategoryName}
                       </span>
                     </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="block text-sm font-semibold text-green-200">
+                      Search Oracle Provider
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={loadOracleProviders}
+                      disabled={oracleLoading}
+                      className="cursor-pointer inline-flex items-center gap-2 rounded-2xl border border-green-700/40 bg-black/40 px-4 py-2 text-xs font-semibold text-green-200 hover:bg-green-950/20 transition-all disabled:opacity-60"
+                    >
+                      <FaSync className={oracleLoading ? "animate-spin" : ""} />
+                      {oracleLoading ? "Loading..." : "Refresh Oracle"}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-2xl border border-green-700/40 bg-black/60 px-4 py-3">
+                    <FaSearch className="text-green-300" />
+                    <input
+                      value={oracleSearch}
+                      onChange={(e) => setOracleSearch(e.target.value)}
+                      placeholder="Search provider name or code..."
+                      className="w-full bg-transparent text-white outline-none placeholder:text-green-200/50"
+                    />
+                  </div>
+
+                  {oracleSearch.trim() && (
+                    <div className="mt-2 max-h-72 overflow-y-auto rounded-2xl border border-green-700/40 bg-black/80 p-2 shadow-2xl">
+                      {filteredOracleProviders.length === 0 ? (
+                        <div className="rounded-xl px-4 py-4 text-center text-sm text-green-200/70">
+                          No provider found
+                        </div>
+                      ) : (
+                        filteredOracleProviders.map((provider) => (
+                          <button
+                            key={provider._id || provider.providerCode}
+                            type="button"
+                            onClick={() =>
+                              handleProviderSelect(provider.providerCode)
+                            }
+                            className={`cursor-pointer mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all hover:bg-green-950/30 ${
+                              form.providerId === provider.providerCode
+                                ? "border border-green-500/40 bg-green-500/10"
+                                : "border border-transparent"
+                            }`}
+                          >
+                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-green-700/40 bg-[#003F2C] flex items-center justify-center">
+                              {provider.image ? (
+                                <img
+                                  src={provider.image}
+                                  alt={provider.providerName}
+                                  className="h-full w-full object-contain p-1"
+                                />
+                              ) : (
+                                <FaImage className="text-xl text-green-300/70" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-bold text-yellow-400">
+                                {provider.providerName}
+                              </p>
+                              <p className="mt-1 truncate text-xs font-mono text-green-200/80">
+                                {provider.providerCode}
+                              </p>
+                            </div>
+
+                            {form.providerId === provider.providerCode && (
+                              <span className="rounded-full border border-green-500/30 bg-green-500/15 px-3 py-1 text-xs font-semibold text-green-300">
+                                Selected
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -541,6 +782,18 @@ const AddProvider = () => {
                         : "Add Provider"}
                   </button>
 
+                  {!isEdit && (
+                    <button
+                      type="button"
+                      onClick={handleSyncSelectedOracle}
+                      disabled={syncLoading}
+                      className="cursor-pointer inline-flex items-center gap-2 rounded-2xl border border-green-700/40 bg-black/40 px-6 py-3 font-semibold text-green-200 hover:bg-green-950/20 transition-all disabled:opacity-60"
+                    >
+                      <FaSync className={syncLoading ? "animate-spin" : ""} />
+                      {syncLoading ? "Syncing..." : "Sync Selected Oracle"}
+                    </button>
+                  )}
+
                   {(isEdit || iconPreview || imagePreview) && (
                     <button
                       type="button"
@@ -574,7 +827,6 @@ const AddProvider = () => {
                 </div>
               </div>
 
-              {/* Right Preview */}
               <div className="xl:col-span-1">
                 <div className="sticky top-6 rounded-3xl border border-green-700/40 bg-black/40 p-5">
                   <h3 className="text-lg font-bold text-white mb-4">
@@ -650,26 +902,39 @@ const AddProvider = () => {
             </form>
           </div>
 
-          {/* List */}
           <div className="border-t border-green-700/40 p-4 md:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-              <h2 className="text-xl md:text-2xl font-bold">
-                Saved Providers
+            <div className="flex flex-col gap-4 mb-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <h2 className="text-xl md:text-2xl font-bold">
+                  Saved Providers
+                  {form.categoryId && (
+                    <span className="text-green-300/80 ml-2">
+                      ({selectedCategoryName})
+                    </span>
+                  )}
+                </h2>
+
                 {form.categoryId && (
-                  <span className="text-green-300/80 ml-2">
-                    ({selectedCategoryName})
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => loadSavedProviders(form.categoryId)}
+                    className="cursor-pointer rounded-2xl border border-green-700/40 bg-black/40 px-5 py-2.5 text-sm font-semibold text-green-200 hover:bg-green-950/20 transition-all"
+                  >
+                    Refresh List
+                  </button>
                 )}
-              </h2>
+              </div>
 
               {form.categoryId && (
-                <button
-                  type="button"
-                  onClick={() => loadSavedProviders(form.categoryId)}
-                  className="cursor-pointer rounded-2xl border border-green-700/40 bg-black/40 px-5 py-2.5 text-sm font-semibold text-green-200 hover:bg-green-950/20 transition-all"
-                >
-                  Refresh List
-                </button>
+                <div className="flex items-center gap-3 rounded-2xl border border-green-700/40 bg-black/60 px-4 py-3">
+                  <FaSearch className="text-green-300" />
+                  <input
+                    value={savedSearch}
+                    onChange={(e) => setSavedSearch(e.target.value)}
+                    placeholder="Search saved provider code..."
+                    className="w-full bg-transparent text-white outline-none placeholder:text-green-200/50"
+                  />
+                </div>
               )}
             </div>
 
@@ -719,10 +984,13 @@ const AddProvider = () => {
 
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-bold text-yellow-400 truncate">
-                          {getProviderName(provider.providerId)}
+                          {getProviderName(
+                            provider.providerId || provider.providerCode,
+                          )}
                         </h3>
+
                         <p className="text-sm text-green-200/80 mt-1 truncate font-mono">
-                          {provider.providerId}
+                          {provider.providerId || provider.providerCode}
                         </p>
 
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -782,7 +1050,6 @@ const AddProvider = () => {
         </div>
       </div>
 
-      {/* Delete Modal */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl border border-red-500/30 bg-gradient-to-br from-black via-red-950/10 to-black p-6 shadow-2xl">
@@ -797,6 +1064,7 @@ const AddProvider = () => {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <button
+                type="button"
                 onClick={confirmDelete}
                 className="cursor-pointer inline-flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-500 transition-all"
               >
@@ -805,6 +1073,7 @@ const AddProvider = () => {
               </button>
 
               <button
+                type="button"
                 onClick={closeDeleteModal}
                 className="cursor-pointer inline-flex items-center gap-2 rounded-2xl border border-green-700/40 bg-black/50 px-5 py-3 font-semibold text-white hover:bg-green-950/20 transition-all"
               >

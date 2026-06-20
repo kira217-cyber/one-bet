@@ -1,19 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { FaImage } from "react-icons/fa";
 import { api } from "../../api/axios";
 import { useLanguage } from "../../context/LanguageProvider";
-
-const ORACLE_PROVIDER_API = "https://api.oraclegames.live/api/providers";
-const ORACLE_PROVIDER_KEY = import.meta.env.VITE_ORACLE_TOKEN;
 
 const Provider = () => {
   const navigate = useNavigate();
   const { isBangla } = useLanguage();
 
   const [providers, setProviders] = useState([]);
-  const [oracleProviders, setOracleProviders] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,11 +16,13 @@ const Provider = () => {
       try {
         setLoading(true);
 
-        const res = await api.get(
-          "/api/game-providers?isHome=true&status=active",
-        );
+        const res = await api.get("/api/client-games/providers", {
+          params: {
+            isHome: "true",
+          },
+        });
 
-        setProviders(res?.data?.data || []);
+        setProviders(Array.isArray(res?.data?.data) ? res.data.data : []);
       } catch (error) {
         console.error("Failed to load home providers:", error);
         setProviders([]);
@@ -37,42 +34,24 @@ const Provider = () => {
     loadHomeProviders();
   }, []);
 
-  useEffect(() => {
-    const loadOracleProviders = async () => {
-      try {
-        const res = await axios.get(ORACLE_PROVIDER_API, {
-          headers: {
-            "x-api-key": ORACLE_PROVIDER_KEY,
-          },
-        });
+  const getProviderName = (provider) => {
+    return (
+      provider?.providerName ||
+      provider?.providerTitle ||
+      provider?.displayName ||
+      provider?.providerId ||
+      ""
+    );
+  };
 
-        setOracleProviders(res?.data?.data || []);
-      } catch (error) {
-        console.error("Failed to load oracle providers:", error);
-        setOracleProviders([]);
-      }
-    };
-
-    loadOracleProviders();
-  }, []);
-
-  const providerNameMap = useMemo(() => {
-    const map = new Map();
-
-    for (const item of oracleProviders) {
-      if (item?.providerCode) {
-        map.set(
-          String(item.providerCode),
-          item?.providerName || item?.providerCode,
-        );
-      }
-    }
-
-    return map;
-  }, [oracleProviders]);
-
-  const getProviderName = (providerId) => {
-    return providerNameMap.get(String(providerId)) || providerId || "";
+  const getProviderImage = (provider) => {
+    return (
+      provider?.providerImageUrl ||
+      provider?.providerImage ||
+      provider?.providerIconUrl ||
+      provider?.providerIcon ||
+      ""
+    );
   };
 
   const handleProviderClick = (provider) => {
@@ -152,8 +131,8 @@ const Provider = () => {
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
             {providers.map((provider) => {
-              const providerName = getProviderName(provider?.providerId);
-              const providerImage = provider?.providerImageUrl;
+              const providerName = getProviderName(provider);
+              const providerImage = getProviderImage(provider);
 
               return (
                 <button
@@ -168,6 +147,7 @@ const Provider = () => {
                         src={providerImage}
                         alt={providerName}
                         className="h-full w-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[#0b8d63]">

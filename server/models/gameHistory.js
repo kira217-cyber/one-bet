@@ -1,7 +1,16 @@
 import mongoose from "mongoose";
 
-const gameHistorySchema = new mongoose.Schema(
+const { Schema } = mongoose;
+
+const gameHistorySchema = new Schema(
   {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     userId: {
       type: String,
       required: true,
@@ -9,31 +18,62 @@ const gameHistorySchema = new mongoose.Schema(
       index: true,
     },
 
-    provider_code: {
-      type: String,
-      required: true,
-      uppercase: true,
-      trim: true,
-      index: true,
-    },
-
-    game_code: {
+    userGamePlayName: {
       type: String,
       required: true,
       trim: true,
       index: true,
     },
 
-    bet_type: {
+    member_account: {
       type: String,
-      enum: ["BET", "SETTLE", "CANCEL", "REFUND", "BONUS", "PROMO"],
       required: true,
-      uppercase: true,
       trim: true,
       index: true,
     },
 
-    amount: {
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    currency: {
+      type: String,
+      default: "BDT",
+      trim: true,
+    },
+
+    userRole: {
+      type: String,
+      default: "user",
+      index: true,
+    },
+
+    game_uid: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+
+    game_round: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+      index: true,
+    },
+
+    serial_number: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+      index: true,
+    },
+
+    bet_amount: {
       type: Number,
       required: true,
       min: 0,
@@ -41,82 +81,54 @@ const gameHistorySchema = new mongoose.Schema(
 
     win_amount: {
       type: Number,
-      default: 0,
+      required: true,
       min: 0,
+    },
+
+    net_amount: {
+      type: Number,
+      required: true,
+    },
+
+    resultType: {
+      type: String,
+      enum: ["win", "loss", "push"],
+      required: true,
+      index: true,
+    },
+
+    balance_before: {
+      type: Number,
+      required: true,
     },
 
     balance_after: {
       type: Number,
-      default: 0,
+      required: true,
     },
 
-    transaction_id: {
-      type: String,
-      trim: true,
-      default: null,
-      index: true, // ✅ searchable, but NOT unique
-    },
-
-    round_id: {
-      type: String,
-      trim: true,
-      default: null,
-      sparse: true,
-    },
-
-    verification_key: {
-      type: String,
-      trim: true,
-      default: null,
-      unique: true, // ✅ always unique
-      sparse: true,
-      index: true,
-    },
-
-    times: {
-      type: String,
-      trim: true,
+    affiliateInfo: {
+      type: Schema.Types.Mixed,
       default: null,
     },
 
-    status: {
+    oracleTimestamp: {
       type: String,
-      enum: [
-        "pending",
-        "bet",
-        "settled",
-        "won",
-        "lost",
-        "push",
-        "cancelled",
-        "refunded",
-        "error",
-        "void",
-      ],
-      default: "pending",
-      index: true,
+      default: "",
+      trim: true,
     },
 
-    bet_details: {
-      type: mongoose.Schema.Types.Mixed,
+    rawPayload: {
+      type: Schema.Types.Mixed,
       default: {},
     },
-
-    flagged: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
-gameHistorySchema.index({ userId: 1, createdAt: -1 });
-gameHistorySchema.index({ provider_code: 1, game_code: 1 });
-gameHistorySchema.index({ status: 1, createdAt: -1 });
+gameHistorySchema.index({ user: 1, createdAt: -1 });
+gameHistorySchema.index({ user: 1, game_uid: 1, createdAt: -1 });
+gameHistorySchema.index({ resultType: 1, createdAt: -1 });
+gameHistorySchema.index({ userGamePlayName: 1, createdAt: -1 });
 
-const GameHistory = mongoose.model("GameHistory", gameHistorySchema);
-
-export default GameHistory;
+export default mongoose.model("GameHistory", gameHistorySchema);

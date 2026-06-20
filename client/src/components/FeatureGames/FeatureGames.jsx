@@ -15,7 +15,7 @@ import {
   selectUser,
 } from "../../features/auth/authSelectors";
 
-import { useLanguage } from "../../Context/LanguageProvider";
+import { useLanguage } from "../../context/LanguageProvider";
 
 const FeatureGames = () => {
   const [games, setGames] = useState([]);
@@ -30,13 +30,16 @@ const FeatureGames = () => {
   const reduxUser = useSelector(selectUser);
 
   const token =
-    localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("user_token") ||
+    "";
 
   const loadFeaturedGames = async () => {
     try {
       setLoading(true);
 
-      const { data } = await api.get("/api/featured-games");
+      const { data } = await api.get("/api/client-games/featured-games");
 
       if (!data?.success) {
         throw new Error(data?.message || "Failed to load featured games");
@@ -60,20 +63,30 @@ const FeatureGames = () => {
     loadFeaturedGames();
   }, []);
 
+  const getBannerImage = (item) => {
+    return item?.bannerImageUrl || item?.bannerImage || "";
+  };
+
+  const getGameId = (item) => {
+    return item?.game?.gameId || item?.gameId || "";
+  };
+
   const handleClick = async (item) => {
-    if (!item?.gameId) {
-      toast.error("Game ID not found");
+    const gameId = getGameId(item);
+
+    if (!gameId) {
+      toast.error(isBangla ? "গেম আইডি পাওয়া যায়নি" : "Game ID not found");
       return;
     }
 
     if (!isAuthenticated || !token) {
-      toast.error("Please login first");
+      toast.error(isBangla ? "প্রথমে লগইন করুন" : "Please login first");
       navigate("/login");
       return;
     }
 
     try {
-      setCheckingId(String(item._id || item.gameId));
+      setCheckingId(String(item._id || gameId));
 
       let currentUser = reduxUser || null;
 
@@ -92,18 +105,22 @@ const FeatureGames = () => {
       const isActive = currentUser?.isActive === true;
 
       if (!currentUser) {
-        toast.error("User profile not found");
+        toast.error(isBangla ? "ইউজার পাওয়া যায়নি" : "User profile not found");
         navigate("/login");
         return;
       }
 
       if (!isActive) {
-        toast.error("Your account is not active");
+        toast.error(
+          isBangla
+            ? "আপনার একাউন্ট অ্যাক্টিভ নয়"
+            : "Your account is not active",
+        );
         navigate("/");
         return;
       }
 
-      navigate(`/featured-games/${item.gameId}`);
+      navigate(`/play-game/${gameId}`);
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
@@ -117,7 +134,6 @@ const FeatureGames = () => {
 
   return (
     <div className="bg-[#005C40] px-3 py-4">
-      {/* Header */}
       <div className="mb-3 flex items-center">
         <div className="mr-2 h-5 w-1 bg-yellow-400"></div>
 
@@ -126,7 +142,6 @@ const FeatureGames = () => {
         </h2>
       </div>
 
-      {/* Loading */}
       {loading ? (
         <div className="h-[180px] animate-pulse overflow-hidden rounded-sm bg-[#0b6b4b]" />
       ) : games.length ? (
@@ -134,7 +149,7 @@ const FeatureGames = () => {
           modules={[Autoplay]}
           spaceBetween={12}
           slidesPerView={1.1}
-          loop={true}
+          loop={games.length > 1}
           speed={900}
           autoplay={{
             delay: 2500,
@@ -148,14 +163,12 @@ const FeatureGames = () => {
           }}
         >
           {games.map((item) => {
-            const imageUrl = item?.bannerImage
-              ? `${import.meta.env.VITE_APP_URL}${item.bannerImage}`
-              : "";
-
-            const isChecking = checkingId === String(item._id || item.gameId);
+            const imageUrl = getBannerImage(item);
+            const gameId = getGameId(item);
+            const isChecking = checkingId === String(item._id || gameId);
 
             return (
-              <SwiperSlide key={item._id}>
+              <SwiperSlide key={item._id || gameId}>
                 <button
                   type="button"
                   onClick={() => handleClick(item)}
@@ -165,19 +178,19 @@ const FeatureGames = () => {
                   {imageUrl ? (
                     <img
                       src={imageUrl}
-                      alt="featured-game"
+                      alt={item?.game?.displayName || "featured-game"}
                       className="h-[180px] w-full object-cover"
                       loading="lazy"
                     />
                   ) : (
                     <div className="flex h-[180px] w-full items-center justify-center bg-[#0b6b4b] text-white/70">
-                      No Image
+                      {isBangla ? "ইমেজ নেই" : "No Image"}
                     </div>
                   )}
 
                   {isChecking && (
                     <div className="bg-black/80 py-2 text-center text-xs text-white">
-                      Checking...
+                      {isBangla ? "চেক হচ্ছে..." : "Checking..."}
                     </div>
                   )}
                 </button>
@@ -187,7 +200,7 @@ const FeatureGames = () => {
         </Swiper>
       ) : (
         <div className="flex h-[180px] items-center justify-center overflow-hidden rounded-sm bg-[#0b6b4b] text-white/70">
-          No featured games found
+          {isBangla ? "কোনো ফিচারড গেম পাওয়া যায়নি" : "No featured games found"}
         </div>
       )}
     </div>

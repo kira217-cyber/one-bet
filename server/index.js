@@ -57,7 +57,8 @@ import weeklyBonusAdminRoutes from "./routes/weeklyBonusAdminRoutes.js";
 import weeklyBonusUserRoutes from "./routes/weeklyBonusUserRoutes.js";
 import userReferRedeemRoutes from "./routes/userReferRedeemRoutes.js";
 import adminReferRedeemRoutes from "./routes/adminReferRedeemRoutes.js";
-
+import affForgetPasswordRoutes from "./routes/affForgetPasswordRoutes.js";
+import clientGameRoutes from "./routes/clientGameRoutes.js";
 
 
 
@@ -143,6 +144,8 @@ app.use("/api/weekly-bonus/admin", weeklyBonusAdminRoutes);
 app.use("/api/weekly-bonus/user", weeklyBonusUserRoutes);
 app.use("/api/user/refer-redeem",authMiddleware, userReferRedeemRoutes);
 app.use("/api/admin/refer-redeem",  adminReferRedeemRoutes);
+app.use("/api/users/affiliate", affForgetPasswordRoutes);
+app.use("/api/client-games", clientGameRoutes);
 
 
 // ✅ port

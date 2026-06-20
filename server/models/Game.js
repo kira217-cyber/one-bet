@@ -16,7 +16,13 @@ const GameSchema = new mongoose.Schema(
       index: true,
     },
 
-    // oracle game._id
+    oracleImageType: {
+      type: String,
+      enum: ["thumbnail", "height", "original"],
+      default: "thumbnail",
+    },
+
+    // oracle game._id / game_uid
     gameId: {
       type: String,
       required: true,
@@ -49,5 +55,7 @@ const GameSchema = new mongoose.Schema(
 );
 
 GameSchema.index({ providerDbId: 1, gameId: 1 }, { unique: true });
+GameSchema.index({ categoryId: 1, status: 1 });
+GameSchema.index({ providerDbId: 1, status: 1 });
 
 export default mongoose.model("Game", GameSchema);

@@ -10,6 +10,7 @@ import sports from "../../assets/sports.png";
 const Categories = () => {
   const [dynamicCategories, setDynamicCategories] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const { language } = useLanguage();
 
@@ -21,10 +22,18 @@ const Categories = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await api.get("/api/game-categories");
-        setDynamicCategories(res?.data?.data || []);
+        setLoading(true);
+
+        const res = await api.get("/api/client-games/categories");
+
+        setDynamicCategories(
+          Array.isArray(res?.data?.data) ? res.data.data : [],
+        );
       } catch (error) {
         console.error("Failed to fetch game categories:", error);
+        setDynamicCategories([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -57,7 +66,7 @@ const Categories = () => {
       _id: item._id,
       name: item.categoryName,
       title: item.categoryTitle,
-      icon: item.iconImageUrl,
+      icon: item.iconImageUrl || item.iconUrl || item.iconImage || "",
       status: item.status,
       order: item.order,
       key: item._id,
@@ -68,14 +77,24 @@ const Categories = () => {
 
   const getText = (textObj) => {
     if (!textObj) return "";
+    if (typeof textObj === "string") return textObj;
+
     return language === "English"
-      ? textObj.en || textObj.bn
-      : textObj.bn || textObj.en;
+      ? textObj.en || textObj.bn || ""
+      : textObj.bn || textObj.en || "";
   };
 
   const activeCategory = categories[activeIndex];
 
+  useEffect(() => {
+    if (activeIndex > categories.length - 1) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, categories.length]);
+
   const handleMouseDown = (e) => {
+    if (!scrollRef.current) return;
+
     isDown.current = true;
     startX.current = e.pageX - scrollRef.current.offsetLeft;
     scrollLeft.current = scrollRef.current.scrollLeft;
@@ -90,10 +109,13 @@ const Categories = () => {
   };
 
   const handleMouseMove = (e) => {
-    if (!isDown.current) return;
+    if (!isDown.current || !scrollRef.current) return;
+
     e.preventDefault();
+
     const x = e.pageX - scrollRef.current.offsetLeft;
     const walk = (x - startX.current) * 1.5;
+
     scrollRef.current.scrollLeft = scrollLeft.current - walk;
   };
 
@@ -119,13 +141,22 @@ const Categories = () => {
               }`}
             >
               <div className="w-14 h-14 mb-1 bg-[#003F2C] rounded-full p-2 overflow-hidden flex items-center justify-center">
-                <img
-                  src={cat.icon}
-                  alt={getText(cat.name)}
-                  className={`w-full h-full object-contain ${
-                    isActive ? "opacity-100" : "opacity-60"
-                  }`}
-                />
+                {cat.icon ? (
+                  <img
+                    src={cat.icon}
+                    alt={getText(cat.name)}
+                    className={`w-full h-full object-contain ${
+                      isActive ? "opacity-100" : "opacity-60"
+                    }`}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full rounded-full bg-[#006c4a] ${
+                      isActive ? "opacity-100" : "opacity-60"
+                    }`}
+                  />
+                )}
               </div>
 
               <span className="text-md font-bold text-yellow-400 text-center leading-tight whitespace-nowrap">
@@ -142,6 +173,17 @@ const Categories = () => {
             </div>
           );
         })}
+
+        {loading &&
+          Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`category-loading-${index}`}
+              className="flex flex-col items-center justify-center min-w-[85px] py-4 px-2"
+            >
+              <div className="w-14 h-14 mb-1 bg-[#003F2C] rounded-full animate-pulse" />
+              <div className="h-4 w-14 bg-[#003F2C] rounded animate-pulse" />
+            </div>
+          ))}
       </div>
 
       <div>

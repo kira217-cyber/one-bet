@@ -28,6 +28,15 @@ const userSchema = new Schema(
       unique: true,
       index: true,
     },
+    
+    userGamePlayName: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true,
+      minlength: 10,
+      maxlength: 10,
+    },
 
     password: {
       type: String,

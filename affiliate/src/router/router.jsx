@@ -15,6 +15,7 @@ import WithdrawHistory from "../pages/WithdrawHistory/WithdrawHistory";
 import WithdrawHistoryDetails from "../pages/WithdrawHistoryDetails/WithdrawHistoryDetails";
 import CommissionStatus from "../pages/CommissionStatus/CommissionStatus";
 import TransferBalance from "../pages/TransferBalance/TransferBalance";
+import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 
 export const routes = createBrowserRouter([
   {
@@ -33,6 +34,10 @@ export const routes = createBrowserRouter([
       {
         path: "register",
         element: <Register />,
+      },
+      {
+        path: "forget-password",
+        element: <ForgetPassword />,
       },
     ],
   },

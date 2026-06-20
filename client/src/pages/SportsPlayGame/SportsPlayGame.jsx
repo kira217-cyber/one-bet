@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSelector } from "react-redux";
-import axios from "axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import {
@@ -11,7 +10,6 @@ import {
 import { api } from "../../api/axios";
 import { useLanguage } from "../../context/LanguageProvider";
 import Loading from "../../components/Loading/Loading";
-
 
 const fetchMyProfile = async () => {
   const { data } = await api.get("/api/users/me");
@@ -32,9 +30,13 @@ const SportsPlayGame = () => {
   const reduxUser = useSelector(selectUser);
 
   const token =
-    localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("user_token") ||
+    "";
 
   const [gameUrl, setGameUrl] = useState("");
+  const [alreadyRequested, setAlreadyRequested] = useState(false);
 
   const t = (bn, en) => (isBangla ? bn : en);
 
@@ -61,33 +63,51 @@ const SportsPlayGame = () => {
   });
 
   const realUser = profile || reduxUser || null;
-  const balance = useMemo(() => Number(realUser?.balance || 0), [realUser]);
-  const isActiveUser = realUser?.isActive === true;
 
-  const API_BASE =
-    import.meta.env.VITE_API_URL || import.meta.env.VITE_APP_URL || "";
+  const balance = useMemo(() => {
+    const value = Number(realUser?.balance || 0);
+    return Number.isFinite(value) ? value : 0;
+  }, [realUser]);
+
+  const isActiveUser = realUser?.isActive === true;
 
   const playMutation = useMutation({
     mutationFn: async () => {
-      const res = await axios.post(
-        `${API_BASE}/api/sports-play-game/playgame`,
-        { gameID: gameId },
+      const res = await api.post(
+        "/api/play-game/playgame",
+        {
+          gameID: gameId,
+          game_uid: gameId,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         },
       );
+
       return res.data;
     },
+
     onSuccess: (data) => {
-      if (data?.gameUrl) {
-        setGameUrl(data.gameUrl);
-      } else {
-        toast.error(t("গেম URL পাওয়া যায়নি", "No game URL received"));
-        navigate("/");
+      const url =
+        data?.gameUrl ||
+        data?.launch_url ||
+        data?.launchUrl ||
+        data?.url ||
+        data?.data?.gameUrl ||
+        data?.data?.launch_url ||
+        "";
+
+      if (url) {
+        setGameUrl(url);
+        return;
       }
+
+      toast.error(t("গেম URL পাওয়া যায়নি", "No game URL received"));
+      navigate("/");
     },
+
     onError: (error) => {
       toast.error(
         error?.response?.data?.message ||
@@ -127,12 +147,18 @@ const SportsPlayGame = () => {
       return;
     }
 
-    // ✅ balance 0 holeo sports game play hobe
-    if (!gameUrl && !playMutation.isPending) {
-      playMutation.mutate();
+    if (balance <= 0) {
+      toast.error(
+        t("ব্যালেন্স নেই, ডিপোজিট করুন", "No balance, please deposit"),
+      );
+      navigate("/");
+      return;
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!gameUrl && !alreadyRequested && !playMutation.isPending) {
+      setAlreadyRequested(true);
+      playMutation.mutate();
+    }
   }, [
     gameId,
     isAuthenticated,
@@ -143,19 +169,22 @@ const SportsPlayGame = () => {
     isActiveUser,
     balance,
     gameUrl,
+    alreadyRequested,
+    playMutation,
+    navigate,
+    t,
   ]);
 
   const isLoading = profileLoading || playMutation.isPending || !gameUrl;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black">
-      {/* ✅ Custom Loading */}
       <Loading
         open={isLoading}
-        text={t("স্পোর্টস গেম প্রস্তুত হচ্ছে...", "Preparing sports game...")}
+        text={t("গেম প্রস্তুত হচ্ছে...", "Preparing game...")}
       />
 
-      {!isLoading && (
+      {!isLoading && gameUrl && (
         <iframe
           src={gameUrl}
           title="Sports Game"
@@ -165,7 +194,7 @@ const SportsPlayGame = () => {
         />
       )}
 
-      {isLoading && (
+      {isLoading && profileError && (
         <button
           type="button"
           onClick={() => refetchProfile()}
