@@ -12,10 +12,13 @@ import {
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
 
-const money = (n) => {
+const money = (n, currency = "BDT") => {
+  const symbol = String(currency || "BDT").toUpperCase() === "USDT" ? "$" : "৳";
   const num = Number(n || 0);
-  if (Number.isNaN(num)) return "৳ 0.00";
-  return `৳ ${num.toLocaleString("en-US", {
+
+  if (Number.isNaN(num)) return `${symbol} 0.00`;
+
+  return `${symbol} ${num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -25,6 +28,7 @@ const formatDate = (date) => {
   if (!date) return "--";
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return "--";
+
   return d.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
@@ -37,27 +41,15 @@ const formatDate = (date) => {
 const getStatusClass = (status = "") => {
   const s = String(status).toLowerCase();
 
-  if (["won", "settled", "bet"].includes(s)) {
+  if (s === "win") {
     return "border border-emerald-500/30 bg-emerald-500/15 text-emerald-300";
   }
 
-  if (["lost", "error", "cancelled", "refunded", "void"].includes(s)) {
+  if (s === "loss") {
     return "border border-red-500/30 bg-red-500/15 text-red-300";
   }
 
   return "border border-amber-500/30 bg-amber-500/15 text-amber-300";
-};
-
-const getSearchText = (item) => {
-  return (
-    item?.transaction_id ||
-    item?.round_id ||
-    item?.verification_key ||
-    item?.game_code ||
-    item?.provider_code ||
-    item?._id ||
-    "N/A"
-  );
 };
 
 const BetHistory = () => {
@@ -99,7 +91,7 @@ const BetHistory = () => {
   }, [page, limit, filters]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["bet-history", queryParams],
+    queryKey: ["game-history", queryParams],
     queryFn: async () => {
       const res = await api.get(`/api/history/me/games?${queryParams}`);
       return res.data;
@@ -109,7 +101,7 @@ const BetHistory = () => {
     retry: 1,
   });
 
-  const rows = data?.data || [];
+  const rows = Array.isArray(data?.data) ? data.data : [];
   const meta = data?.meta || {};
   const totalPages = meta?.totalPages || 1;
 
@@ -142,7 +134,6 @@ const BetHistory = () => {
   return (
     <div className="w-full text-white">
       <div className="grid grid-cols-1 gap-4">
-        {/* Top Card */}
         <div className="border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-4 shadow-lg shadow-green-900/20 sm:p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 text-black shadow-lg shadow-green-500/30">
@@ -150,15 +141,14 @@ const BetHistory = () => {
             </div>
             <div>
               <h2 className="text-[20px] font-extrabold text-white">
-                Bet History
+                Game History
               </h2>
               <p className="text-[12px] text-white/60">
-                View all your bet transactions
+                View all your game history records
               </p>
             </div>
           </div>
 
-          {/* Filters */}
           <div className="mt-5 grid grid-cols-1 gap-3 ">
             <div>
               <label className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-white">
@@ -201,7 +191,7 @@ const BetHistory = () => {
             <div>
               <label className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-white">
                 <FaFilter className="text-emerald-300" />
-                Status
+                Result Type
               </label>
               <select
                 value={filters.status}
@@ -215,34 +205,16 @@ const BetHistory = () => {
                 className="h-[46px] w-full rounded-xl border border-green-700/40 bg-black/40 px-4 text-[14px] text-white outline-none transition focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
               >
                 <option value="all" className="bg-[#0a0a0a]">
-                  All Status
+                  All Result Type
                 </option>
-                <option value="pending" className="bg-[#0a0a0a]">
-                  Pending
+                <option value="win" className="bg-[#0a0a0a]">
+                  Win
                 </option>
-                <option value="bet" className="bg-[#0a0a0a]">
-                  Bet
+                <option value="loss" className="bg-[#0a0a0a]">
+                  Loss
                 </option>
-                <option value="settled" className="bg-[#0a0a0a]">
-                  Settled
-                </option>
-                <option value="won" className="bg-[#0a0a0a]">
-                  Won
-                </option>
-                <option value="lost" className="bg-[#0a0a0a]">
-                  Lost
-                </option>
-                <option value="cancelled" className="bg-[#0a0a0a]">
-                  Cancelled
-                </option>
-                <option value="refunded" className="bg-[#0a0a0a]">
-                  Refunded
-                </option>
-                <option value="void" className="bg-[#0a0a0a]">
-                  Void
-                </option>
-                <option value="error" className="bg-[#0a0a0a]">
-                  Error
+                <option value="push" className="bg-[#0a0a0a]">
+                  Push
                 </option>
               </select>
             </div>
@@ -260,7 +232,7 @@ const BetHistory = () => {
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder="Search transaction / round / game / provider..."
+                    placeholder="Search game uid / game round / serial number..."
                     className="h-[46px] w-full rounded-xl border border-green-700/40 bg-black/40 pl-10 pr-4 text-[14px] text-white outline-none transition placeholder:text-white/35 focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
                   />
                 </div>
@@ -297,10 +269,9 @@ const BetHistory = () => {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-hidden border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black shadow-lg shadow-green-900/20">
           <div className="overflow-x-scroll">
-            <table className="w-full min-w-[1400px] whitespace-nowrap">
+            <table className="w-full min-w-[1500px] whitespace-nowrap">
               <thead>
                 <tr className="border-b border-green-700/30 bg-white/[0.03] text-left">
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
@@ -310,31 +281,31 @@ const BetHistory = () => {
                     Date
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Provider
+                    Game UID
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Game Code
+                    Game Round
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Bet Type
+                    Serial Number
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Amount
+                    Bet Amount
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
                     Win Amount
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
+                    Net Amount
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-extrabold text-white">
+                    Balance Before
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-extrabold text-white">
                     Balance After
                   </th>
                   <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Transaction ID
-                  </th>
-                  <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Round ID
-                  </th>
-                  <th className="px-4 py-4 text-[13px] font-extrabold text-white">
-                    Status
+                    Result Type
                   </th>
                 </tr>
               </thead>
@@ -362,51 +333,57 @@ const BetHistory = () => {
                         {formatDate(item.createdAt)}
                       </td>
 
-                      <td className="px-4 py-4 text-[13px] font-bold uppercase text-white">
-                        {item.provider_code || "N/A"}
-                      </td>
-
-                      <td className="max-w-[160px] px-4 py-4 text-[12px] font-semibold text-white/80">
+                      <td className="max-w-[170px] px-4 py-4 text-[12px] font-semibold text-white/80">
                         <span className="line-clamp-2 break-all">
-                          {item.game_code || "N/A"}
+                          {item.game_uid || "N/A"}
                         </span>
                       </td>
 
-                      <td className="px-4 py-4 text-[13px] font-bold text-sky-300">
-                        {item.bet_type || "N/A"}
+                      <td className="max-w-[180px] px-4 py-4 text-[12px] font-semibold text-white/75">
+                        <span className="line-clamp-2 break-all">
+                          {item.game_round || "N/A"}
+                        </span>
+                      </td>
+
+                      <td className="max-w-[180px] px-4 py-4 text-[12px] font-semibold text-white/75">
+                        <span className="line-clamp-2 break-all">
+                          {item.serial_number || "N/A"}
+                        </span>
                       </td>
 
                       <td className="px-4 py-4 text-[13px] font-extrabold text-white">
-                        {money(item.amount)}
+                        {money(item.bet_amount, item.currency)}
                       </td>
 
                       <td className="px-4 py-4 text-[13px] font-semibold text-emerald-300">
-                        {money(item.win_amount)}
+                        {money(item.win_amount, item.currency)}
+                      </td>
+
+                      <td
+                        className={`px-4 py-4 text-[13px] font-extrabold ${
+                          Number(item.net_amount || 0) >= 0
+                            ? "text-emerald-300"
+                            : "text-red-300"
+                        }`}
+                      >
+                        {money(item.net_amount, item.currency)}
+                      </td>
+
+                      <td className="px-4 py-4 text-[13px] font-semibold text-white">
+                        {money(item.balance_before, item.currency)}
                       </td>
 
                       <td className="px-4 py-4 text-[13px] font-extrabold text-yellow-300">
-                        {money(item.balance_after)}
-                      </td>
-
-                      <td className="max-w-[180px] px-4 py-4 text-[12px] font-semibold text-white/75">
-                        <span className="line-clamp-2 break-all">
-                          {item.transaction_id || "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="max-w-[180px] px-4 py-4 text-[12px] font-semibold text-white/75">
-                        <span className="line-clamp-2 break-all">
-                          {item.round_id || "N/A"}
-                        </span>
+                        {money(item.balance_after, item.currency)}
                       </td>
 
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex rounded-full px-3 py-1 text-[12px] font-extrabold ${getStatusClass(
-                            item.status,
+                          className={`inline-flex rounded-full px-3 py-1 text-[12px] font-extrabold uppercase ${getStatusClass(
+                            item.resultType,
                           )}`}
                         >
-                          {item.status || "pending"}
+                          {item.resultType || "push"}
                         </span>
                       </td>
                     </tr>
@@ -415,7 +392,7 @@ const BetHistory = () => {
                   <tr>
                     <td colSpan={11} className="px-4 py-10 text-center">
                       <div className="text-[15px] font-bold text-white/70">
-                        No bet history found
+                        No game history found
                       </div>
                     </td>
                   </tr>
@@ -425,7 +402,6 @@ const BetHistory = () => {
           </div>
         </div>
 
-        {/* Pagination */}
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-green-700/40 bg-gradient-to-br from-black via-green-950/20 to-black p-4 shadow-lg shadow-green-900/20 sm:flex-row">
           <div className="text-[13px] font-semibold text-white/70">
             Total:{" "}

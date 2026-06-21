@@ -15,10 +15,11 @@ import { useParams } from "react-router";
 import { toast } from "react-toastify";
 import { api } from "../../api/axios";
 
-const money = (value) => {
+const money = (value, currency = "BDT") => {
+  const symbol = String(currency || "BDT").toUpperCase() === "USDT" ? "$" : "৳";
   const num = Number(value || 0);
 
-  return `৳ ${num.toLocaleString("en-US", {
+  return `${symbol} ${num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -27,16 +28,16 @@ const money = (value) => {
 const statusClass = (status) => {
   const s = String(status || "").toLowerCase();
 
-  if (["won", "settled"].includes(s)) {
+  if (s === "win") {
     return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
   }
 
-  if (["lost", "cancelled", "error"].includes(s)) {
+  if (s === "loss") {
     return "bg-red-500/15 text-red-300 border border-red-500/30";
   }
 
-  if (["pending"].includes(s)) {
-    return "bg-yellow-500/15 text-yellow-300 border border-yellow-500/30";
+  if (s === "push") {
+    return "bg-blue-500/15 text-blue-300 border border-blue-500/30";
   }
 
   return "bg-blue-500/15 text-blue-300 border border-blue-500/30";
@@ -70,9 +71,11 @@ const SingleUserGameHistory = () => {
     limit: 15,
   });
 
-  const totalBet = Number(summary?.totalLoss || 0);
+  const totalBet = Number(summary?.totalLoss || summary?.totalBet || 0);
   const totalWin = Number(summary?.totalWin || 0);
-  const profitLoss = totalWin - totalBet;
+  const totalNet =
+    Number(summary?.totalNet || 0) ||
+    history.reduce((sum, item) => sum + Number(item?.net_amount || 0), 0);
 
   const fetchHistory = async (isRefresh = false) => {
     try {
@@ -90,7 +93,7 @@ const SingleUserGameHistory = () => {
       });
 
       if (data?.success) {
-        setHistory(data?.history || []);
+        setHistory(Array.isArray(data?.history) ? data.history : []);
         setSummary(data?.summary || {});
         setPagination(
           data?.pagination || {
@@ -113,6 +116,7 @@ const SingleUserGameHistory = () => {
 
   useEffect(() => {
     fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, status]);
 
   const totalPages = useMemo(() => {
@@ -146,7 +150,8 @@ const SingleUserGameHistory = () => {
             </h2>
 
             <p className="text-sm text-green-200/70 mt-1">
-              View all game transactions, win/loss details and betting records
+              View all game history records, win/loss details and balance
+              changes
             </p>
           </div>
 
@@ -180,9 +185,9 @@ const SingleUserGameHistory = () => {
         />
 
         <SummaryCard
-          label="Profit / Loss"
-          value={money(profitLoss)}
-          valueClass={profitLoss >= 0 ? "text-emerald-300" : "text-red-300"}
+          label="Net Amount"
+          value={money(totalNet)}
+          valueClass={totalNet >= 0 ? "text-emerald-300" : "text-red-300"}
           icon={<FaCoins />}
           iconClass="bg-blue-500/15 text-blue-300"
         />
@@ -202,7 +207,7 @@ const SingleUserGameHistory = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search provider, game code, transaction id..."
+                placeholder="Search userGamePlayName, member account, game uid, game round, serial number..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 onKeyDown={(e) => {
@@ -230,17 +235,10 @@ const SingleUserGameHistory = () => {
               }}
               className={inputClass}
             >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="bet">Bet</option>
-              <option value="settled">Settled</option>
-              <option value="won">Won</option>
-              <option value="lost">Lost</option>
+              <option value="">All Result Type</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
               <option value="push">Push</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="refunded">Refunded</option>
-              <option value="error">Error</option>
-              <option value="void">Void</option>
             </select>
           </div>
 
@@ -258,32 +256,50 @@ const SingleUserGameHistory = () => {
 
       <div className={`${cardClass} overflow-hidden`}>
         <div className="hidden xl:block overflow-x-auto">
-          <table className="w-full min-w-[1300px]">
+          <table className="w-full min-w-[1700px]">
             <thead className="bg-green-900/20 border-b border-green-700/30">
               <tr className="text-left">
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Provider
+                  User
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Game
+                  User Game Play Name
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Bet Type
+                  Member Account
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Amount
+                  Game UID
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Win
+                  Game Round
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Balance
+                  Serial Number
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Transaction
+                  Bet Amount
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
-                  Status
+                  Win Amount
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Net Amount
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Result Type
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Balance Before
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Balance After
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Currency
+                </th>
+                <th className="px-4 py-4 text-sm font-semibold text-green-200">
+                  Oracle Time
                 </th>
                 <th className="px-4 py-4 text-sm font-semibold text-green-200">
                   Date
@@ -299,43 +315,74 @@ const SingleUserGameHistory = () => {
                     className="border-b border-green-900/20 hover:bg-green-900/10"
                   >
                     <td className="px-4 py-4 text-sm font-semibold text-white">
-                      {item?.provider_code || "—"}
+                      <div>{item?.userId || "—"}</div>
+                      <div className="text-xs text-green-200/60 mt-1">
+                        {item?.phone || "—"}
+                      </div>
                     </td>
 
-                    <td className="px-4 py-4 text-sm text-green-100">
-                      {item?.game_code || "—"}
+                    <td className="px-4 py-4 text-sm text-green-100 break-all">
+                      {item?.userGamePlayName || "—"}
                     </td>
 
-                    <td className="px-4 py-4">
-                      <span className="px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 text-xs font-bold border border-blue-500/30">
-                        {item?.bet_type || "—"}
-                      </span>
+                    <td className="px-4 py-4 text-sm text-green-100 break-all">
+                      {item?.member_account || "—"}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-white break-all">
+                      {item?.game_uid || "—"}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-green-100 break-all">
+                      {item?.game_round || "—"}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-green-100 break-all">
+                      {item?.serial_number || "—"}
                     </td>
 
                     <td className="px-4 py-4 text-sm font-semibold text-red-300">
-                      {money(item?.amount)}
+                      {money(item?.bet_amount, item?.currency)}
                     </td>
 
                     <td className="px-4 py-4 text-sm font-semibold text-emerald-300">
-                      {money(item?.win_amount)}
+                      {money(item?.win_amount, item?.currency)}
                     </td>
 
-                    <td className="px-4 py-4 text-sm text-yellow-300">
-                      {money(item?.balance_after)}
-                    </td>
-
-                    <td className="px-4 py-4 text-xs text-green-100 max-w-[180px] truncate">
-                      {item?.transaction_id || "—"}
+                    <td
+                      className={`px-4 py-4 text-sm font-semibold ${
+                        Number(item?.net_amount || 0) >= 0
+                          ? "text-emerald-300"
+                          : "text-red-300"
+                      }`}
+                    >
+                      {money(item?.net_amount, item?.currency)}
                     </td>
 
                     <td className="px-4 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${statusClass(
-                          item?.status,
+                          item?.resultType,
                         )}`}
                       >
-                        {item?.status || "—"}
+                        {item?.resultType || "—"}
                       </span>
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-white">
+                      {money(item?.balance_before, item?.currency)}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-yellow-300">
+                      {money(item?.balance_after, item?.currency)}
+                    </td>
+
+                    <td className="px-4 py-4 text-sm text-green-100">
+                      {item?.currency || "BDT"}
+                    </td>
+
+                    <td className="px-4 py-4 text-xs text-green-100 whitespace-nowrap">
+                      {item?.oracleTimestamp || "—"}
                     </td>
 
                     <td className="px-4 py-4 text-xs text-green-100">
@@ -359,51 +406,88 @@ const SingleUserGameHistory = () => {
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
                     <h3 className="font-bold text-white text-lg">
-                      {item?.provider_code || "—"}
+                      {item?.game_uid || "—"}
                     </h3>
 
                     <p className="text-sm text-green-200/70 mt-1">
-                      {item?.game_code || "—"}
+                      {item?.userGamePlayName || "—"}
+                    </p>
+
+                    <p className="text-xs text-green-200/50 mt-1">
+                      {item?.member_account || "—"}
                     </p>
                   </div>
 
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${statusClass(
-                      item?.status,
+                      item?.resultType,
                     )}`}
                   >
-                    {item?.status || "—"}
+                    {item?.resultType || "—"}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <InfoItem
-                    label="Bet"
-                    value={money(item?.amount)}
+                    label="Bet Amount"
+                    value={money(item?.bet_amount, item?.currency)}
                     valueClass="text-red-300"
                   />
 
                   <InfoItem
-                    label="Win"
-                    value={money(item?.win_amount)}
+                    label="Win Amount"
+                    value={money(item?.win_amount, item?.currency)}
                     valueClass="text-emerald-300"
                   />
 
                   <InfoItem
-                    label="Balance"
-                    value={money(item?.balance_after)}
-                    valueClass="text-yellow-300"
+                    label="Net Amount"
+                    value={money(item?.net_amount, item?.currency)}
+                    valueClass={
+                      Number(item?.net_amount || 0) >= 0
+                        ? "text-emerald-300"
+                        : "text-red-300"
+                    }
                   />
 
-                  <InfoItem label="Bet Type" value={item?.bet_type || "—"} />
+                  <InfoItem
+                    label="Balance After"
+                    value={money(item?.balance_after, item?.currency)}
+                    valueClass="text-yellow-300"
+                  />
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-green-900/30">
+                <div className="mt-4 pt-4 border-t border-green-900/30 space-y-2">
                   <p className="text-xs text-green-200/60 break-all">
-                    TXN: {item?.transaction_id || "—"}
+                    User ID: {item?.userId || "—"}
                   </p>
 
-                  <p className="text-xs text-green-200/60 mt-2">
+                  <p className="text-xs text-green-200/60 break-all">
+                    Phone: {item?.phone || "—"}
+                  </p>
+
+                  <p className="text-xs text-green-200/60 break-all">
+                    Game Round: {item?.game_round || "—"}
+                  </p>
+
+                  <p className="text-xs text-green-200/60 break-all">
+                    Serial Number: {item?.serial_number || "—"}
+                  </p>
+
+                  <p className="text-xs text-green-200/60">
+                    Balance Before:{" "}
+                    {money(item?.balance_before, item?.currency)}
+                  </p>
+
+                  <p className="text-xs text-green-200/60">
+                    Currency: {item?.currency || "BDT"}
+                  </p>
+
+                  <p className="text-xs text-green-200/60">
+                    Oracle Time: {item?.oracleTimestamp || "—"}
+                  </p>
+
+                  <p className="text-xs text-green-200/60">
                     {item?.createdAt
                       ? new Date(item.createdAt).toLocaleString()
                       : "—"}

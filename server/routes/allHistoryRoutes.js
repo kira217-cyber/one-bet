@@ -30,14 +30,19 @@ const getPagination = (req) => {
 
 const buildDateFilter = (query) => {
   const filter = {};
-  const from = query.from ? new Date(query.from) : null;
-  const to = query.to ? new Date(query.to) : null;
+  const from =
+    query.from || query.startDate
+      ? new Date(query.from || query.startDate)
+      : null;
+  const to =
+    query.to || query.endDate ? new Date(query.to || query.endDate) : null;
 
   if (from && !Number.isNaN(from.getTime())) {
     filter.$gte = from;
   }
 
   if (to && !Number.isNaN(to.getTime())) {
+    to.setHours(23, 59, 59, 999);
     filter.$lte = to;
   }
 
@@ -49,10 +54,6 @@ const getLoggedInUserMongoId = (req) => {
 };
 
 const getLoggedInUserIdentity = async (req) => {
-  /**
-   * AutoDeposit.userIdentity string type
-   * তাই আমরা user._id এবং user.userId দুটোই consider করবো
-   */
   const userId = getLoggedInUserMongoId(req);
   if (!userId) return null;
 
@@ -72,16 +73,108 @@ const buildMeta = (page, limit, total) => ({
   page,
   limit,
   total,
-  totalPages: Math.ceil(total / limit),
+  totalPages: Math.max(Math.ceil(total / limit), 1),
 });
+
+/* ------------------------- V3 GameHistory Helpers ------------------------- */
+
+const normalizeGameHistoryRow = (item = {}) => {
+  const obj = item.toObject ? item.toObject() : item;
+
+  return {
+    ...obj,
+
+    provider_code:
+      obj?.rawPayload?.provider_code ||
+      obj?.rawPayload?.provider ||
+      obj?.rawPayload?.providerCode ||
+      "ORACLE",
+
+    game_code: obj?.game_uid || obj?.rawPayload?.game_code || "—",
+
+    bet_type: obj?.rawPayload?.bet_type || "BET",
+
+    status: obj?.resultType || "push",
+
+    amount: Number(obj?.bet_amount || 0),
+
+    win_amount: Number(obj?.win_amount || 0),
+
+    balance_after: Number(obj?.balance_after || 0),
+
+    transaction_id: obj?.serial_number || "—",
+
+    verification_key: obj?.game_round || "—",
+
+    round_id: obj?.game_round || "—",
+  };
+};
+
+const buildV3GameHistoryQuery = ({
+  user,
+  userId = "",
+  phone = "",
+  game_code = "",
+  status = "",
+  transaction_id = "",
+  verification_key = "",
+  search = "",
+  dateFilter = null,
+}) => {
+  const query = {};
+
+  if (user) query.user = user;
+
+  if (userId.trim()) {
+    query.userId = new RegExp(`^${escapeRegex(userId.trim())}$`, "i");
+  }
+
+  if (phone.trim()) {
+    query.phone = new RegExp(escapeRegex(phone.trim()), "i");
+  }
+
+  if (game_code.trim()) {
+    query.game_uid = new RegExp(escapeRegex(game_code.trim()), "i");
+  }
+
+  if (status.trim() && status.trim() !== "all") {
+    query.resultType = status.trim().toLowerCase();
+  }
+
+  if (transaction_id.trim()) {
+    query.serial_number = new RegExp(escapeRegex(transaction_id.trim()), "i");
+  }
+
+  if (verification_key.trim()) {
+    query.game_round = new RegExp(escapeRegex(verification_key.trim()), "i");
+  }
+
+  if (search.trim()) {
+    const rx = new RegExp(escapeRegex(search.trim()), "i");
+
+    query.$or = [
+      { userId: rx },
+      { phone: rx },
+      { userGamePlayName: rx },
+      { member_account: rx },
+      { game_uid: rx },
+      { game_round: rx },
+      { serial_number: rx },
+      { resultType: rx },
+    ];
+  }
+
+  if (dateFilter) {
+    query.createdAt = dateFilter;
+  }
+
+  return query;
+};
 
 /* -------------------------------------------------------------------------- */
 /*                          ADMIN: TURNOVER HISTORY                           */
 /* -------------------------------------------------------------------------- */
 
-/**
- * GET /api/history/admin/turnovers
- */
 router.get("/admin/turnovers", async (req, res) => {
   try {
     const { page, limit, skip } = getPagination(req);
@@ -90,21 +183,10 @@ router.get("/admin/turnovers", async (req, res) => {
 
     const query = {};
 
-    if (status) {
-      query.status = status;
-    }
-
-    if (sourceType) {
-      query.sourceType = sourceType;
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
-
-    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-      query.user = userId;
-    }
+    if (status) query.status = status;
+    if (sourceType) query.sourceType = sourceType;
+    if (dateFilter) query.createdAt = dateFilter;
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) query.user = userId;
 
     if (search.trim()) {
       const regex = new RegExp(escapeRegex(search.trim()), "i");
@@ -161,74 +243,24 @@ router.get("/admin/turnovers", async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*                         ADMIN: GAME HISTORY                                */
+/*                         ADMIN: GAME HISTORY V3                             */
 /* -------------------------------------------------------------------------- */
 
-/**
- * GET /api/history/admin/games
- */
 router.get("/admin/games", async (req, res) => {
   try {
     const { page, limit, skip } = getPagination(req);
-    const {
-      userId = "",
-      phone = "",
-      provider_code = "",
-      game_code = "",
-      bet_type = "",
-      status = "",
-      transaction_id = "",
-      verification_key = "",
-    } = req.query;
-
     const dateFilter = buildDateFilter(req.query);
 
-    const query = {};
-
-    if (userId.trim()) {
-      query.userId = new RegExp(`^${escapeRegex(userId.trim())}$`, "i");
-    }
-
-    if (phone.trim()) {
-      query.phone = new RegExp(escapeRegex(phone.trim()), "i");
-    }
-
-    if (provider_code.trim()) {
-      query.provider_code = new RegExp(
-        `^${escapeRegex(provider_code.trim())}$`,
-        "i",
-      );
-    }
-
-    if (game_code.trim()) {
-      query.game_code = new RegExp(escapeRegex(game_code.trim()), "i");
-    }
-
-    if (bet_type.trim()) {
-      query.bet_type = new RegExp(`^${escapeRegex(bet_type.trim())}$`, "i");
-    }
-
-    if (status.trim()) {
-      query.status = status.trim();
-    }
-
-    if (transaction_id.trim()) {
-      query.transaction_id = new RegExp(
-        escapeRegex(transaction_id.trim()),
-        "i",
-      );
-    }
-
-    if (verification_key.trim()) {
-      query.verification_key = new RegExp(
-        escapeRegex(verification_key.trim()),
-        "i",
-      );
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    const query = buildV3GameHistoryQuery({
+      userId: String(req.query.userId || ""),
+      phone: String(req.query.phone || ""),
+      game_code: String(req.query.game_code || ""),
+      status: String(req.query.status || ""),
+      transaction_id: String(req.query.transaction_id || ""),
+      verification_key: String(req.query.verification_key || ""),
+      search: String(req.query.search || ""),
+      dateFilter,
+    });
 
     const [items, total] = await Promise.all([
       GameHistory.find(query)
@@ -242,7 +274,7 @@ router.get("/admin/games", async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Game history fetched successfully.",
-      data: items,
+      data: items.map(normalizeGameHistoryRow),
       meta: buildMeta(page, limit, total),
     });
   } catch (error) {
@@ -259,10 +291,6 @@ router.get("/admin/games", async (req, res) => {
 /*                    MY PROFILE / MY ALL HISTORY ROUTES                      */
 /* -------------------------------------------------------------------------- */
 
-/**
- * GET /api/history/me/profile
- * logged-in user নিজের profile + summary
- */
 router.get("/me/profile", async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -299,7 +327,7 @@ router.get("/me/profile", async (req, res) => {
         ],
       }),
       TurnOver.countDocuments({ user: user._id }),
-      GameHistory.countDocuments({ userId: user.userId }),
+      GameHistory.countDocuments({ user: user._id }),
     ]);
 
     return res.status(200).json({
@@ -326,9 +354,6 @@ router.get("/me/profile", async (req, res) => {
   }
 });
 
-/**
- * GET /api/history/me/deposits
- */
 router.get("/me/deposits", authMiddleware, async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -344,17 +369,10 @@ router.get("/me/deposits", authMiddleware, async (req, res) => {
     const { status } = req.query;
     const dateFilter = buildDateFilter(req.query);
 
-    const query = {
-      user: authUserId,
-    };
+    const query = { user: authUserId };
 
-    if (status) {
-      query.status = status;
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    if (status) query.status = status;
+    if (dateFilter) query.createdAt = dateFilter;
 
     const [items, total] = await Promise.all([
       DepositRequest.find(query)
@@ -381,9 +399,6 @@ router.get("/me/deposits", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /api/history/me/withdraws
- */
 router.get("/me/withdraws", authMiddleware, async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -399,17 +414,10 @@ router.get("/me/withdraws", authMiddleware, async (req, res) => {
     const { status } = req.query;
     const dateFilter = buildDateFilter(req.query);
 
-    const query = {
-      user: authUserId,
-    };
+    const query = { user: authUserId };
 
-    if (status) {
-      query.status = status;
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    if (status) query.status = status;
+    if (dateFilter) query.createdAt = dateFilter;
 
     const [items, total] = await Promise.all([
       WithdrawRequest.find(query)
@@ -436,9 +444,6 @@ router.get("/me/withdraws", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /api/history/me/auto-deposits
- */
 router.get("/me/auto-deposits", authMiddleware, async (req, res) => {
   try {
     const identity = await getLoggedInUserIdentity(req);
@@ -461,13 +466,8 @@ router.get("/me/auto-deposits", authMiddleware, async (req, res) => {
       ],
     };
 
-    if (status) {
-      query.status = status;
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    if (status) query.status = status;
+    if (dateFilter) query.createdAt = dateFilter;
 
     const [items, total] = await Promise.all([
       AutoDeposit.find(query)
@@ -494,9 +494,6 @@ router.get("/me/auto-deposits", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /api/history/me/turnovers
- */
 router.get("/me/turnovers", authMiddleware, async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -512,21 +509,11 @@ router.get("/me/turnovers", authMiddleware, async (req, res) => {
     const { status, sourceType } = req.query;
     const dateFilter = buildDateFilter(req.query);
 
-    const query = {
-      user: authUserId,
-    };
+    const query = { user: authUserId };
 
-    if (status) {
-      query.status = status;
-    }
-
-    if (sourceType) {
-      query.sourceType = sourceType;
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    if (status) query.status = status;
+    if (sourceType) query.sourceType = sourceType;
+    if (dateFilter) query.createdAt = dateFilter;
 
     const [items, total] = await Promise.all([
       TurnOver.find(query)
@@ -553,9 +540,10 @@ router.get("/me/turnovers", authMiddleware, async (req, res) => {
   }
 });
 
-/**
- * GET /api/history/me/games
- */
+/* -------------------------------------------------------------------------- */
+/*                         LOGGED-IN USER: GAME HISTORY V3                    */
+/* -------------------------------------------------------------------------- */
+
 router.get("/me/games", authMiddleware, async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -567,67 +555,18 @@ router.get("/me/games", authMiddleware, async (req, res) => {
       });
     }
 
-    const authUser = await User.findById(authUserId).select("userId");
-
-    if (!authUser || !authUser.userId) {
-      return res.status(404).json({
-        success: false,
-        message: "Logged in user not found.",
-      });
-    }
-
     const { page, limit, skip } = getPagination(req);
-    const {
-      provider_code = "",
-      game_code = "",
-      bet_type = "",
-      status = "",
-      transaction_id = "",
-      verification_key = "",
-    } = req.query;
-
     const dateFilter = buildDateFilter(req.query);
 
-    const query = {
-      userId: authUser.userId,
-    };
-
-    if (provider_code.trim()) {
-      query.provider_code = new RegExp(
-        `^${escapeRegex(provider_code.trim())}$`,
-        "i",
-      );
-    }
-
-    if (game_code.trim()) {
-      query.game_code = new RegExp(escapeRegex(game_code.trim()), "i");
-    }
-
-    if (bet_type.trim()) {
-      query.bet_type = new RegExp(`^${escapeRegex(bet_type.trim())}$`, "i");
-    }
-
-    if (status.trim()) {
-      query.status = status.trim();
-    }
-
-    if (transaction_id.trim()) {
-      query.transaction_id = new RegExp(
-        escapeRegex(transaction_id.trim()),
-        "i",
-      );
-    }
-
-    if (verification_key.trim()) {
-      query.verification_key = new RegExp(
-        escapeRegex(verification_key.trim()),
-        "i",
-      );
-    }
-
-    if (dateFilter) {
-      query.createdAt = dateFilter;
-    }
+    const query = buildV3GameHistoryQuery({
+      user: authUserId,
+      game_code: String(req.query.game_code || ""),
+      status: String(req.query.status || ""),
+      transaction_id: String(req.query.transaction_id || ""),
+      verification_key: String(req.query.verification_key || ""),
+      search: String(req.query.search || ""),
+      dateFilter,
+    });
 
     const [items, total] = await Promise.all([
       GameHistory.find(query)
@@ -641,7 +580,7 @@ router.get("/me/games", authMiddleware, async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "My game history fetched successfully.",
-      data: items,
+      data: items.map(normalizeGameHistoryRow),
       meta: buildMeta(page, limit, total),
     });
   } catch (error) {
@@ -658,10 +597,6 @@ router.get("/me/games", authMiddleware, async (req, res) => {
 /*                         MY ALL HISTORY SUMMARY                             */
 /* -------------------------------------------------------------------------- */
 
-/**
- * GET /api/history/me/all
- * সব history একসাথে summary আকারে
- */
 router.get("/me/all", async (req, res) => {
   try {
     const authUserId = getLoggedInUserMongoId(req);
@@ -691,7 +626,7 @@ router.get("/me/all", async (req, res) => {
       withdraws,
       autoDeposits,
       turnovers,
-      games,
+      gamesRaw,
       depositCount,
       withdrawCount,
       autoDepositCount,
@@ -702,27 +637,32 @@ router.get("/me/all", async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
+
       WithdrawRequest.find({ user: user._id })
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
+
       AutoDeposit.find(autoDepositIdentityQuery)
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
+
       TurnOver.find({ user: user._id })
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
-      GameHistory.find({ userId: user.userId })
+
+      GameHistory.find({ user: user._id })
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
+
       DepositRequest.countDocuments({ user: user._id }),
       WithdrawRequest.countDocuments({ user: user._id }),
       AutoDeposit.countDocuments(autoDepositIdentityQuery),
       TurnOver.countDocuments({ user: user._id }),
-      GameHistory.countDocuments({ userId: user.userId }),
+      GameHistory.countDocuments({ user: user._id }),
     ]);
 
     return res.status(200).json({
@@ -742,7 +682,7 @@ router.get("/me/all", async (req, res) => {
           withdraws,
           autoDeposits,
           turnovers,
-          games,
+          games: gamesRaw.map(normalizeGameHistoryRow),
         },
       },
     });

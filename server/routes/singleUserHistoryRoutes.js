@@ -21,6 +21,77 @@ const buildSearchRegex = (search) => ({
   $options: "i",
 });
 
+const normalizeGameHistoryRow = (item = {}) => {
+  const obj = item.toObject ? item.toObject() : item;
+
+  return {
+    ...obj,
+
+    provider_code:
+      obj?.rawPayload?.provider_code ||
+      obj?.rawPayload?.provider ||
+      obj?.rawPayload?.providerCode ||
+      "ORACLE",
+
+    game_code: obj?.game_uid || obj?.rawPayload?.game_code || "—",
+
+    bet_type: obj?.rawPayload?.bet_type || "BET",
+
+    status: obj?.resultType || "push",
+
+    amount: Number(obj?.bet_amount || 0),
+
+    win_amount: Number(obj?.win_amount || 0),
+
+    balance_after: Number(obj?.balance_after || 0),
+
+    transaction_id: obj?.serial_number || "—",
+
+    verification_key: obj?.game_round || "—",
+
+    round_id: obj?.game_round || "—",
+  };
+};
+
+const buildGameHistoryQuery = ({ user, userId, search = "", status = "" }) => {
+  const query = {};
+
+  if (user) {
+    query.user = user;
+  }
+
+  if (userId) {
+    query.userId = userId;
+  }
+
+  const cleanStatus = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  if (cleanStatus && cleanStatus !== "all") {
+    query.resultType = cleanStatus;
+  }
+
+  const cleanSearch = String(search || "").trim();
+
+  if (cleanSearch) {
+    const rx = buildSearchRegex(cleanSearch);
+
+    query.$or = [
+      { userId: rx },
+      { phone: rx },
+      { userGamePlayName: rx },
+      { member_account: rx },
+      { game_uid: rx },
+      { game_round: rx },
+      { serial_number: rx },
+      { resultType: rx },
+    ];
+  }
+
+  return query;
+};
+
 router.get("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -96,14 +167,13 @@ router.get("/:userId", async (req, res) => {
       GameHistory.aggregate([
         {
           $match: {
-            userId: user.userId,
-            bet_type: "BET",
+            user: userObjectId,
           },
         },
         {
           $group: {
             _id: null,
-            total: { $sum: "$amount" },
+            total: { $sum: "$bet_amount" },
             count: { $sum: 1 },
           },
         },
@@ -112,19 +182,18 @@ router.get("/:userId", async (req, res) => {
       GameHistory.aggregate([
         {
           $match: {
-            userId: user.userId,
-            bet_type: "SETTLE",
+            user: userObjectId,
           },
         },
         {
           $group: {
             _id: null,
-            total: {
+            total: { $sum: "$win_amount" },
+            count: {
               $sum: {
-                $cond: [{ $gt: ["$win_amount", 0] }, "$win_amount", "$amount"],
+                $cond: [{ $gt: ["$win_amount", 0] }, 1, 0],
               },
             },
-            count: { $sum: 1 },
           },
         },
       ]),
@@ -270,30 +339,13 @@ router.get("/:userId", async (req, res) => {
     };
 
     if (type === "game") {
-      const query = {
-        userId: user.userId,
-      };
+      const query = buildGameHistoryQuery({
+        user: userObjectId,
+        search: cleanSearch,
+        status: cleanStatus,
+      });
 
-      if (cleanStatus) {
-        query.status = cleanStatus;
-      }
-
-      if (cleanSearch) {
-        const rx = buildSearchRegex(cleanSearch);
-
-        query.$or = [
-          { provider_code: rx },
-          { game_code: rx },
-          { bet_type: rx },
-          { transaction_id: rx },
-          { round_id: rx },
-          { verification_key: rx },
-          { status: rx },
-          { times: rx },
-        ];
-      }
-
-      const [data, total] = await Promise.all([
+      const [data, total, gameSummaryAgg] = await Promise.all([
         GameHistory.find(query)
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -301,9 +353,54 @@ router.get("/:userId", async (req, res) => {
           .lean(),
 
         GameHistory.countDocuments(query),
+
+        GameHistory.aggregate([
+          {
+            $match: query,
+          },
+          {
+            $group: {
+              _id: null,
+              totalBet: { $sum: "$bet_amount" },
+              totalWin: { $sum: "$win_amount" },
+              totalNet: { $sum: "$net_amount" },
+              totalRecords: { $sum: 1 },
+              winCount: {
+                $sum: {
+                  $cond: [{ $eq: ["$resultType", "win"] }, 1, 0],
+                },
+              },
+              lossCount: {
+                $sum: {
+                  $cond: [{ $eq: ["$resultType", "loss"] }, 1, 0],
+                },
+              },
+              pushCount: {
+                $sum: {
+                  $cond: [{ $eq: ["$resultType", "push"] }, 1, 0],
+                },
+              },
+            },
+          },
+        ]),
       ]);
 
-      responseData.history = data;
+      const gameSummary = gameSummaryAgg?.[0] || {};
+
+      responseData.history = data.map(normalizeGameHistoryRow);
+
+      responseData.summary = {
+        ...responseData.summary,
+        totalLoss: Number(gameSummary.totalBet || 0),
+        totalBetCount: Number(gameSummary.totalRecords || 0),
+        totalWin: Number(gameSummary.totalWin || 0),
+        totalWinCount: Number(gameSummary.winCount || 0),
+        totalNet: Number(gameSummary.totalNet || 0),
+        winCount: Number(gameSummary.winCount || 0),
+        lossCount: Number(gameSummary.lossCount || 0),
+        pushCount: Number(gameSummary.pushCount || 0),
+      };
+
       responseData.pagination = {
         total,
         currentPage,
