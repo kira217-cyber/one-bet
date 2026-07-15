@@ -305,7 +305,7 @@ const updateNineWicketWalletAfterTransfer = async ({
       },
     },
     {
-      new: true,
+      returnDocument: "after",
 
       upsert: true,
 
@@ -351,7 +351,7 @@ const reserveUserBalance = async ({ userId, amount }) => {
       },
     },
     {
-      new: true,
+      returnDocument: "after",
     },
   ).select("balance currency");
 };

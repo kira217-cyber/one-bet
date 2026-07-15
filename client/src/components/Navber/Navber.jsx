@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Download,
-  MessageCircle,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  Wallet,
-} from "lucide-react";
+import { Download, RefreshCw, Eye, EyeOff, Wallet } from "lucide-react";
 import { BiMenuAltLeft } from "react-icons/bi";
 import { Link } from "react-router";
 import { useSelector } from "react-redux";
@@ -32,9 +25,11 @@ const Navber = ({ setOpen }) => {
     const fetchSiteIdentity = async () => {
       try {
         const res = await api.get("/api/site-identity");
+
         setSiteIdentity(res?.data?.data || null);
       } catch (error) {
         console.error("Failed to fetch site identity:", error);
+
         setSiteIdentity(null);
       }
     };
@@ -50,11 +45,28 @@ const Navber = ({ setOpen }) => {
 
     try {
       setLoadingBalance(true);
+
       const { data } = await api.get("/api/users/me");
+
       const userData = data?.user || data?.data || null;
 
       if (userData) {
-        setProfile(userData);
+        setProfile({
+          ...userData,
+
+          balance: data?.balance ?? userData?.balance ?? 0,
+
+          exposureBalance:
+            data?.exposureBalance ??
+            data?.nineWicket?.exposureBalance ??
+            userData?.exposureBalance ??
+            userData?.nineWicket?.exposureBalance ??
+            0,
+
+          totalBalance: data?.totalBalance ?? userData?.totalBalance ?? 0,
+
+          nineWicket: data?.nineWicket ?? userData?.nineWicket ?? null,
+        });
       }
     } catch (error) {
       console.error("Failed to fetch navbar balance:", error);
@@ -69,6 +81,7 @@ const Navber = ({ setOpen }) => {
 
   const formatMoney = (value) => {
     const num = Number(value || 0);
+
     return `৳${num.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -82,8 +95,15 @@ const Navber = ({ setOpen }) => {
     : null;
 
   const realUser = profile || authUser || null;
+
   const balanceText = showBalance
     ? formatMoney(realUser?.balance || 0)
+    : "৳••••";
+
+  const exposureBalanceText = showBalance
+    ? formatMoney(
+        realUser?.exposureBalance ?? realUser?.nineWicket?.exposureBalance ?? 0,
+      )
     : "৳••••";
 
   return (
@@ -110,10 +130,17 @@ const Navber = ({ setOpen }) => {
 
       {/* Balance - middle */}
       {isAuthenticated && (
-        <div className="flex rounded-xl border border-yellow-400/40 bg-gradient-to-r from-[#003c29] to-[#006c4a] px-1 sm:px-2 shadow-md shadow-black/30 py-1">
-          <div className="flex min-w-0 flex-1 leading-none">
-            <span className="mt-1 mr-1 max-w-auto truncate text-[14px] sm:text-[18px] font-extrabold text-yellow-400">
+        <div className="flex rounded-xl border border-yellow-400/40 bg-gradient-to-r from-[#003c29] to-[#006c4a] px-1 py-1 shadow-md shadow-black/30">
+          <div className="flex min-w-0 flex-1 flex-col justify-center leading-none">
+            <span className="mr-1 max-w-auto truncate text-[14px] font-extrabold text-yellow-400 sm:text-[18px]">
               {loadingBalance ? "..." : balanceText}
+            </span>
+
+            <span className="mt-[3px] mr-1 truncate text-[10px] font-semibold text-white/80 sm:text-[12px]">
+              {isBangla ? "এক্সপোজার" : "Exposure"}:{" "}
+              <span className="font-bold text-red-300">
+                {loadingBalance ? "..." : exposureBalanceText}
+              </span>
             </span>
           </div>
 
@@ -153,6 +180,7 @@ const Navber = ({ setOpen }) => {
               className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
             >
               <Download className="h-7 w-7" />
+
               <span>{isBangla ? "ডিপোজিট" : "Deposit"}</span>
             </Link>
 
@@ -161,6 +189,7 @@ const Navber = ({ setOpen }) => {
               className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all hover:scale-105"
             >
               <Wallet className="h-7 w-7" />
+
               <span>{isBangla ? "উইথড্র" : "Withdraw"}</span>
             </Link>
           </div>
@@ -172,6 +201,7 @@ const Navber = ({ setOpen }) => {
               className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
             >
               <Download className="h-4 w-4" />
+
               <span>{isBangla ? "ডিপো" : "Depo"}</span>
             </Link>
 
@@ -180,6 +210,7 @@ const Navber = ({ setOpen }) => {
               className="flex cursor-pointer flex-col items-center font-bold text-yellow-400 transition-all active:scale-95"
             >
               <Wallet className="h-4 w-4" />
+
               <span>{isBangla ? "উইথ" : "With"}</span>
             </Link>
           </div>

@@ -32,7 +32,7 @@ const RootLayout = () => {
   const hideNavbar = hideNavbarRoutes.includes(location.pathname);
   const hideBottomNavbarRoutes = ["/login", "/register", "/account", "/forgot-password"];
   const hideBottomNavbar = hideBottomNavbarRoutes.includes(location.pathname);
-  const showSocialLink = ["/account"].includes(location.pathname);
+  const showSocialLink = ["/account","/history/bet-history","/history/withdraw-history","/history/deposit-history","/history/auto-deposit-history","/history/turnover-history"].includes(location.pathname);
 
   return (
     <div className="h-screen flex justify-center bg-black overflow-hidden">

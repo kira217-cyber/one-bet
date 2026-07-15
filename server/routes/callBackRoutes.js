@@ -384,8 +384,7 @@ const updateNineWicketExposure = async ({
     exposureAction =
       previousRoundMatchStake > 0 ? "replace_same_round" : "add_new_round";
   } else if (betAmount === 0 && safeMatchStake > 0) {
-
-  /* -------------------------------------------------------
+    /* -------------------------------------------------------
      SETTLEMENT / CLOSE CALLBACK
   ------------------------------------------------------- */
     exposureChange = money(-safeMatchStake);
@@ -960,7 +959,7 @@ router.post("/", async (req, res) => {
       },
 
       {
-        new: true,
+        returnDocument: "after",
       },
     );
 

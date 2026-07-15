@@ -241,7 +241,7 @@ const syncNineWicketBalance = async (user) => {
               },
             },
             {
-              new: true,
+              returnDocument: "after",
             },
           ).select("balance");
 
@@ -515,7 +515,9 @@ router.post("/register", async (req, res) => {
             referCommissionBalance: referReward,
           },
         },
-        { new: false },
+        {
+          returnDocument: "before",
+        },
       );
     }
 
@@ -1307,7 +1309,7 @@ router.patch(
       }
 
       const updatedUser = await User.findByIdAndUpdate(id, updateData, {
-        new: true,
+        returnDocument: "after",
       });
 
       return res.status(200).json({

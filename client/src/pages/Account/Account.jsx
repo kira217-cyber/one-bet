@@ -47,6 +47,7 @@ const Account = () => {
     vipPoints: isBangla ? "ভিআইপি পয়েন্টস (VP)" : "VIP Points (VP)",
     myVip: isBangla ? "আমার VIP" : "My VIP",
     mainWallet: isBangla ? "মূল ওয়ালেট" : "Main Wallet",
+    exposure: isBangla ? "এক্সপোজার" : "Exposure",
     funds: isBangla ? "ফান্ডস" : "Funds",
     deposit: isBangla ? "ডিপোজিট" : "Deposit",
     dispute: isBangla ? "ডিসপিউট" : "Dispute",
@@ -75,6 +76,7 @@ const Account = () => {
 
   const formatMoney = (value) => {
     const num = Number(value || 0);
+
     return `৳${num.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -96,10 +98,26 @@ const Account = () => {
       const userData = data?.user || data?.data || null;
 
       if (userData) {
-        setProfile(userData);
+        setProfile({
+          ...userData,
+
+          balance: data?.balance ?? userData?.balance ?? 0,
+
+          exposureBalance:
+            data?.exposureBalance ??
+            data?.nineWicket?.exposureBalance ??
+            userData?.exposureBalance ??
+            userData?.nineWicket?.exposureBalance ??
+            0,
+
+          totalBalance: data?.totalBalance ?? userData?.totalBalance ?? 0,
+
+          nineWicket: data?.nineWicket ?? userData?.nineWicket ?? null,
+        });
       }
     } catch (error) {
       console.error("Failed to fetch profile/balance:", error);
+
       toast.error(
         error?.response?.data?.message ||
           (isBangla ? "ব্যালেন্স লোড করা যায়নি" : "Failed to load balance"),
@@ -114,11 +132,18 @@ const Account = () => {
   }, [isAuthed]);
 
   const realUser = profile || authUser || null;
+
   const realUserId = realUser?.userId || text.guest;
+
   const realFullName =
     `${realUser?.firstName || ""} ${realUser?.lastName || ""}`.trim() ||
     realUserId;
+
   const realBalance = formatMoney(realUser?.balance || 0);
+
+  const realExposureBalance = formatMoney(
+    realUser?.exposureBalance ?? realUser?.nineWicket?.exposureBalance ?? 0,
+  );
 
   const fundsItems = useMemo(
     () => [
@@ -194,6 +219,7 @@ const Account = () => {
   const SectionTitle = ({ title }) => (
     <div className="flex items-center gap-2 border-b border-white/10 px-2 py-3">
       <span className="h-5 w-[5px] rounded-sm bg-yellow-300" />
+
       <h3 className="text-xl font-bold leading-none text-yellow-300 sm:text-[22px]">
         {title}
       </h3>
@@ -225,6 +251,7 @@ const Account = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00563d] shadow-inner transition-all duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
                 <Icon className="h-6 w-6 text-white" strokeWidth={1.8} />
               </div>
+
               <span className="mt-3 flex min-h-[34px] items-start justify-center text-[13px] font-bold leading-[1.15] text-white sm:text-[15px]">
                 {item.title}
               </span>
@@ -241,6 +268,7 @@ const Account = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00563d] shadow-inner transition-all duration-200 group-hover:scale-105 sm:h-16 sm:w-16">
               <Icon className="h-6 w-6 text-white" strokeWidth={1.8} />
             </div>
+
             <span className="mt-3 flex min-h-[34px] items-start justify-center text-[13px] font-bold leading-[1.15] text-white sm:text-[15px]">
               {item.title}
             </span>
@@ -252,7 +280,9 @@ const Account = () => {
 
   const handleLogout = () => {
     dispatch(logout());
+
     toast.success(isBangla ? "সফলভাবে লগআউট হয়েছে" : "Logged out successfully");
+
     navigate("/");
   };
 
@@ -289,6 +319,7 @@ const Account = () => {
             <h2 className="truncate rounded-2xl bg-yellow-400 p-1 text-[18px] font-bold text-black sm:text-[22px]">
               userId: {realUserId}
             </h2>
+
             <h2 className="truncate text-[18px] font-bold text-white sm:text-[22px]">
               {text.fullName}: {realFullName}
             </h2>
@@ -326,12 +357,25 @@ const Account = () => {
               </button>
             </div>
 
-            <div className="text-[28px] font-bold leading-none text-white sm:text-[32px]">
-              {loadingBalance
-                ? text.loading
-                : showBalance
-                  ? realBalance
-                  : hiddenBalance}
+            <div className="flex flex-col items-end">
+              <div className="text-[28px] font-bold leading-none text-white sm:text-[32px]">
+                {loadingBalance
+                  ? text.loading
+                  : showBalance
+                    ? realBalance
+                    : hiddenBalance}
+              </div>
+
+              <div className="mt-1 text-[11px] font-semibold leading-none text-white/80 sm:text-[13px]">
+                {text.exposure}:{" "}
+                <span className="font-bold text-yellow-300">
+                  {loadingBalance
+                    ? "..."
+                    : showBalance
+                      ? realExposureBalance
+                      : hiddenBalance}
+                </span>
+              </div>
             </div>
           </div>
         </div>

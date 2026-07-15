@@ -41,6 +41,7 @@ const InfoRow = ({
         >
           {value}
         </div>
+
         {rightAction}
       </div>
     </div>
@@ -62,13 +63,16 @@ const Wallet = () => {
   const [walletData, setWalletData] = useState({
     userId: "",
     balance: 0,
+    exposureBalance: 0,
     referralCode: "",
   });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast.error("Please login first.");
-      navigate("/login", { replace: true });
+      navigate("/login", {
+        replace: true,
+      });
     }
   }, [authLoading, isAuthenticated, navigate]);
 
@@ -85,12 +89,36 @@ const Wallet = () => {
         api.get("/api/users/me"),
       ]);
 
-      const balanceData = balanceRes?.data?.data || {};
-      const meUser = meRes?.data?.user || {};
+      const balanceResponse = balanceRes?.data || {};
+      const balanceData = balanceResponse?.data || {};
+      const meResponse = meRes?.data || {};
+      const meUser = meResponse?.user || {};
+
+      const balance =
+        balanceResponse?.balance ??
+        balanceData?.balance ??
+        meResponse?.balance ??
+        meUser?.balance ??
+        0;
+
+      const exposureBalance =
+        balanceResponse?.exposureBalance ??
+        balanceResponse?.nineWicket?.exposureBalance ??
+        balanceData?.exposureBalance ??
+        balanceData?.nineWicket?.exposureBalance ??
+        meResponse?.exposureBalance ??
+        meResponse?.nineWicket?.exposureBalance ??
+        meUser?.exposureBalance ??
+        meUser?.nineWicket?.exposureBalance ??
+        0;
 
       setWalletData({
         userId: balanceData?.userId || meUser?.userId || authUser?.userId || "",
-        balance: Number(balanceData?.balance || 0),
+
+        balance: Number(balance || 0),
+
+        exposureBalance: Number(exposureBalance || 0),
+
         referralCode: meUser?.referralCode || authUser?.referralCode || "",
       });
 
@@ -100,6 +128,7 @@ const Wallet = () => {
     } catch (error) {
       const message =
         error?.response?.data?.message || "Failed to load wallet data.";
+
       toast.error(message);
     } finally {
       setLoadingBalance(false);
@@ -108,7 +137,10 @@ const Wallet = () => {
   };
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated) return;
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
+
     fetchWalletData();
   }, [authLoading, isAuthenticated]);
 
@@ -120,9 +152,14 @@ const Wallet = () => {
 
     try {
       await navigator.clipboard.writeText(walletData.referralCode);
+
       setCopied(true);
+
       toast.success("Referral code copied.");
-      setTimeout(() => setCopied(false), 1600);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 1600);
     } catch {
       toast.error("Failed to copy referral code.");
     }
@@ -130,16 +167,26 @@ const Wallet = () => {
 
   const formattedBalance = useMemo(() => {
     const amount = Number(walletData?.balance || 0);
+
     return `৳ ${amount.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
   }, [walletData?.balance]);
 
+  const formattedExposureBalance = useMemo(() => {
+    const amount = Number(walletData?.exposureBalance || 0);
+
+    return `৳ ${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }, [walletData?.exposureBalance]);
+
   if (authLoading || loadingBalance) {
     return (
-      <div className="min-h-screen bg-[#004d3b] flex items-center justify-center px-4">
-        <div className="flex items-center gap-3 text-white text-base font-medium">
+      <div className="flex min-h-screen items-center justify-center bg-[#004d3b] px-4">
+        <div className="flex items-center gap-3 text-base font-medium text-white">
           <Loader2 className="h-5 w-5 animate-spin" />
           Loading...
         </div>
@@ -154,7 +201,7 @@ const Wallet = () => {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="absolute left-4 flex h-10 w-10 items-center justify-center text-white cursor-pointer"
+          className="absolute left-4 flex h-10 w-10 cursor-pointer items-center justify-center text-white"
         >
           <ArrowLeft size={28} strokeWidth={2.1} />
         </button>
@@ -171,17 +218,28 @@ const Wallet = () => {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f2ef00] text-[#165a3e] shadow-sm">
               <WalletIcon size={24} />
             </div>
+
             <div>
               <p className="text-sm text-white/70">Available Balance</p>
+
               <div className="mt-1 flex items-center gap-2">
-                <h2 className="text-[28px] font-bold tracking-tight text-white">
-                  {showBalance ? formattedBalance : "৳ ••••••"}
-                </h2>
+                <div>
+                  <h2 className="text-[28px] font-bold tracking-tight text-white">
+                    {showBalance ? formattedBalance : "৳ ••••••"}
+                  </h2>
+
+                  <p className="mt-1 text-xs font-semibold text-white/70">
+                    Exposure:{" "}
+                    <span className="font-bold text-[#f2ef00]">
+                      {showBalance ? formattedExposureBalance : "৳ ••••••"}
+                    </span>
+                  </p>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => setShowBalance((prev) => !prev)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 cursor-pointer"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15"
                 >
                   {showBalance ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -190,7 +248,7 @@ const Wallet = () => {
                   type="button"
                   onClick={() => fetchWalletData(true)}
                   disabled={reloadingBalance}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <RefreshCw
                     size={18}
@@ -205,6 +263,7 @@ const Wallet = () => {
             <p className="text-xs uppercase tracking-[0.18em] text-white/55">
               Account
             </p>
+
             <p className="mt-1 break-all text-[17px] font-semibold text-white">
               {walletData?.userId || "N/A"}
             </p>
@@ -227,7 +286,7 @@ const Wallet = () => {
                 <button
                   type="button"
                   onClick={() => setShowBalance((prev) => !prev)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2ef00] text-[#165a3e] transition hover:opacity-95 active:scale-[0.98] cursor-pointer"
+                  className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-[#f2ef00] text-[#165a3e] transition hover:opacity-95 active:scale-[0.98]"
                 >
                   {showBalance ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -236,7 +295,7 @@ const Wallet = () => {
                   type="button"
                   onClick={() => fetchWalletData(true)}
                   disabled={reloadingBalance}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2ef00] text-[#165a3e] transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                  className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-[#f2ef00] text-[#165a3e] transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <RefreshCw
                     size={18}
@@ -248,6 +307,13 @@ const Wallet = () => {
           />
 
           <InfoRow
+            icon={<WalletIcon size={18} />}
+            label="Exposure Balance"
+            value={showBalance ? formattedExposureBalance : "৳ ••••••"}
+            valueClass="text-[#f2ef00]"
+          />
+
+          <InfoRow
             icon={<BadgePercent size={18} />}
             label="Referral Code"
             value={walletData?.referralCode || "N/A"}
@@ -256,9 +322,10 @@ const Wallet = () => {
               <button
                 type="button"
                 onClick={handleCopyReferralCode}
-                className="inline-flex h-10 min-w-[96px] items-center justify-center gap-2 rounded-xl bg-[#f2ef00] px-3 text-sm font-semibold text-[#165a3e] transition hover:opacity-95 active:scale-[0.98] cursor-pointer"
+                className="inline-flex h-10 min-w-[96px] cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#f2ef00] px-3 text-sm font-semibold text-[#165a3e] transition hover:opacity-95 active:scale-[0.98]"
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
+
                 {copied ? "Copied" : "Copy"}
               </button>
             }
