@@ -171,6 +171,16 @@ const buildV3GameHistoryQuery = ({
   return query;
 };
 
+const money = (value = 0) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+
+  return Math.trunc(amount * 100) / 100;
+};
+
 /* -------------------------------------------------------------------------- */
 /*                          ADMIN: TURNOVER HISTORY                           */
 /* -------------------------------------------------------------------------- */
@@ -243,45 +253,569 @@ router.get("/admin/turnovers", async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*                         ADMIN: GAME HISTORY V3                             */
+/*                         ADMIN: GAME HISTORY V3                              */
 /* -------------------------------------------------------------------------- */
+
 
 router.get("/admin/games", async (req, res) => {
   try {
     const { page, limit, skip } = getPagination(req);
+
     const dateFilter = buildDateFilter(req.query);
 
+    const {
+      userId = "",
+      phone = "",
+      game_code = "",
+      game_uid = "",
+      game_round = "",
+      serial_number = "",
+      provider = "",
+      status = "",
+      resultType = "",
+      transaction_id = "",
+      verification_key = "",
+      nineWicketBetId = "",
+      nineWicketBetStatus = "",
+      eventTypeName = "",
+      eventName = "",
+      marketName = "",
+      competitionName = "",
+      hasExposure = "",
+      search = "",
+    } = req.query || {};
+
+    /* ----------------------------------------------------------------------
+       EXISTING V3 QUERY
+    ---------------------------------------------------------------------- */
+
     const query = buildV3GameHistoryQuery({
-      userId: String(req.query.userId || ""),
-      phone: String(req.query.phone || ""),
-      game_code: String(req.query.game_code || ""),
-      status: String(req.query.status || ""),
-      transaction_id: String(req.query.transaction_id || ""),
-      verification_key: String(req.query.verification_key || ""),
-      search: String(req.query.search || ""),
+      userId: String(userId || "").trim(),
+
+      phone: String(phone || "").trim(),
+
+      game_code: String(game_code || game_uid || "").trim(),
+
+      status: String(status || resultType || "").trim(),
+
+      transaction_id: String(
+        transaction_id || serial_number || "",
+      ).trim(),
+
+      verification_key: String(verification_key || "").trim(),
+
+      search: "",
+
       dateFilter,
     });
 
-    const [items, total] = await Promise.all([
+    /* ----------------------------------------------------------------------
+       DIRECT FILTERS
+    ---------------------------------------------------------------------- */
+
+    const providerValue = String(provider || "")
+      .trim()
+      .toLowerCase();
+
+    if (["oracle", "ninewicket"].includes(providerValue)) {
+      query.provider = providerValue;
+    }
+
+    const resultTypeValue = String(resultType || status || "")
+      .trim()
+      .toLowerCase();
+
+    if (["win", "loss", "push"].includes(resultTypeValue)) {
+      query.resultType = resultTypeValue;
+    }
+
+    if (game_uid) {
+      query.game_uid = {
+        $regex: String(game_uid).trim(),
+        $options: "i",
+      };
+    }
+
+    if (game_round) {
+      query.game_round = {
+        $regex: String(game_round).trim(),
+        $options: "i",
+      };
+    }
+
+    if (serial_number) {
+      query.serial_number = {
+        $regex: String(serial_number).trim(),
+        $options: "i",
+      };
+    }
+
+    if (nineWicketBetId) {
+      query.nineWicketBetId = {
+        $regex: String(nineWicketBetId).trim(),
+        $options: "i",
+      };
+    }
+
+    if (nineWicketBetStatus) {
+      query.nineWicketBetStatus = {
+        $regex: `^${String(nineWicketBetStatus).trim()}$`,
+        $options: "i",
+      };
+    }
+
+    if (eventTypeName) {
+      query.eventTypeName = {
+        $regex: String(eventTypeName).trim(),
+        $options: "i",
+      };
+    }
+
+    if (eventName) {
+      query.eventName = {
+        $regex: String(eventName).trim(),
+        $options: "i",
+      };
+    }
+
+    if (marketName) {
+      query.marketName = {
+        $regex: String(marketName).trim(),
+        $options: "i",
+      };
+    }
+
+    if (competitionName) {
+      query.competitionName = {
+        $regex: String(competitionName).trim(),
+        $options: "i",
+      };
+    }
+
+    const exposureFilter = String(hasExposure || "")
+      .trim()
+      .toLowerCase();
+
+    if (exposureFilter === "true") {
+      query.exposureAfter = {
+        $gt: 0,
+      };
+    }
+
+    if (exposureFilter === "false") {
+      query.exposureAfter = {
+        $lte: 0,
+      };
+    }
+
+    /* ----------------------------------------------------------------------
+       GLOBAL SEARCH
+    ---------------------------------------------------------------------- */
+
+    const searchText = String(search || "").trim();
+
+    if (searchText) {
+      const escapedSearch = searchText.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
+
+      const searchRegex = new RegExp(escapedSearch, "i");
+
+      const searchConditions = [
+        {
+          userId: searchRegex,
+        },
+
+        {
+          phone: searchRegex,
+        },
+
+        {
+          userGamePlayName: searchRegex,
+        },
+
+        {
+          nineWicketUsername: searchRegex,
+        },
+
+        {
+          member_account: searchRegex,
+        },
+
+        {
+          provider: searchRegex,
+        },
+
+        {
+          game_uid: searchRegex,
+        },
+
+        {
+          game_round: searchRegex,
+        },
+
+        {
+          serial_number: searchRegex,
+        },
+
+        {
+          resultType: searchRegex,
+        },
+
+        {
+          nineWicketBetId: searchRegex,
+        },
+
+        {
+          nineWicketBetStatus: searchRegex,
+        },
+
+        {
+          eventTypeName: searchRegex,
+        },
+
+        {
+          eventName: searchRegex,
+        },
+
+        {
+          marketName: searchRegex,
+        },
+
+        {
+          competitionName: searchRegex,
+        },
+
+        {
+          oracleTimestamp: searchRegex,
+        },
+      ];
+
+      if (Array.isArray(query.$and)) {
+        query.$and.push({
+          $or: searchConditions,
+        });
+      } else if (query.$or) {
+        const existingOr = query.$or;
+
+        delete query.$or;
+
+        query.$and = [
+          {
+            $or: existingOr,
+          },
+
+          {
+            $or: searchConditions,
+          },
+        ];
+      } else {
+        query.$or = searchConditions;
+      }
+    }
+
+    /* ----------------------------------------------------------------------
+       FETCH HISTORY
+    ---------------------------------------------------------------------- */
+
+    const [items, total, summaryResult] = await Promise.all([
       GameHistory.find(query)
-        .sort({ createdAt: -1 })
+        .populate(
+          "user",
+          [
+            "userId",
+            "phone",
+            "email",
+            "role",
+            "balance",
+            "currency",
+            "isActive",
+            "userGamePlayName",
+            "nineWicketUsername",
+          ].join(" "),
+        )
+        .sort({
+          createdAt: -1,
+          _id: -1,
+        })
         .skip(skip)
         .limit(limit)
         .lean(),
+
       GameHistory.countDocuments(query),
+
+      GameHistory.aggregate([
+        {
+          $match: query,
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            totalBetAmount: {
+              $sum: "$bet_amount",
+            },
+
+            totalWinAmount: {
+              $sum: "$win_amount",
+            },
+
+            totalNetAmount: {
+              $sum: "$net_amount",
+            },
+
+            totalExposureChange: {
+              $sum: "$exposureChange",
+            },
+
+            latestExposure: {
+              $max: "$exposureAfter",
+            },
+
+            totalRecords: {
+              $sum: 1,
+            },
+
+            oracleRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$provider", "oracle"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            nineWicketRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$provider", "ninewicket"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            winRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "win"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            lossRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "loss"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            pushRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "push"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
     ]);
+
+    const summary = summaryResult[0] || {
+      totalBetAmount: 0,
+      totalWinAmount: 0,
+      totalNetAmount: 0,
+      totalExposureChange: 0,
+      latestExposure: 0,
+      totalRecords: 0,
+      oracleRecords: 0,
+      nineWicketRecords: 0,
+      winRecords: 0,
+      lossRecords: 0,
+      pushRecords: 0,
+    };
+
+    /* ----------------------------------------------------------------------
+       RESPONSE
+    ---------------------------------------------------------------------- */
 
     return res.status(200).json({
       success: true,
+
       message: "Game history fetched successfully.",
-      data: items.map(normalizeGameHistoryRow),
+
+      data: items.map((item) => {
+        const normalizedRow = normalizeGameHistoryRow(item);
+
+        return {
+          ...normalizedRow,
+
+          _id: item._id,
+
+          user: item.user || null,
+
+          userId: item.userId || item.user?.userId || "",
+
+          phone: item.phone || item.user?.phone || "",
+
+          userGamePlayName:
+            item.userGamePlayName ||
+            item.user?.userGamePlayName ||
+            "",
+
+          nineWicketUsername:
+            item.nineWicketUsername ||
+            item.user?.nineWicketUsername ||
+            "",
+
+          provider: item.provider || "oracle",
+
+          member_account: item.member_account || "",
+
+          game_uid: item.game_uid || "",
+
+          game_round: item.game_round || "",
+
+          serial_number: item.serial_number || "",
+
+          bet_amount: Number(item.bet_amount || 0),
+
+          win_amount: Number(item.win_amount || 0),
+
+          net_amount: Number(item.net_amount || 0),
+
+          resultType: item.resultType || "push",
+
+          balance_before: Number(item.balance_before || 0),
+
+          balance_after: Number(item.balance_after || 0),
+
+          nineWicketBetId: item.nineWicketBetId || "",
+
+          nineWicketBetStatus: item.nineWicketBetStatus || "",
+
+          matchStake: Number(item.matchStake || 0),
+
+          profitLoss: Number(item.profitLoss || 0),
+
+          eventTypeName: item.eventTypeName || "",
+
+          eventName: item.eventName || "",
+
+          marketName: item.marketName || "",
+
+          competitionName: item.competitionName || "",
+
+          exposureChange: Number(item.exposureChange || 0),
+
+          exposureAfter: Number(item.exposureAfter || 0),
+
+          affiliateInfo: item.affiliateInfo || null,
+
+          oracleTimestamp: item.oracleTimestamp || "",
+
+          createdAt: item.createdAt,
+
+          updatedAt: item.updatedAt,
+        };
+      }),
+
+      summary: {
+        totalRecords: Number(summary.totalRecords || 0),
+
+        totalBetAmount: money(summary.totalBetAmount),
+
+        totalWinAmount: money(summary.totalWinAmount),
+
+        totalNetAmount: money(summary.totalNetAmount),
+
+        totalExposureChange: money(
+          summary.totalExposureChange,
+        ),
+
+        latestExposure: Math.max(
+          0,
+          money(summary.latestExposure),
+        ),
+
+        oracleRecords: Number(summary.oracleRecords || 0),
+
+        nineWicketRecords: Number(
+          summary.nineWicketRecords || 0,
+        ),
+
+        winRecords: Number(summary.winRecords || 0),
+
+        lossRecords: Number(summary.lossRecords || 0),
+
+        pushRecords: Number(summary.pushRecords || 0),
+      },
+
+      filters: {
+        search: searchText,
+
+        userId: String(userId || ""),
+
+        phone: String(phone || ""),
+
+        provider: providerValue,
+
+        game_uid: String(game_uid || ""),
+
+        game_round: String(game_round || ""),
+
+        serial_number: String(serial_number || ""),
+
+        resultType: resultTypeValue,
+
+        nineWicketBetId: String(nineWicketBetId || ""),
+
+        nineWicketBetStatus: String(
+          nineWicketBetStatus || "",
+        ),
+
+        eventTypeName: String(eventTypeName || ""),
+
+        eventName: String(eventName || ""),
+
+        marketName: String(marketName || ""),
+
+        competitionName: String(competitionName || ""),
+
+        hasExposure: exposureFilter,
+      },
+
       meta: buildMeta(page, limit, total),
     });
   } catch (error) {
     console.error("GET /admin/games error:", error);
+
     return res.status(500).json({
       success: false,
+
       message: "Failed to fetch game history.",
+
       error: error.message,
     });
   }
@@ -541,8 +1075,9 @@ router.get("/me/turnovers", authMiddleware, async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*                         LOGGED-IN USER: GAME HISTORY V3                    */
+/*                         LOGGED-IN USER: GAME HISTORY V3                     */
 /* -------------------------------------------------------------------------- */
+
 
 router.get("/me/games", authMiddleware, async (req, res) => {
   try {
@@ -556,38 +1091,540 @@ router.get("/me/games", authMiddleware, async (req, res) => {
     }
 
     const { page, limit, skip } = getPagination(req);
+
     const dateFilter = buildDateFilter(req.query);
+
+    const {
+      game_code = "",
+      game_uid = "",
+      game_round = "",
+      serial_number = "",
+      status = "",
+      provider = "",
+      transaction_id = "",
+      verification_key = "",
+      nineWicketBetStatus = "",
+      hasExposure = "",
+      search = "",
+    } = req.query || {};
+
+    /* ---------------------------------------------------------------------- */
+    /*                        EXISTING BASE QUERY                              */
+    /* ---------------------------------------------------------------------- */
 
     const query = buildV3GameHistoryQuery({
       user: authUserId,
-      game_code: String(req.query.game_code || ""),
-      status: String(req.query.status || ""),
-      transaction_id: String(req.query.transaction_id || ""),
-      verification_key: String(req.query.verification_key || ""),
-      search: String(req.query.search || ""),
+
+      game_code: String(game_code || game_uid || "").trim(),
+
+      status: String(status || "").trim(),
+
+      transaction_id: String(
+        transaction_id || serial_number || "",
+      ).trim(),
+
+      verification_key: String(
+        verification_key || game_round || "",
+      ).trim(),
+
+      /**
+       * Search নিচে আলাদাভাবে যোগ করা হচ্ছে।
+       */
+      search: "",
+
       dateFilter,
     });
 
-    const [items, total] = await Promise.all([
+    /* ---------------------------------------------------------------------- */
+    /*                           PROVIDER FILTER                               */
+    /* ---------------------------------------------------------------------- */
+
+    const providerValue = String(provider || "")
+      .trim()
+      .toLowerCase();
+
+    if (
+      providerValue &&
+      providerValue !== "all" &&
+      ["oracle", "ninewicket"].includes(providerValue)
+    ) {
+      query.provider = providerValue;
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                         RESULT TYPE FILTER                              */
+    /* ---------------------------------------------------------------------- */
+
+    const resultTypeValue = String(status || "")
+      .trim()
+      .toLowerCase();
+
+    if (
+      resultTypeValue &&
+      resultTypeValue !== "all" &&
+      ["win", "loss", "push"].includes(resultTypeValue)
+    ) {
+      query.resultType = resultTypeValue;
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                         DIRECT GAME FILTERS                             */
+    /* ---------------------------------------------------------------------- */
+
+    if (String(game_uid || "").trim()) {
+      query.game_uid = {
+        $regex: String(game_uid).trim(),
+        $options: "i",
+      };
+    }
+
+    if (String(game_round || "").trim()) {
+      query.game_round = {
+        $regex: String(game_round).trim(),
+        $options: "i",
+      };
+    }
+
+    if (String(serial_number || "").trim()) {
+      query.serial_number = {
+        $regex: String(serial_number).trim(),
+        $options: "i",
+      };
+    }
+
+    if (String(nineWicketBetStatus || "").trim()) {
+      query.nineWicketBetStatus = {
+        $regex: `^${String(nineWicketBetStatus).trim()}$`,
+        $options: "i",
+      };
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                           EXPOSURE FILTER                               */
+    /* ---------------------------------------------------------------------- */
+
+    const exposureFilter = String(hasExposure || "")
+      .trim()
+      .toLowerCase();
+
+    if (exposureFilter === "true") {
+      query.exposureAfter = {
+        $gt: 0,
+      };
+    }
+
+    if (exposureFilter === "false") {
+      query.exposureAfter = {
+        $lte: 0,
+      };
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                            GLOBAL SEARCH                                */
+    /* ---------------------------------------------------------------------- */
+
+    const searchText = String(search || "").trim();
+
+    if (searchText) {
+      const escapedSearch = searchText.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
+
+      const searchRegex = new RegExp(escapedSearch, "i");
+
+      const searchConditions = [
+        {
+          userId: searchRegex,
+        },
+        {
+          phone: searchRegex,
+        },
+        {
+          userGamePlayName: searchRegex,
+        },
+        {
+          nineWicketUsername: searchRegex,
+        },
+        {
+          member_account: searchRegex,
+        },
+        {
+          provider: searchRegex,
+        },
+        {
+          game_uid: searchRegex,
+        },
+        {
+          game_round: searchRegex,
+        },
+        {
+          serial_number: searchRegex,
+        },
+        {
+          resultType: searchRegex,
+        },
+        {
+          nineWicketBetId: searchRegex,
+        },
+        {
+          nineWicketBetStatus: searchRegex,
+        },
+        {
+          eventTypeName: searchRegex,
+        },
+        {
+          eventName: searchRegex,
+        },
+        {
+          marketName: searchRegex,
+        },
+        {
+          competitionName: searchRegex,
+        },
+        {
+          oracleTimestamp: searchRegex,
+        },
+      ];
+
+      /**
+       * Base query-তে আগে থেকেই $or থাকলে,
+       * সেটি destroy না করে $and দিয়ে combine করবে।
+       */
+      if (query.$or) {
+        const existingOr = query.$or;
+
+        delete query.$or;
+
+        query.$and = [
+          {
+            $or: existingOr,
+          },
+          {
+            $or: searchConditions,
+          },
+        ];
+      } else if (Array.isArray(query.$and)) {
+        query.$and.push({
+          $or: searchConditions,
+        });
+      } else {
+        query.$or = searchConditions;
+      }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /*                         FETCH HISTORY + SUMMARY                         */
+    /* ---------------------------------------------------------------------- */
+
+    const [items, total, summaryAgg] = await Promise.all([
       GameHistory.find(query)
-        .sort({ createdAt: -1 })
+        .sort({
+          createdAt: -1,
+          _id: -1,
+        })
         .skip(skip)
         .limit(limit)
         .lean(),
+
       GameHistory.countDocuments(query),
+
+      GameHistory.aggregate([
+        {
+          $match: query,
+        },
+        {
+          $group: {
+            _id: null,
+
+            totalBetAmount: {
+              $sum: "$bet_amount",
+            },
+
+            totalWinAmount: {
+              $sum: "$win_amount",
+            },
+
+            totalNetAmount: {
+              $sum: "$net_amount",
+            },
+
+            totalMatchStake: {
+              $sum: "$matchStake",
+            },
+
+            totalProfitLoss: {
+              $sum: "$profitLoss",
+            },
+
+            totalExposureChange: {
+              $sum: "$exposureChange",
+            },
+
+            highestExposure: {
+              $max: "$exposureAfter",
+            },
+
+            totalRecords: {
+              $sum: 1,
+            },
+
+            oracleRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$provider", "oracle"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            nineWicketRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$provider", "ninewicket"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            winRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "win"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            lossRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "loss"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            pushRecords: {
+              $sum: {
+                $cond: [
+                  {
+                    $eq: ["$resultType", "push"],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
     ]);
+
+    const summary = summaryAgg?.[0] || {
+      totalBetAmount: 0,
+      totalWinAmount: 0,
+      totalNetAmount: 0,
+      totalMatchStake: 0,
+      totalProfitLoss: 0,
+      totalExposureChange: 0,
+      highestExposure: 0,
+      totalRecords: 0,
+      oracleRecords: 0,
+      nineWicketRecords: 0,
+      winRecords: 0,
+      lossRecords: 0,
+      pushRecords: 0,
+    };
+
+    const safeMoney = (value = 0) => {
+      const number = Number(value);
+
+      if (!Number.isFinite(number)) {
+        return 0;
+      }
+
+      return Math.trunc(number * 100) / 100;
+    };
+
+    /* ---------------------------------------------------------------------- */
+    /*                               RESPONSE                                  */
+    /* ---------------------------------------------------------------------- */
 
     return res.status(200).json({
       success: true,
+
       message: "My game history fetched successfully.",
-      data: items.map(normalizeGameHistoryRow),
+
+      data: items.map((item) => {
+        const normalized = normalizeGameHistoryRow(item);
+
+        return {
+          ...normalized,
+
+          provider: item.provider || "oracle",
+
+          userId: item.userId || "",
+
+          userGamePlayName: item.userGamePlayName || "",
+
+          nineWicketUsername: item.nineWicketUsername || "",
+
+          member_account: item.member_account || "",
+
+          game_uid: item.game_uid || "",
+
+          game_round: item.game_round || "",
+
+          serial_number: item.serial_number || "",
+
+          bet_amount: safeMoney(item.bet_amount),
+
+          win_amount: safeMoney(item.win_amount),
+
+          net_amount: safeMoney(item.net_amount),
+
+          resultType: item.resultType || "push",
+
+          balance_before: safeMoney(item.balance_before),
+
+          balance_after: safeMoney(item.balance_after),
+
+          nineWicketBetId: item.nineWicketBetId || "",
+
+          nineWicketBetStatus:
+            item.nineWicketBetStatus || "",
+
+          matchStake: safeMoney(item.matchStake),
+
+          profitLoss: safeMoney(item.profitLoss),
+
+          eventTypeName: item.eventTypeName || "",
+
+          eventName: item.eventName || "",
+
+          marketName: item.marketName || "",
+
+          competitionName: item.competitionName || "",
+
+          exposureChange: safeMoney(item.exposureChange),
+
+          exposureAfter: Math.max(
+            0,
+            safeMoney(item.exposureAfter),
+          ),
+
+          affiliateInfo: item.affiliateInfo || null,
+
+          oracleTimestamp: item.oracleTimestamp || "",
+
+          createdAt: item.createdAt,
+
+          updatedAt: item.updatedAt,
+        };
+      }),
+
+      summary: {
+        totalRecords: Number(summary.totalRecords || 0),
+
+        totalBetAmount: safeMoney(
+          summary.totalBetAmount,
+        ),
+
+        totalWinAmount: safeMoney(
+          summary.totalWinAmount,
+        ),
+
+        totalNetAmount: safeMoney(
+          summary.totalNetAmount,
+        ),
+
+        totalMatchStake: safeMoney(
+          summary.totalMatchStake,
+        ),
+
+        totalProfitLoss: safeMoney(
+          summary.totalProfitLoss,
+        ),
+
+        totalExposureChange: safeMoney(
+          summary.totalExposureChange,
+        ),
+
+        highestExposure: Math.max(
+          0,
+          safeMoney(summary.highestExposure),
+        ),
+
+        oracleRecords: Number(
+          summary.oracleRecords || 0,
+        ),
+
+        nineWicketRecords: Number(
+          summary.nineWicketRecords || 0,
+        ),
+
+        winRecords: Number(
+          summary.winRecords || 0,
+        ),
+
+        lossRecords: Number(
+          summary.lossRecords || 0,
+        ),
+
+        pushRecords: Number(
+          summary.pushRecords || 0,
+        ),
+      },
+
+      filters: {
+        search: searchText,
+
+        status: resultTypeValue,
+
+        provider: providerValue,
+
+        game_code: String(game_code || ""),
+
+        game_uid: String(game_uid || ""),
+
+        game_round: String(game_round || ""),
+
+        serial_number: String(serial_number || ""),
+
+        transaction_id: String(transaction_id || ""),
+
+        verification_key: String(verification_key || ""),
+
+        nineWicketBetStatus: String(
+          nineWicketBetStatus || "",
+        ),
+
+        hasExposure: exposureFilter,
+      },
+
       meta: buildMeta(page, limit, total),
     });
   } catch (error) {
     console.error("GET /me/games error:", error);
+
     return res.status(500).json({
       success: false,
+
       message: "Failed to fetch my game history.",
+
       error: error.message,
     });
   }

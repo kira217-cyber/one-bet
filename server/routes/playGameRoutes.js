@@ -3,19 +3,48 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
+import NineWicketWallet from "../models/NineWicketWallet.js";
 
 const router = express.Router();
+
+/* =========================================================
+   API CONFIGURATION
+========================================================= */
 
 const ORACLE_GAME_LAUNCH_URL =
   process.env.ORACLE_GAME_LAUNCH_URL ||
   "https://oraclegames.net/api/getgameurl";
 
-const ORACLE_LAUNCH_KEY = "4895677890656568745";
+const ORACLE_NINE_WICKET_URL =
+  process.env.ORACLE_NINE_WICKET_URL ||
+  "https://oraclegames.net/api/ninewicket";
+
+const ORACLE_LAUNCH_KEY =
+  process.env.ORACLE_LAUNCH_KEY || "412afc3901061cd4389224fd1643a709";
+
+const NINE_WICKET_GAME_UID =
+  process.env.NINE_WICKET_GAME_UID || "48341a3bf62b6dd0814d7129e7e0834b";
+
+/* =========================================================
+   LAUNCH LOCK
+========================================================= */
+
+/**
+ * একই user একই game একসঙ্গে একাধিকবার launch করলে
+ * duplicate transfer আটকাবে।
+ */
+
+const launchLocks = new Map();
+
+/* =========================================================
+   AUTHENTICATION
+========================================================= */
 
 const requireAuth = (req, res, next) => {
   try {
     const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+    const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
 
     if (!token) {
       return res.status(401).json({
@@ -40,9 +69,12 @@ const requireAuth = (req, res, next) => {
       });
     }
 
-    req.user = { id };
+    req.user = {
+      id,
+    };
+
     next();
-  } catch {
+  } catch (error) {
     return res.status(401).json({
       success: false,
       message: "Invalid or expired token",
@@ -50,42 +82,165 @@ const requireAuth = (req, res, next) => {
   }
 };
 
-const makeGamePlayName = () => {
-  const letters = "abcdefghijklmnopqrstuvwxyz";
-  const bytes = crypto.randomBytes(10);
-  let name = "";
+/* =========================================================
+   MONEY HELPERS
+========================================================= */
 
-  for (let i = 0; i < 10; i += 1) {
-    name += letters[bytes[i] % letters.length];
+const toMoney = (value = 0) => {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    return 0;
   }
 
-  return name;
+  return Math.trunc(amount * 100) / 100;
 };
 
-const isValidGamePlayName = (value = "") =>
-  /^[a-z]{10}$/.test(String(value || "").trim());
+/* =========================================================
+   USERNAME HELPERS
+========================================================= */
 
-const getOrCreateGamePlayName = async (user) => {
-  if (isValidGamePlayName(user.userGamePlayName)) {
-    return String(user.userGamePlayName).trim();
+const normalizeUsername = (value = "") => {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+};
+
+const makeRandomUsername = (length) => {
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+
+  const bytes = crypto.randomBytes(length);
+
+  let username = "";
+
+  for (let index = 0; index < length; index += 1) {
+    username += letters[bytes[index] % letters.length];
   }
 
-  for (let i = 0; i < 50; i += 1) {
-    const name = makeGamePlayName();
+  return username;
+};
+
+/**
+ * Normal Oracle game username:
+ * exactly 10 lowercase letters।
+ */
+
+const isValidOracleUsername = (value = "") => {
+  return /^[a-z]{10}$/.test(normalizeUsername(value));
+};
+
+/**
+ * Nine Wicket username:
+ * exactly 6 lowercase letters।
+ */
+
+const isValidNineWicketUsername = (value = "") => {
+  return /^[a-z]{6}$/.test(normalizeUsername(value));
+};
+
+/* =========================================================
+   NORMAL ORACLE USERNAME
+========================================================= */
+
+const getOrCreateOracleUsername = async (user) => {
+  const existingUsername = normalizeUsername(user.userGamePlayName);
+
+  if (isValidOracleUsername(existingUsername)) {
+    if (user.userGamePlayName !== existingUsername) {
+      user.userGamePlayName = existingUsername;
+
+      await user.save();
+    }
+
+    return existingUsername;
+  }
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const generatedUsername = makeRandomUsername(10);
+
+    if (!isValidOracleUsername(generatedUsername)) {
+      continue;
+    }
 
     const exists = await User.exists({
-      userGamePlayName: name,
+      userGamePlayName: generatedUsername,
     });
 
-    if (!exists) {
-      user.userGamePlayName = name;
+    if (exists) {
+      continue;
+    }
+
+    try {
+      user.userGamePlayName = generatedUsername;
+
       await user.save();
-      return name;
+
+      return generatedUsername;
+    } catch (error) {
+      if (error?.code === 11000) {
+        continue;
+      }
+
+      throw error;
     }
   }
 
-  throw new Error("Failed to generate unique game play username");
+  throw new Error("Failed to generate unique 10-letter Oracle game username");
 };
+
+/* =========================================================
+   NINE WICKET USERNAME
+========================================================= */
+
+const getOrCreateNineWicketUsername = async (user) => {
+  const existingUsername = normalizeUsername(user.nineWicketUsername);
+
+  if (isValidNineWicketUsername(existingUsername)) {
+    if (user.nineWicketUsername !== existingUsername) {
+      user.nineWicketUsername = existingUsername;
+
+      await user.save();
+    }
+
+    return existingUsername;
+  }
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const generatedUsername = makeRandomUsername(6);
+
+    if (!isValidNineWicketUsername(generatedUsername)) {
+      continue;
+    }
+
+    const exists = await User.exists({
+      nineWicketUsername: generatedUsername,
+    });
+
+    if (exists) {
+      continue;
+    }
+
+    try {
+      user.nineWicketUsername = generatedUsername;
+
+      await user.save();
+
+      return generatedUsername;
+    } catch (error) {
+      if (error?.code === 11000) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Failed to generate unique 6-letter Nine Wicket username");
+};
+
+/* =========================================================
+   LAUNCH URL HELPER
+========================================================= */
 
 const extractLaunchUrl = (responseData) => {
   return (
@@ -103,8 +258,168 @@ const extractLaunchUrl = (responseData) => {
   );
 };
 
+/* =========================================================
+   NINE WICKET WALLET UPDATE
+========================================================= */
+
+const updateNineWicketWalletAfterTransfer = async ({
+  userId,
+  username,
+  amount,
+}) => {
+  const safeAmount = toMoney(amount);
+
+  const now = new Date();
+
+  const wallet = await NineWicketWallet.findOneAndUpdate(
+    {
+      user: userId,
+    },
+    {
+      $set: {
+        user: userId,
+
+        username,
+
+        lastTransferAmount: safeAmount,
+
+        lastTransferAt: now,
+
+        lastSyncAt: now,
+
+        status: "playing",
+      },
+
+      $inc: {
+        totalTransferred: safeAmount,
+      },
+
+      $setOnInsert: {
+        totalReturned: 0,
+
+        exposureBalance: 0,
+
+        lastReturnedAmount: 0,
+
+        lastReturnedAt: null,
+      },
+    },
+    {
+      new: true,
+
+      upsert: true,
+
+      setDefaultsOnInsert: true,
+    },
+  );
+
+  return wallet;
+};
+
+/* =========================================================
+   BALANCE RESERVE
+========================================================= */
+
+/**
+ * Nine Wicket API call করার আগে local balance deduct করা হবে।
+ *
+ * এতে একই balance multiple request থেকে transfer হতে পারবে না।
+ */
+
+const reserveUserBalance = async ({ userId, amount }) => {
+  const safeAmount = toMoney(amount);
+
+  if (safeAmount <= 0) {
+    return null;
+  }
+
+  return User.findOneAndUpdate(
+    {
+      _id: userId,
+
+      role: "user",
+
+      isActive: true,
+
+      balance: {
+        $gte: safeAmount,
+      },
+    },
+    {
+      $inc: {
+        balance: -safeAmount,
+      },
+    },
+    {
+      new: true,
+    },
+  ).select("balance currency");
+};
+
+/* =========================================================
+   BALANCE ROLLBACK
+========================================================= */
+
+/**
+ * Nine Wicket transfer API fail করলে reserve করা balance
+ * user-এর main balance-এ ফেরত দেওয়া হবে।
+ */
+
+const rollbackUserBalance = async ({ userId, amount }) => {
+  const safeAmount = toMoney(amount);
+
+  if (safeAmount <= 0) {
+    return;
+  }
+
+  await User.updateOne(
+    {
+      _id: userId,
+    },
+    {
+      $inc: {
+        balance: safeAmount,
+      },
+    },
+  );
+};
+
+/* =========================================================
+   PLAY GAME ROUTE
+   POST /api/play-game/playgame
+========================================================= */
+
 router.post("/playgame", requireAuth, async (req, res) => {
+  const requestedGameId = String(
+    req.body?.game_uid || req.body?.gameID || req.body?.gameId || "",
+  ).trim();
+
+  const lockKey = `${req.user?.id}:${requestedGameId}`;
+
+  let nineWicketBalanceReserved = false;
+
+  let reservedNineWicketAmount = 0;
+
+  let reservedNineWicketUserId = null;
+
   try {
+    /* -----------------------------------------------------
+       DUPLICATE LAUNCH CHECK
+    ----------------------------------------------------- */
+
+    if (launchLocks.has(lockKey)) {
+      return res.status(429).json({
+        success: false,
+        message: "Game launch already processing. Please wait.",
+      });
+    }
+
+    launchLocks.set(lockKey, true);
+
+    /* -----------------------------------------------------
+       GAME UID
+    ----------------------------------------------------- */
+
     const { gameID, game_uid, gameId } = req.body || {};
 
     const gameUId = String(game_uid || gameID || gameId || "").trim();
@@ -116,14 +431,41 @@ router.post("/playgame", requireAuth, async (req, res) => {
       });
     }
 
+    if (!ORACLE_LAUNCH_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: "ORACLE_LAUNCH_KEY missing",
+      });
+    }
+
+    /* -----------------------------------------------------
+       FIND USER
+    ----------------------------------------------------- */
+
     const user = await User.findById(req.user?.id).select(
-      "userId phone balance isActive currency userGamePlayName",
+      [
+        "userId",
+        "phone",
+        "balance",
+        "role",
+        "isActive",
+        "currency",
+        "userGamePlayName",
+        "nineWicketUsername",
+      ].join(" "),
     );
 
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
+      });
+    }
+
+    if (user.role !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Only normal user can play games",
       });
     }
 
@@ -134,70 +476,417 @@ router.post("/playgame", requireAuth, async (req, res) => {
       });
     }
 
-    let balance = Number(user.balance ?? 0);
-    if (!Number.isFinite(balance) || balance < 0) balance = 0;
+    /* -----------------------------------------------------
+       VALIDATE BALANCE
+    ----------------------------------------------------- */
 
-    if (balance <= 0) {
+    const currentBalance = toMoney(user.balance);
+
+    if (currentBalance <= 0) {
       return res.status(400).json({
         success: false,
         message: "No balance, please deposit",
       });
     }
 
-    if (!ORACLE_LAUNCH_KEY) {
-      return res.status(500).json({
+    /**
+     * আগের functionality অনুযায়ী integer amount transfer হবে।
+     */
+
+    const amount = Math.floor(currentBalance);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({
         success: false,
-        message: "ORACLE_LAUNCH_KEY missing in .env",
+        message: "Invalid transferable balance",
       });
     }
 
-    const userGamePlayName = await getOrCreateGamePlayName(user);
+    /* =====================================================
+       NINE WICKET GAME
+    ===================================================== */
 
-    const payload = {
-      amount: String(Math.floor(balance)),
-      username: userGamePlayName,
+    if (gameUId === NINE_WICKET_GAME_UID) {
+      /* ---------------------------------------------------
+         CREATE OR GET NINE WICKET USERNAME
+      --------------------------------------------------- */
+
+      const generatedUsername = await getOrCreateNineWicketUsername(user);
+
+      const nineWicketUsername = normalizeUsername(generatedUsername);
+
+      if (!isValidNineWicketUsername(nineWicketUsername)) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            "Invalid Nine Wicket username. Username must be exactly 6 lowercase letters.",
+
+          debug: {
+            username: nineWicketUsername,
+
+            usernameLength: nineWicketUsername.length,
+
+            usernameValid: false,
+          },
+        });
+      }
+
+      /* ---------------------------------------------------
+         STEP 1: RESERVE LOCAL BALANCE
+      --------------------------------------------------- */
+
+      const reservedUser = await reserveUserBalance({
+        userId: user._id,
+
+        amount,
+      });
+
+      if (!reservedUser) {
+        return res.status(409).json({
+          success: false,
+
+          message:
+            "Balance changed while launching Nine Wicket. Please refresh and try again.",
+        });
+      }
+
+      nineWicketBalanceReserved = true;
+
+      reservedNineWicketAmount = amount;
+
+      reservedNineWicketUserId = user._id;
+
+      const remainingBalance = toMoney(reservedUser.balance);
+
+      /* ---------------------------------------------------
+         STEP 2: PREPARE NINE WICKET PAYLOAD
+      --------------------------------------------------- */
+
+      const nineWicketPayload = {
+        username: nineWicketUsername,
+
+        amount,
+      };
+
+      console.log("========== NINE WICKET TRANSFER START ==========");
+
+      console.log("User ID:", String(user._id));
+
+      console.log("Site User ID:", String(user.userId || ""));
+
+      console.log("Nine Wicket Username:", JSON.stringify(nineWicketUsername));
+
+      console.log("Nine Wicket Username Length:", nineWicketUsername.length);
+
+      console.log(
+        "Nine Wicket Username Valid:",
+        isValidNineWicketUsername(nineWicketUsername),
+      );
+
+      console.log("DB Balance Before Reserve:", currentBalance);
+
+      console.log("DB Balance After Reserve:", remainingBalance);
+
+      console.log("Amount Sending:", amount);
+
+      console.log("Nine Wicket Payload:", nineWicketPayload);
+
+      /* ---------------------------------------------------
+         STEP 3: TRANSFER TO NINE WICKET
+      --------------------------------------------------- */
+
+      const nineWicketResponse = await axios.post(
+        ORACLE_NINE_WICKET_URL,
+
+        nineWicketPayload,
+
+        {
+          headers: {
+            "Content-Type": "application/json",
+
+            "x-oracle-key": ORACLE_LAUNCH_KEY,
+          },
+
+          timeout: 30000,
+        },
+      );
+
+      console.log("Nine Wicket Response:", nineWicketResponse.data);
+
+      const transferStatus = Number(nineWicketResponse.data?.transfer_status);
+
+      const gameUrl = extractLaunchUrl(nineWicketResponse.data);
+
+      /* ---------------------------------------------------
+         TRANSFER FAILED
+      --------------------------------------------------- */
+
+      if (transferStatus !== 1 || !gameUrl) {
+        await rollbackUserBalance({
+          userId: user._id,
+
+          amount,
+        });
+
+        nineWicketBalanceReserved = false;
+
+        console.error(
+          "Nine Wicket transfer failed. Local balance rolled back.",
+        );
+
+        return res.status(502).json({
+          success: false,
+
+          message:
+            nineWicketResponse.data?.message || "Nine Wicket transfer failed",
+
+          error: nineWicketResponse.data,
+        });
+      }
+
+      /* ---------------------------------------------------
+         STEP 4: UPDATE LOCAL WALLET
+      --------------------------------------------------- */
+
+      let wallet = null;
+
+      try {
+        wallet = await updateNineWicketWalletAfterTransfer({
+          userId: user._id,
+
+          username: nineWicketUsername,
+
+          amount,
+        });
+      } catch (walletError) {
+        /**
+         * Provider-এ transfer success হয়ে গেছে।
+         *
+         * তাই wallet tracking fail হলেও local balance
+         * rollback করা যাবে না।
+         */
+
+        console.error(
+          "Nine Wicket wallet tracking update failed:",
+          walletError.message,
+        );
+
+        wallet = await NineWicketWallet.findOne({
+          user: user._id,
+        });
+      }
+
+      /**
+       * Provider transfer success।
+       *
+       * catch block যেন reserved balance rollback না করে।
+       */
+
+      nineWicketBalanceReserved = false;
+
+      console.log("Nine Wicket transfer success.");
+
+      console.log("User local balance:", remainingBalance);
+
+      console.log("Nine Wicket Wallet:", {
+        totalTransferred: Number(wallet?.totalTransferred || 0),
+
+        totalReturned: Number(wallet?.totalReturned || 0),
+
+        exposureBalance: Number(wallet?.exposureBalance || 0),
+
+        status: wallet?.status || "playing",
+      });
+
+      console.log("========== NINE WICKET TRANSFER END ==========");
+
+      /* ---------------------------------------------------
+         STEP 5: RETURN LAUNCH URL
+      --------------------------------------------------- */
+
+      return res.status(200).json({
+        success: true,
+
+        gameUrl,
+
+        launch_url: gameUrl,
+
+        game_url: gameUrl,
+
+        provider: "ninewicket",
+
+        /**
+         * Client same tab-এ game open করতে পারবে।
+         */
+
+        openType: "same_tab",
+
+        iframeFallback: false,
+
+        directOpenUrl: gameUrl,
+
+        used: {
+          game_uid: gameUId,
+
+          username: nineWicketUsername,
+
+          usernameLength: nineWicketUsername.length,
+
+          amount,
+
+          balanceTransferred: true,
+
+          oldBalance: currentBalance,
+
+          newBalance: remainingBalance,
+        },
+
+        nineWicketWallet: {
+          totalTransferred: Number(wallet?.totalTransferred || 0),
+
+          totalReturned: Number(wallet?.totalReturned || 0),
+
+          exposureBalance: Number(wallet?.exposureBalance || 0),
+
+          status: wallet?.status || "playing",
+        },
+      });
+    }
+
+    /* =====================================================
+       NORMAL ORACLE GAME
+    ===================================================== */
+
+    const oracleUsername = await getOrCreateOracleUsername(user);
+
+    if (!isValidOracleUsername(oracleUsername)) {
+      return res.status(400).json({
+        success: false,
+
+        message:
+          "Invalid Oracle game username. Username must be exactly 10 lowercase letters.",
+      });
+    }
+
+    const oraclePayload = {
+      amount: String(amount),
+
+      username: oracleUsername,
+
       game_uid: gameUId,
     };
 
-    const response = await axios.post(ORACLE_GAME_LAUNCH_URL, payload, {
-      headers: {
-        "Content-Type": "application/json",
-        "x-oracle-key": ORACLE_LAUNCH_KEY,
-      },
-      timeout: 30000,
-    });
+    console.log("========== NORMAL ORACLE GAME LAUNCH START ==========");
 
-    const gameUrl = extractLaunchUrl(response.data);
+    console.log("User ID:", String(user._id));
+
+    console.log("Game UID:", gameUId);
+
+    console.log("Oracle Username:", oracleUsername);
+
+    console.log("Amount:", oraclePayload.amount);
+
+    const oracleResponse = await axios.post(
+      ORACLE_GAME_LAUNCH_URL,
+
+      oraclePayload,
+
+      {
+        headers: {
+          "Content-Type": "application/json",
+
+          "x-oracle-key": ORACLE_LAUNCH_KEY,
+        },
+
+        timeout: 30000,
+      },
+    );
+
+    const gameUrl = extractLaunchUrl(oracleResponse.data);
 
     if (!gameUrl || typeof gameUrl !== "string") {
       return res.status(502).json({
         success: false,
+
         message: "No launch_url received from Oracle API",
-        error: response.data,
+
+        error: oracleResponse.data,
       });
     }
 
-    return res.json({
+    console.log("========== NORMAL ORACLE GAME LAUNCH END ==========");
+
+    return res.status(200).json({
       success: true,
+
       gameUrl,
+
       launch_url: gameUrl,
+
+      game_url: gameUrl,
+
+      provider: "oracle",
+
       used: {
         game_uid: gameUId,
-        username: userGamePlayName,
-        amount: payload.amount,
+
+        username: oracleUsername,
+
+        usernameLength: oracleUsername.length,
+
+        amount: oraclePayload.amount,
       },
     });
   } catch (error) {
-    console.error("PlayGame API Error:", error.response?.data || error.message);
+    /* -----------------------------------------------------
+       NINE WICKET RESERVE ROLLBACK
+    ----------------------------------------------------- */
 
-    return res.status(error.response?.status || 500).json({
+    if (
+      nineWicketBalanceReserved &&
+      reservedNineWicketUserId &&
+      reservedNineWicketAmount > 0
+    ) {
+      try {
+        await rollbackUserBalance({
+          userId: reservedNineWicketUserId,
+
+          amount: reservedNineWicketAmount,
+        });
+
+        console.log("Nine Wicket error: reserved local balance rolled back.");
+      } catch (rollbackError) {
+        console.error(
+          "Nine Wicket balance rollback failed:",
+          rollbackError.message,
+        );
+      }
+    }
+
+    const providerError =
+      error?.response?.data || error?.message || "Unknown game launch error";
+
+    console.error("PlayGame API Error:", providerError);
+
+    return res.status(error?.response?.status || 500).json({
       success: false,
+
       message:
         error?.response?.data?.message ||
-        error.message ||
+        error?.message ||
         "Failed to launch game",
-      error: error.response?.data || error.message,
+
+      error: providerError,
     });
+  } finally {
+    /**
+     * ৮ সেকেন্ড পর একই user আবার একই game launch করতে পারবে।
+     */
+
+    setTimeout(() => {
+      launchLocks.delete(lockKey);
+    }, 8000);
   }
 });
 

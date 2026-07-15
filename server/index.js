@@ -59,7 +59,7 @@ import userReferRedeemRoutes from "./routes/userReferRedeemRoutes.js";
 import adminReferRedeemRoutes from "./routes/adminReferRedeemRoutes.js";
 import affForgetPasswordRoutes from "./routes/affForgetPasswordRoutes.js";
 import clientGameRoutes from "./routes/clientGameRoutes.js";
-
+import nineWicketWalletRoutes from "./routes/nineWicketWalletRoutes.js";
 
 
 
@@ -146,7 +146,7 @@ app.use("/api/user/refer-redeem",authMiddleware, userReferRedeemRoutes);
 app.use("/api/admin/refer-redeem",  adminReferRedeemRoutes);
 app.use("/api/users/affiliate", affForgetPasswordRoutes);
 app.use("/api/client-games", clientGameRoutes);
-
+app.use("/api/nine-wicket-wallet", nineWicketWalletRoutes);
 
 // ✅ port
 const PORT = process.env.PORT || 5008;

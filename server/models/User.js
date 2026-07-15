@@ -28,7 +28,15 @@ const userSchema = new Schema(
       unique: true,
       index: true,
     },
-    
+
+    /**
+     * ==========================================
+     * NORMAL ORACLE GAME USERNAME
+     * ==========================================
+     * Normal Oracle games-এর জন্য ব্যবহার হবে।
+     * অবশ্যই exactly 10 lowercase English letters।
+     */
+
     userGamePlayName: {
       type: String,
       default: null,
@@ -36,6 +44,23 @@ const userSchema = new Schema(
       lowercase: true,
       minlength: 10,
       maxlength: 10,
+    },
+
+    /**
+     * ==========================================
+     * NINE WICKET USERNAME
+     * ==========================================
+     * Nine Wicket-এর জন্য আলাদা username।
+     * অবশ্যই exactly 6 lowercase English letters।
+     */
+
+    nineWicketUsername: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true,
+      minlength: 6,
+      maxlength: 6,
     },
 
     password: {
@@ -59,6 +84,8 @@ const userSchema = new Schema(
     currency: {
       type: String,
       default: "BDT",
+      trim: true,
+      uppercase: true,
     },
 
     balance: {
@@ -71,6 +98,7 @@ const userSchema = new Schema(
       type: String,
       default: null,
       trim: true,
+      uppercase: true,
     },
 
     createdUsers: [
@@ -97,8 +125,8 @@ const userSchema = new Schema(
      * ==========================================
      * OWN GAMEPLAY USER FOR AFFILIATE
      * ==========================================
-     * aff-user নিজের gameplay user create করবে
-     * এবং balance transfer এই user এ যাবে
+     * aff-user নিজের gameplay user create করবে।
+     * Affiliate balance transfer এই user-এ যাবে।
      */
 
     ownUser: {
@@ -212,22 +240,50 @@ userSchema.index(
   },
 );
 
+userSchema.index(
+  {
+    userGamePlayName: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      userGamePlayName: {
+        $type: "string",
+      },
+    },
+  },
+);
+
+userSchema.index(
+  {
+    nineWicketUsername: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      nineWicketUsername: {
+        $type: "string",
+      },
+    },
+  },
+);
+
 userSchema.index({
   role: 1,
   isActive: 1,
 });
 
-// userSchema.index({
-//   referredBy: 1,
-// });
-
-// userSchema.index({
-//   ownUser: 1,
-// });
-
 userSchema.index({
   userId: 1,
   phone: 1,
+});
+
+userSchema.index({
+  referredBy: 1,
+});
+
+userSchema.index({
+  ownUser: 1,
 });
 
 /**
