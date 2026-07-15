@@ -11,7 +11,6 @@ const userSchema = new Schema(
       unique: true,
       minlength: 4,
       maxlength: 15,
-      index: true,
     },
 
     email: {
@@ -26,7 +25,6 @@ const userSchema = new Schema(
       required: true,
       trim: true,
       unique: true,
-      index: true,
     },
 
     /**
@@ -34,7 +32,7 @@ const userSchema = new Schema(
      * NORMAL ORACLE GAME USERNAME
      * ==========================================
      * Normal Oracle games-এর জন্য ব্যবহার হবে।
-     * অবশ্যই exactly 10 lowercase English letters।
+     * Exactly 10 lowercase English letters।
      */
 
     userGamePlayName: {
@@ -51,7 +49,7 @@ const userSchema = new Schema(
      * NINE WICKET USERNAME
      * ==========================================
      * Nine Wicket-এর জন্য আলাদা username।
-     * অবশ্যই exactly 6 lowercase English letters।
+     * Exactly 6 lowercase English letters।
      */
 
     nineWicketUsername: {
@@ -125,8 +123,6 @@ const userSchema = new Schema(
      * ==========================================
      * OWN GAMEPLAY USER FOR AFFILIATE
      * ==========================================
-     * aff-user নিজের gameplay user create করবে।
-     * Affiliate balance transfer এই user-এ যাবে।
      */
 
     ownUser: {
@@ -230,6 +226,11 @@ const userSchema = new Schema(
  * ==========================================
  */
 
+/**
+ * userId এবং phone field-এর unique: true থেকেই
+ * unique index তৈরি হবে।
+ */
+
 userSchema.index(
   {
     referralCode: 1,
@@ -239,6 +240,11 @@ userSchema.index(
     sparse: true,
   },
 );
+
+/**
+ * Normal Oracle username unique হবে শুধু
+ * string value থাকলে।
+ */
 
 userSchema.index(
   {
@@ -253,6 +259,11 @@ userSchema.index(
     },
   },
 );
+
+/**
+ * Nine Wicket username unique হবে শুধু
+ * string value থাকলে।
+ */
 
 userSchema.index(
   {
@@ -273,18 +284,10 @@ userSchema.index({
   isActive: 1,
 });
 
-userSchema.index({
-  userId: 1,
-  phone: 1,
-});
-
-userSchema.index({
-  referredBy: 1,
-});
-
-userSchema.index({
-  ownUser: 1,
-});
+/**
+ * referredBy এবং ownUser-এর আলাদা schema.index()
+ * রাখা হয়নি, কারণ field-এর মধ্যে index: true আছে।
+ */
 
 /**
  * ==========================================

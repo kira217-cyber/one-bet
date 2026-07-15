@@ -5,10 +5,10 @@ const { Schema } = mongoose;
 const nineWicketWalletSchema = new Schema(
   {
     /**
-     * ==========================================
-     * USER REFERENCE
-     * ==========================================
-     * প্রত্যেক user-এর জন্য একটি NineWicket wallet থাকবে।
+     * প্রত্যেক user-এর জন্য একটি wallet থাকবে।
+     *
+     * unique: true থেকেই index তৈরি হবে।
+     * তাই আলাদা index: true দেওয়া হয়নি।
      */
 
     user: {
@@ -16,11 +16,10 @@ const nineWicketWalletSchema = new Schema(
       ref: "User",
       required: true,
       unique: true,
-      index: true,
     },
 
     /**
-     * User model-এর 6-letter NineWicket username।
+     * User model-এর six-letter Nine Wicket username।
      */
 
     username: {
@@ -32,9 +31,7 @@ const nineWicketWalletSchema = new Schema(
     },
 
     /**
-     * ==========================================
-     * TRANSFER INFORMATION
-     * ==========================================
+     * Nine Wicket-এ মোট কত balance transfer হয়েছে।
      */
 
     totalTransferred: {
@@ -43,6 +40,10 @@ const nineWicketWalletSchema = new Schema(
       min: 0,
     },
 
+    /**
+     * Nine Wicket থেকে মোট কত balance ফেরত এসেছে।
+     */
+
     totalReturned: {
       type: Number,
       default: 0,
@@ -50,10 +51,7 @@ const nineWicketWalletSchema = new Schema(
     },
 
     /**
-     * ==========================================
-     * EXPOSURE
-     * ==========================================
-     * Callback route থেকে update হবে।
+     * Callback route থেকে current exposure update হবে।
      */
 
     exposureBalance: {
@@ -64,9 +62,7 @@ const nineWicketWalletSchema = new Schema(
     },
 
     /**
-     * ==========================================
-     * LAST TRANSFER
-     * ==========================================
+     * সর্বশেষ transfer amount।
      */
 
     lastTransferAmount: {
@@ -75,15 +71,8 @@ const nineWicketWalletSchema = new Schema(
       min: 0,
     },
 
-    lastTransferAt: {
-      type: Date,
-      default: null,
-    },
-
     /**
-     * ==========================================
-     * LAST RETURN
-     * ==========================================
+     * সর্বশেষ returned amount।
      */
 
     lastReturnedAmount: {
@@ -92,13 +81,26 @@ const nineWicketWalletSchema = new Schema(
       min: 0,
     },
 
+    /**
+     * সর্বশেষ transfer-এর সময়।
+     */
+
+    lastTransferAt: {
+      type: Date,
+      default: null,
+    },
+
+    /**
+     * সর্বশেষ balance return-এর সময়।
+     */
+
     lastReturnedAt: {
       type: Date,
       default: null,
     },
 
     /**
-     * NineWicket API-এর সঙ্গে সর্বশেষ sync time।
+     * Nine Wicket API-এর সঙ্গে সর্বশেষ sync।
      */
 
     lastSyncAt: {
@@ -107,14 +109,17 @@ const nineWicketWalletSchema = new Schema(
     },
 
     /**
-     * ==========================================
-     * WALLET STATUS
-     * ==========================================
+     * idle:
+     * এখনো transfer হয়নি।
      *
-     * idle     = এখনো transfer হয়নি
-     * playing  = balance NineWicket-এ transfer হয়েছে
-     * exposure = active exposure রয়েছে
-     * settled  = খেলা settle হয়েছে
+     * playing:
+     * balance transfer হয়েছে।
+     *
+     * exposure:
+     * active exposure রয়েছে।
+     *
+     * settled:
+     * exposure শেষ হয়েছে।
      */
 
     status: {
@@ -135,9 +140,10 @@ const nineWicketWalletSchema = new Schema(
  * ==========================================
  */
 
-nineWicketWalletSchema.index({
-  username: 1,
-});
+/**
+ * username field-এর মধ্যে index: true আছে।
+ * তাই নিচে আলাদা username index দেওয়া হয়নি।
+ */
 
 nineWicketWalletSchema.index({
   status: 1,
@@ -148,6 +154,12 @@ nineWicketWalletSchema.index({
   user: 1,
   updatedAt: -1,
 });
+
+/**
+ * ==========================================
+ * MODEL
+ * ==========================================
+ */
 
 const NineWicketWallet = mongoose.model(
   "NineWicketWallet",
